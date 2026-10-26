@@ -130,7 +130,8 @@
        50.0
       ],
       "heating_cycles": 83,
-      "very_short": 0
+      "very_short": 0,
+      "very_short_days": []
      },
      "key": "short_cycles",
      "origin": "descriptive",
@@ -337,12 +338,15 @@
         1768422120.0
        ]
       ],
-      "minutes": 58.0
+      "minutes": 58.0,
+      "warm_events": 4,
+      "warm_rate_per_h": 0.24,
+      "warm_run_h": 16.7
      },
      "key": "defrost",
      "origin": "derived",
      "progress": null,
-     "text": "29 Abtauungen in 72,5 h Verdichterlauf.",
+     "text": "29 Abtauungen in 72,5 h Verdichterlauf. Über 5 °C außen: 4 Abtauungen in 16,7 h Lauf (0,2/h).",
      "unit": "1/h Lauf",
      "value": 0.4,
      "verdict": "info"

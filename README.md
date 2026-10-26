@@ -95,10 +95,10 @@ Lebensdauer.
 |---|---|
 | C1 Starts pro Jahr | Verdichterstarts, hochgerechnet aufs Jahr. Grün bis 2.000. |
 | C2 Starts pro Stunde | Die meisten Starts innerhalb einer Stunde. Grün bis 6. |
-| C3 Kurze Zyklen | Wie viele Heizläufe kürzer als 10 Minuten sind. |
+| C3 Kurze Zyklen | Wie viele Heizläufe kürzer als 10 Minuten sind; gelb, wenn an mindestens zwei Tagen Läufe unter 3 Minuten vorkommen. |
 | C4 Last gegen Mindestleistung | Ob der Wärmebedarf unter der kleinsten Leistung der Wärmepumpe liegt – dann ist Takten unvermeidbar (nur Info). |
 | C5 Heizstab-Anteil | Wie viel Strom der elektrische Heizstab verbraucht. Grün bis 2 %. |
-| C6 Abtauung | Wie oft das Außengerät abtaut (nur Info). |
+| C6 Abtauung | Wie oft das Außengerät abtaut; gelb, wenn es auch bei über +5 °C außen mehr als zweimal pro Laufstunde abtaut. |
 | C7 Modulation | Wie viel der Laufzeit die Wärmepumpe mit kleiner Leistung arbeitet (nur Info). |
 
 ### Wann gibt es ein Ergebnis?

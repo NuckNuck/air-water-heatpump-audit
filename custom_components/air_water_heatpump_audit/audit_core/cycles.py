@@ -17,6 +17,10 @@ DHW_MIN_S = 60
 SHORT_CYCLE_S = 600
 VERY_SHORT_CYCLE_S = 180
 LOW_FREQUENCY_HZ = 20
+VERY_SHORT_MIN_DAYS = 2  # C3: sehr kurze Heizläufe an mindestens 2 verschiedenen Tagen → hint
+DEFROST_WARM_C = 5.0  # C6: über +5 °C sollte kaum Reif entstehen (Abtaubereich −2…+5 °C, BFE-AT)
+DEFROST_WARM_MAX_PER_H = 2.0  # C6: mehr Abtauungen je Laufstunde über +5 °C → hint (derived)
+DEFROST_WARM_MIN_RUN_H = 5.0  # C6: erst ab 5 h Lauf über +5 °C bewerten, sonst entscheidet eine einzelne Stunde
 
 STARTS_PER_YEAR_OK, STARTS_PER_YEAR_HINT = 2000, 5500  # C1, WPQS: ⅓ der Anlagen ≤ 2.000, 90 % < 5.500
 
@@ -97,8 +101,9 @@ def check_max_starts_per_hour(cycles: list[Cycle], start: float, end: float) -> 
                        SOURCED, progress=prog)
 
 
-def check_short_cycles(cycles: list[Cycle], min_cycles: int = 20, since: float = 0.0) -> CheckResult:
-    """C3: Anteil kurzer Heizzyklen (< 10 min), dazu Zyklen unter 3 min."""
+def check_short_cycles(cycles: list[Cycle], min_cycles: int = 20, since: float = 0.0,
+                       tz: str = days.DEFAULT_TZ) -> CheckResult:
+    """C3: Anteil kurzer Heizzyklen (< 10 min), dazu Zyklen unter 3 min und an wie vielen Tagen sie vorkamen."""
     heating = [c for c in cycles if c.kind == HEATING and c.closed]
     details = {"heating_cycles": len(heating), "durations_min": [round(c.duration / 60, 1) for c in heating]}
     prog = progress(len(heating), min_cycles, "cycles", RATE, since)
@@ -107,14 +112,18 @@ def check_short_cycles(cycles: list[Cycle], min_cycles: int = 20, since: float =
                            text=f"{count(len(heating), 'abgeschlossener Heizzyklus', 'abgeschlossene Heizzyklen')}, nötig {min_cycles}.", origin=DESCRIPTIVE,
                            details=details, progress=prog)
     short = sum(1 for c in heating if c.duration < SHORT_CYCLE_S)
-    very_short = sum(1 for c in heating if c.duration < VERY_SHORT_CYCLE_S)
+    very_short_cycles = [c for c in heating if c.duration < VERY_SHORT_CYCLE_S]
+    very_short = len(very_short_cycles)
+    very_short_days = sorted({days.label(c.start, tz) for c in very_short_cycles})
     details["very_short"] = very_short
+    details["very_short_days"] = very_short_days
     share = 100 * short / len(heating)
-    # Spezifikation 3.2: ≥ 2 Heizzyklen < 3 min im Abschnitt → hint (geplant war „an ≥ 2 Tagen“, bisher nicht nach Tagen getrennt).
-    verdict = HINT if very_short >= 2 else INFO
-    return CheckResult("C3", "short_cycles", verdict, round(share, 1), "%",
-                       f"{short} von {len(heating)} Heizzyklen kürzer als 10 min, {very_short} kürzer als 3 min.",
-                       DESCRIPTIVE, details)
+    # Spezifikation 3.2: Läufe < 3 min an ≥ 2 Tagen → hint; ein einzelner schlechter Tag (z. B. Wartung) reicht nicht.
+    verdict = HINT if len(very_short_days) >= VERY_SHORT_MIN_DAYS else INFO
+    text = f"{short} von {len(heating)} Heizzyklen kürzer als 10 min, {very_short} kürzer als 3 min"
+    if very_short:
+        text += f" (an {count(len(very_short_days), 'Tag', 'Tagen')})"
+    return CheckResult("C3", "short_cycles", verdict, round(share, 1), "%", text + ".", DESCRIPTIVE, details)
 
 
 def check_starts_per_year(cycles: list[Cycle], start: float, end: float, heating_hours: float | None,
@@ -169,14 +178,34 @@ def check_backup_heater(heaters: dict[str, Series], power_kw: dict[str, float | 
                        details, progress=prog)
 
 
-def check_defrost(defrost: Series, cycles: list[Cycle], start: float, end: float) -> CheckResult:
-    """C6: Abtauungen je Laufstunde (ohne Temperaturbänder, die folgen mit Audit 1)."""
+def check_defrost(defrost: Series, cycles: list[Cycle], start: float, end: float,
+                  outdoor: Series = ()) -> CheckResult:
+    """C6: Abtauungen je Laufstunde; gelb, wenn sie auch über +5 °C außen häufig sind.
+
+    outdoor: möglichst die Außentemperatur eines Wetterdienstes – der Außenfühler der Wärmepumpe wird beim Abtauen
+    verfälscht (Spezifikation 2, D10).
+    """
     events = intervals_where(defrost, _on, start, end)
-    run_h = sum(c.duration for c in cycles) / 3600
+    runs = [(c.start, c.end) for c in cycles]
+    run_h = total(runs) / 3600
     rate = len(events) / run_h if run_h else 0.0
-    return CheckResult("C6", "defrost", INFO, round(rate, 2), "1/h Lauf",
-                       f"{count(len(events), 'Abtauung', 'Abtauungen')} in {num(run_h, '.1f')} h Verdichterlauf.", DERIVED,
-                       {"events": events, "minutes": round(total(events) / 60, 1)})
+    details = {"events": events, "minutes": round(total(events) / 60, 1)}
+    text = f"{count(len(events), 'Abtauung', 'Abtauungen')} in {num(run_h, '.1f')} h Verdichterlauf."
+    verdict = INFO
+    if outdoor:
+        warm = intersect(runs, intervals_where(outdoor, lambda v: float(v) > DEFROST_WARM_C, start, end))
+        warm_h = total(warm) / 3600
+        warm_events = sum(1 for a, _ in events if overlaps((a, a + 1), warm))
+        details |= {"warm_run_h": round(warm_h, 1), "warm_events": warm_events}
+        if warm_h >= DEFROST_WARM_MIN_RUN_H:
+            warm_rate = warm_events / warm_h
+            details["warm_rate_per_h"] = round(warm_rate, 2)
+            text += (f" Über {num(DEFROST_WARM_C, 'g')} °C außen: {count(warm_events, 'Abtauung', 'Abtauungen')} in "
+                     f"{num(warm_h, '.1f')} h Lauf ({num(warm_rate, '.1f')}/h).")
+            if warm_rate > DEFROST_WARM_MAX_PER_H:
+                verdict = HINT
+                text += " Bei diesen Temperaturen sollte kaum Reif entstehen."
+    return CheckResult("C6", "defrost", verdict, round(rate, 2), "1/h Lauf", text, DERIVED, details)
 
 
 def check_modulation(frequency: Series, cycles: list[Cycle], low_hz: float = LOW_FREQUENCY_HZ) -> CheckResult:

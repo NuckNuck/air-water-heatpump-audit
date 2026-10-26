@@ -114,6 +114,39 @@ class CycleTest(unittest.TestCase):
         self.assertEqual((r.value, r.verdict), (0.0, OK))
 
 
+class ShortCycleAndDefrostTest(unittest.TestCase):
+    """C3 zählt sehr kurze Läufe nach Tagen, C6 bewertet Abtauungen über +5 °C außen."""
+
+    @staticmethod
+    def heating_cycles(very_short_starts):
+        day = 24 * H
+        normal = [c3.Cycle(i * day / 20, i * day / 20 + 30 * 60) for i in range(20)]
+        return normal + [c3.Cycle(t, t + 120) for t in very_short_starts]
+
+    def test_very_short_cycles_on_one_day_are_info(self):
+        r = c3.check_short_cycles(self.heating_cycles([2 * H, 5 * H]), tz="UTC")
+        self.assertEqual(r.verdict, INFO)
+        self.assertEqual(r.details["very_short_days"], ["1970-01-01"])
+        self.assertIn("an 1 Tag", r.text)
+
+    def test_very_short_cycles_on_two_days_are_hint(self):
+        r = c3.check_short_cycles(self.heating_cycles([2 * H, 26 * H]), tz="UTC")
+        self.assertEqual(r.verdict, HINT)
+        self.assertIn("an 2 Tagen", r.text)
+
+    def test_frequent_defrost_above_five_degrees_is_hint(self):
+        runs = [c3.Cycle(0, 6 * H)]
+        # je Stunde 3 Abtauungen à 5 min
+        defrost = [(t * H + m * 60, v) for t in range(6) for m, v in ((5, 1), (10, 0), (25, 1), (30, 0), (45, 1), (50, 0))]
+        warm = c3.check_defrost([(0, 0)] + defrost, runs, 0, 6 * H, outdoor=[(0, 8.0)])
+        self.assertEqual(warm.verdict, HINT)
+        self.assertEqual(warm.details["warm_events"], 18)
+        cold = c3.check_defrost([(0, 0)] + defrost, runs, 0, 6 * H, outdoor=[(0, 1.0)])
+        self.assertEqual(cold.verdict, INFO)  # unter +5 °C ist häufiges Abtauen normal
+        short = c3.check_defrost([(0, 0)] + defrost, [c3.Cycle(0, 2 * H)], 0, 6 * H, outdoor=[(0, 8.0)])
+        self.assertEqual(short.verdict, INFO)  # unter 5 h Lauf über +5 °C noch kein Urteil
+
+
 class DataBasisTest(unittest.TestCase):
     def test_heartbeat_gaps_and_coverage(self):
         hb = [(t, t) for t in range(0, 3600, 60) if not 1200 <= t < 1800]
