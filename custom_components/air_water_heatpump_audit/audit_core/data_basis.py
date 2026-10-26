@@ -5,7 +5,7 @@ from __future__ import annotations
 from . import days
 from .heat import time_mean
 from .result import (DERIVED, FULL_DAYS, INFO, NOT_ASSESSABLE, OK, HINT, RATE, WARN, PHYSICAL, SOURCED, CheckResult,
-                     grade, num, progress)
+                     count, grade, num, progress)
 from .series import (Interval, Series, clip, combine, dedupe, intersect, intervals_where, normalize, subtract,
                      total, value_at, weighted_values)
 
@@ -47,7 +47,7 @@ def check_coverage(uptime: Series, start: float, end: float) -> CheckResult:
     share = 1 - total(gaps) / (end - start)
     verdict = OK if share >= 0.98 else HINT if share >= 0.90 else WARN
     return CheckResult("D2", "coverage", verdict, round(share * 100, 1), "%",
-                       f"{len(gaps)} Lücke(n) > {HEARTBEAT_MAX_GAP_S} s, zusammen {num(total(gaps) / 60, '.0f')} min.",
+                       f"{count(len(gaps), 'Lücke', 'Lücken')} > {HEARTBEAT_MAX_GAP_S} s, zusammen {num(total(gaps) / 60, '.0f')} min.",
                        DERIVED, {"gaps": gaps})
 
 
@@ -106,7 +106,7 @@ def check_sensor_offset(flow: Series, ret: Series, compressor: Series, pump: Ser
     prog = progress(len(windows), OFFSET_ROBUST_WINDOWS, "windows", RATE, start)
     if len(windows) < OFFSET_MIN_WINDOWS:
         return CheckResult("D4", "sensor_offset", NOT_ASSESSABLE,
-                           text=f"{len(windows)} geeignete Fenster, nötig {OFFSET_MIN_WINDOWS}.",
+                           text=f"{count(len(windows), 'geeignetes Fenster', 'geeignete Fenster')}, nötig {OFFSET_MIN_WINDOWS}.",
                            origin=DERIVED, details=details, progress=prog)
     # Zeitmittel statt Median: die Fühler melden in 0,5-K-Schritten, ein Median rastet auf 0 oder 0,5 K ein.
     offset = round(time_mean(diff, windows), 2)
@@ -139,7 +139,7 @@ def check_restarts(uptime: Series, start: float, end: float) -> CheckResult:
     # Unter einem Tag wird nicht hochgerechnet: ein einzelner Neustart ergäbe sonst eine hohe Tagesrate.
     verdict = HINT if days >= 1 and per_day > 3 else INFO
     return CheckResult("D9", "restart_artifacts", verdict, round(per_day, 2), "1/d",
-                       f"{len(found)} Neustart(s) im Zeitraum; Zustandswechsel ±{ARTIFACT_MARGIN_S} s darum werden verworfen.",
+                       f"{count(len(found), 'Neustart', 'Neustarts')} im Zeitraum; Zustandswechsel ±{ARTIFACT_MARGIN_S} s darum werden verworfen.",
                        DERIVED, {"restarts": found})
 
 
@@ -177,7 +177,7 @@ def check_meter_vs_controller(meter: Series, controller_consumed: list[Series], 
     # Der Wert der Steuerung für einen Tag steht erst am Mittag danach: ein Tag wird 12 h nach seiner Mitternacht zählbar.
     prog = progress(len(rows), min_days, "days", FULL_DAYS, start, lag_h=12)
     if len(rows) < min_days:
-        return CheckResult("D5", "meter_vs_controller", NOT_ASSESSABLE, text=f"{len(rows)} vergleichbare Tage, nötig {min_days}.",
+        return CheckResult("D5", "meter_vs_controller", NOT_ASSESSABLE, text=f"{count(len(rows), 'vergleichbarer Tag', 'vergleichbare Tage')}, nötig {min_days}.",
                            origin=DERIVED, details={"days": rows}, progress=prog)
     meter_sum = sum(r["meter_kwh"] for r in rows)
     ctrl_sum = sum(r["controller_kwh"] for r in rows)
@@ -223,7 +223,7 @@ def check_outdoor_sensor(outdoor: Series, reference: Series, defrost: Series, st
                          "diff": round(own - ref, 2)})
     prog = progress(len(rows), min_days, "days", FULL_DAYS, start)
     if len(rows) < min_days:
-        return CheckResult("D10", "outdoor_sensor", NOT_ASSESSABLE, text=f"{len(rows)} Tage, nötig {min_days}.",
+        return CheckResult("D10", "outdoor_sensor", NOT_ASSESSABLE, text=f"{count(len(rows), 'Tag', 'Tage')}, nötig {min_days}.",
                            origin=DERIVED, details={"days": rows}, progress=prog)
     bias = sum(r["diff"] for r in rows) / len(rows)
     return CheckResult("D10", "outdoor_sensor", grade(abs(bias), 1.5, 3.0), round(bias, 2), "K",

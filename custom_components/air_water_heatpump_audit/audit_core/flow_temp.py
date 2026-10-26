@@ -11,7 +11,7 @@ from .cycles import Cycle
 from .data_basis import resolution
 from .heat import time_mean
 from .result import (DERIVED, DESCRIPTIVE, FULL_DAYS, HINT, INFO, NOT_ASSESSABLE, OK, PHYSICAL, RATE, SOURCED, WARN,
-                     CheckResult, grade, num, progress)
+                     CheckResult, count, grade, num, progress)
 from .series import (Interval, Series, combine, intersect, intervals_where, normalize, subtract, total,
                      weighted_values)
 
@@ -100,7 +100,7 @@ def heating_progress(windows: list[Interval], used: int, since: float) -> dict:
 
 def _heating_gate(windows: list[Interval], used: int) -> str | None:
     if total(windows) < MIN_HEATING_S or used < MIN_HEATING_CYCLES:
-        return (f"{num(total(windows) / 3600, '.1f')} h stationärer Heizbetrieb aus {used} Zyklen, nötig "
+        return (f"{num(total(windows) / 3600, '.1f')} h stationärer Heizbetrieb aus {count(used, 'Zyklus', 'Zyklen')}, nötig "
                 f"{num(MIN_HEATING_S / 3600, '.0f')} h aus {MIN_HEATING_CYCLES} Zyklen.")
     return None
 
@@ -115,7 +115,7 @@ def check_circuit_sensor_offset(flow: Series, circuit_flow: Series, pauses: list
     prog = progress(len(pauses), ROBUST_PAUSE_WINDOWS, "windows", RATE, start)  # reif erst, wenn belastbar
     if len(pauses) < MIN_PAUSE_WINDOWS:
         return CheckResult("T2", "circuit_sensor_offset", NOT_ASSESSABLE,
-                           text=f"{len(pauses)} Pausen mit laufender Pumpe, nötig {MIN_PAUSE_WINDOWS}.",
+                           text=f"{count(len(pauses), 'Pause', 'Pausen')} mit laufender Pumpe, nötig {MIN_PAUSE_WINDOWS}.",
                            origin=PHYSICAL, details=details, progress=prog)
     offset = time_mean(diff, pauses)  # Zeitmittel statt Median, wie D4 (0,5-K-Schritte)
     text = f"In {len(pauses)} Verdichterpausen zeigen beide Vorlauffühler im Mittel {num(offset, '+.2f')} K Unterschied."
@@ -306,7 +306,7 @@ def check_heating_curve_headroom(room: Series, target: float | None, heating: li
     prog = progress(len(means), MIN_ROOM_DAYS, "heating_days", FULL_DAYS, start)
     if len(means) < MIN_ROOM_DAYS:
         return CheckResult("T6", "heating_curve_headroom", NOT_ASSESSABLE,
-                           text=f"{len(means)} Heiztage mit Raumtemperatur, nötig {MIN_ROOM_DAYS}.", origin=DERIVED,
+                           text=f"{count(len(means), 'Heiztag', 'Heiztage')} mit Raumtemperatur, nötig {MIN_ROOM_DAYS}.", origin=DERIVED,
                            details=details, progress=prog)
     values = [m for _, m in means]
     lowest = min(values)

@@ -35,7 +35,7 @@
       "since": 1768118400.0,
       "unit": "hours"
      },
-     "text": "Höchstens 1 Start(s) in einer Stunde. Herstellergrenzen 6–12/h (WPQS S. 98, Danfoss).",
+     "text": "Höchstens 1 Start in einer Stunde. Herstellergrenzen 6–12/h (WPQS S. 98, Danfoss).",
      "unit": "1/h",
      "value": 1,
      "verdict": "ok"
@@ -342,7 +342,7 @@
      "key": "defrost",
      "origin": "derived",
      "progress": null,
-     "text": "29 Abtauung(en) in 72,5 h Verdichterlauf.",
+     "text": "29 Abtauungen in 72,5 h Verdichterlauf.",
      "unit": "1/h Lauf",
      "value": 0.4,
      "verdict": "info"
@@ -407,7 +407,7 @@
      "key": "coverage",
      "origin": "derived",
      "progress": null,
-     "text": "1 Lücke(n) > 180 s, zusammen 21 min.",
+     "text": "1 Lücke > 180 s, zusammen 21 min.",
      "unit": "%",
      "value": 99.9,
      "verdict": "ok"
@@ -1745,7 +1745,7 @@
      "key": "restart_artifacts",
      "origin": "derived",
      "progress": null,
-     "text": "1 Neustart(s) im Zeitraum; Zustandswechsel ±30 s darum werden verworfen.",
+     "text": "1 Neustart im Zeitraum; Zustandswechsel ±30 s darum werden verworfen.",
      "unit": "1/d",
      "value": 0.1,
      "verdict": "info"

@@ -9,7 +9,7 @@ from __future__ import annotations
 from . import days
 from .data_basis import check_coverage
 from .heat import energy_kwh, time_mean
-from .result import DERIVED, DESCRIPTIVE, HINT, INFO, NOT_ASSESSABLE, OK, SOURCED, WARN, CheckResult, num
+from .result import DERIVED, DESCRIPTIVE, HINT, INFO, NOT_ASSESSABLE, OK, SOURCED, WARN, CheckResult, count, num
 from .series import Series, combine, intervals_where, value_at
 
 KELVIN = 273.15
@@ -116,7 +116,7 @@ def check_weekly_cop(rows: list[dict]) -> CheckResult:
     week = _week(rows)
     if week is None:
         return CheckResult("E2", "weekly_cop", NOT_ASSESSABLE,
-                           text=f"{len(rows)} gültige Tage, nötig {WEEK_DAYS}.", origin=SOURCED)
+                           text=f"{count(len(rows), 'gültiger Tag', 'gültige Tage')}, nötig {WEEK_DAYS}.", origin=SOURCED)
     electricity, heat, heat_raw = _sum(week, "electricity_kwh"), _sum(week, "heat_kwh"), _sum(week, "heat_raw_kwh")
     cop, outdoor = heat / electricity, _week_outdoor(week)
     text = (f"{days.display(week[0]['day'])} bis {days.display(week[-1]['day'])}: Arbeitszahl {num(cop, '.1f')} "
@@ -149,7 +149,7 @@ def check_carnot_efficiency(rows: list[dict], dq: str, offset_robust: bool) -> C
     week = _week(rows)
     if week is None:
         return CheckResult("E3", "carnot_efficiency", NOT_ASSESSABLE,
-                           text=f"{len(rows)} gültige Tage, nötig {WEEK_DAYS}.", origin=DERIVED)
+                           text=f"{count(len(rows), 'gültiger Tag', 'gültige Tage')}, nötig {WEEK_DAYS}.", origin=DERIVED)
     if dq == "low":
         return CheckResult("E3", "carnot_efficiency", NOT_ASSESSABLE,
                            text="Datenqualität niedrig (Audit 0), kein Urteil.", origin=DERIVED)
@@ -178,7 +178,7 @@ def check_dhw_share(rows: list[dict]) -> CheckResult:
     week = _week(rows)
     if week is None:
         return CheckResult("E4", "dhw_share", NOT_ASSESSABLE,
-                           text=f"{len(rows)} gültige Tage, nötig {WEEK_DAYS}.", origin=SOURCED)
+                           text=f"{count(len(rows), 'gültiger Tag', 'gültige Tage')}, nötig {WEEK_DAYS}.", origin=SOURCED)
     heat = _sum(week, "heat_kwh")
     if heat <= 0:
         return CheckResult("E4", "dhw_share", NOT_ASSESSABLE, text="Keine Wärme in der Woche.", origin=SOURCED)
