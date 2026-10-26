@@ -326,6 +326,8 @@ entfernen.
 - Texte: Zahlen mit `audit_core.result.num()` (Dezimalkomma), Anzahlen mit `count(n, Einzahl, Mehrzahl)`. In
   `strings.json`/`translations/*.json` sind `{…}` Platzhalter – jede Sprache braucht genau die des englischen Texts
   (Test `test_translation_placeholders_match_english`), Beispiele mit Klammern also nicht in diese Dateien.
+- Fachliche Grundlage (Rollen, Stammdaten, jede Prüfung mit Gate, Schwellen und Quellen):
+  [`docs/specification.md`](docs/specification.md).
 - Aufbau und Entscheidungen: [`docs/audit_modules_design.md`](docs/audit_modules_design.md).
 
 ## Lizenz

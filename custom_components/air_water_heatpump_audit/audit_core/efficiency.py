@@ -1,4 +1,4 @@
-"""Audit 1 – Effizienz gesamt (Spezifikation: docs/heatpump_audit_spec.md, Abschnitt 4).
+"""Audit 1 – Effizienz gesamt (Spezifikation: docs/specification.md, Abschnitt 4).
 
 Strom immer vom Stromzähler (Grundsatz 1), Wärme selbst gerechnet, roh und mit Fühler-Offset aus D4 (F74).
 Herstellerneutral: nur Rollen und Stammdaten (Spezifikation 1.6).
