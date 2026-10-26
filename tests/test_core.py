@@ -276,8 +276,8 @@ class DailyChecksTest(unittest.TestCase):
 class RunnerTest(unittest.TestCase):
     def test_data_quality(self):
         from audit_core.runner import data_quality
-        dq = lambda d2, d4, d8: data_quality([CheckResult("D2", "", d2), CheckResult("D4", "", d4),
-                                             CheckResult("D8", "", d8)])
+        dq = lambda d2, d4, d8: data_quality(CheckResult("D2", "", d2), CheckResult("D4", "", d4),
+                                             CheckResult("D8", "", d8))
         self.assertEqual(dq(OK, OK, OK), "high")
         self.assertEqual(dq(OK, OK, HINT), "medium")
         self.assertEqual(dq(OK, NOT_ASSESSABLE, OK), "medium")
@@ -619,10 +619,11 @@ class TimelineTest(unittest.TestCase):
         self.assertEqual(plain, cut)
 
     def test_scales_follow_check_thresholds(self):
-        sc = tl.scales(6279)
-        self.assertEqual(sc["flow_temperature"]["bands"][0], [0, 1.5, OK])
-        self.assertAlmostEqual(sc["capacity"]["bands"][0][1], 7.6)
-        self.assertEqual(tl.scales(None)["capacity"]["bands"], [])
+        from audit_core.audits import BY_ID
+        scale = lambda audit, hours: BY_ID[audit].timeline.scale({"heating_hours": hours})
+        self.assertEqual(scale("flow_temperature", 6279)["bands"][0], [0, 1.5, OK])
+        self.assertAlmostEqual(scale("capacity", 6279)["bands"][0][1], 7.6)
+        self.assertEqual(scale("capacity", None)["bands"], [])
 
     def test_merge_keeps_old_days_and_replaces_recomputed(self):
         old = [{"day": "2026-01-01", "x": 1}, {"day": "2026-01-02", "x": 1}]
@@ -694,3 +695,46 @@ class ReadinessTest(unittest.TestCase):
         self.assertEqual((c1["reached"], c1["eta"]), (False, 2 * H + 14 * 24 * H))
         # Ohne Vor-/Rücklauf haben T1/T3–T5 keine Mindestmenge (Eingang fehlt), ohne Raumfühler auch T6 nicht
         self.assertFalse({"T1", "T3", "T4", "T5", "T6"} & {c["check_id"] for c in ready["flow_temperature"]["checks"]})
+
+
+class RegistryTest(unittest.TestCase):
+    """Umbau auf Audit-Module (docs/audit_modules_design.md): Ergebnis bleibt gleich, Audits laufen auch einzeln."""
+
+    @classmethod
+    def setUpClass(cls):
+        from tests import synthetic as syn
+        cls.syn, cls.series = syn, syn.series()
+
+    def run_with(self, audits=None, roles=None):
+        from audit_core.runner import run_audits
+        s = self.series if roles is None else {k: v for k, v in self.series.items() if k in roles}
+        rep = run_audits(s, self.syn.START, self.syn.END, recorder_keep_days=10, long_term_days=None,
+                         heater_kw=self.syn.HEATER_KW, master=self.syn.MASTER, events=self.syn.EVENTS, controls={},
+                         tz="Europe/Berlin", audits=audits)
+        return __import__("json").loads(__import__("json").dumps(rep, sort_keys=True, default=str))
+
+    def test_golden_report_unchanged(self):
+        """Vergleichsbericht der synthetischen Anlage, erzeugt vor dem Umbau (tests/golden)."""
+        golden = __import__("pathlib").Path(__file__).with_name("golden") / "synthetic_report.json"
+        self.assertEqual(self.run_with(), __import__("json").loads(golden.read_text(encoding="utf-8")))
+
+    def test_each_audit_alone_with_only_its_roles(self):
+        """Ein Audit allein, nur mit seinen angemeldeten Rollen, urteilt wie im Gesamtlauf."""
+        from audit_core.audits import REGISTRY
+        full = self.run_with()
+        for spec in REGISTRY:
+            alone = self.run_with([spec.audit_id], set(spec.roles))
+            self.assertEqual(list(alone["audits"]), [spec.audit_id])
+            self.assertEqual(alone["audits"][spec.audit_id], full["audits"][spec.audit_id], spec.audit_id)
+            self.assertEqual(list(alone["timeline"]["scales"]), [spec.audit_id])
+            for a, b in zip(alone["timeline"]["days"], full["timeline"]["days"]):
+                self.assertEqual(a[spec.audit_id], b[spec.audit_id], spec.audit_id)
+
+    def test_registry_is_valid(self):
+        from audit_core.audits import REGISTRY
+        from audit_core.context import ROLE_KEYS
+        from audit_core.registry import validate
+        validate(REGISTRY, ROLE_KEYS)
+        dup = REGISTRY[0].__class__(**{**REGISTRY[0].__dict__, "audit_id": REGISTRY[1].audit_id})
+        with self.assertRaises(ValueError):
+            validate([dup, REGISTRY[1]], ROLE_KEYS)

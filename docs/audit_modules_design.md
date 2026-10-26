@@ -1,6 +1,6 @@
 # Entwurf: Audits als zuschaltbare Module (Weg B, F148/F149)
 
-Stand: 26.10.2026, Entwurf – noch nichts umgesetzt.
+Stand: 26.10.2026. Kern umgesetzt (Abschnitt „Umsetzung“ am Ende), HA-Teil folgt mit der Umbenennung (F147).
 
 ## Ziel
 
@@ -164,3 +164,16 @@ mit Hinweis „Empfohlen: zeigt, wie belastbar die anderen Urteile sind“ (F150
 
 - **F150 (entschieden):** abschaltbar, bei der Einrichtung vorausgewählt mit Empfehlung.
 - **F151 (entschieden):** ja.
+
+## Umsetzung Kern (26.10.2026)
+
+- `audit_core/registry.py` (`AuditSpec`, `CheckSpec`, `TimelineSpec`, `validate`), `audit_core/context.py`
+  (Laufkontext, Grundgrößen als `cached_property`), `audit_core/audits/` (ein Modul je Audit, `REGISTRY`),
+  `runner.run_audits(..., audits=[…])`, `runner.roles_for(...)`.
+- Die Prüf-Logik bleibt in `data_basis.py`, `efficiency.py`, `flow_temp.py`, `cycles.py`; die Audit-Module verdrahten
+  sie nur. Hilfetexte (`help.py`) und Aktionen (`actions.py`) bleiben vorerst zentral nach `check_id` – ein neues Audit
+  trägt dort seine Einträge ein. Übersetzungen: statt Generator ein Test, dass jede Prüfung der Registry in allen
+  Sprachdateien steht (HA-Teil).
+- Prüfstein: `tests/golden/synthetic_report.json` (synthetische Anlage `tests/synthetic.py`, erzeugt vor dem Umbau) ist
+  unverändert; jedes Audit liefert allein und nur mit seinen angemeldeten Rollen dasselbe wie im Gesamtlauf. Mit
+  echten InfluxDB-Daten (24.–26.10.) ebenfalls identisch.
