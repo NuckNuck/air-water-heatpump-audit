@@ -154,10 +154,12 @@ _ACTIONS: dict[str, Callable[[CheckResult, dict], Action]] = {
     "D5": _fixed(NONE, "Nichts zu tun: Die Auswertungen rechnen mit dem Stromzähler, nicht mit der Schätzung der "
                        "Steuerung."),
     "D6": _day_boundary,
-    "D8": _fixed(OWNER, "Der Stromzähler liefert nur ganze kWh; mit PIN liefert er Nachkommastellen.", steps=[
-        "PIN beim Messstellenbetreiber anfordern (steht auf der Rechnung oder am Zähler).",
-        "PIN am Zähler eingeben (Taste oder Taschenlampe auf das Lichtsymbol).",
-        "Im Zählermenü „InF“ auf „On“ stellen, damit der Lesekopf alle Werte bekommt."]),
+    "D8": _fixed(OWNER, "Der Stromzähler liefert nur ganze kWh. Viele digitale Zähler liefern nach Freischaltung per PIN "
+                       "Nachkommastellen.", steps=[
+        "PIN beim Messstellenbetreiber anfordern.",
+        "PIN am Zähler eingeben (meist per Taste oder Taschenlampe auf das Lichtsymbol).",
+        "Im Zählermenü die erweiterte Datenausgabe einschalten (oft „InF“ auf „On“), damit der Lesekopf alle "
+        "Werte bekommt."]),
     "D9": _fixed(OWNER, "Die Schnittstelle startet zu oft neu.", steps=[
         "Netzteil prüfen oder tauschen (mindestens 1 A).",
         "WLAN-Signal prüfen.",
@@ -262,7 +264,7 @@ class ControlRole:
     domains: tuple[str, ...] = ("number", "input_number", "select", "input_select")
 
 
-SHORT_CYCLE_LOCKOUT_MIN = 30  # Sperre nach einem zu kurzen Lauf; 30 min wie das Beispiel der Mahtanar-Firmware
+SHORT_CYCLE_LOCKOUT_MIN = 30  # Sperre nach einem zu kurzen Lauf; halbe Stunde lässt den Puffer sicher auskühlen
 SHORT_CYCLE_MIN_RUN_MIN = 5  # kürzere Läufe lösen die Sperre aus; C3 zählt Läufe unter 3 min als sehr kurz
 
 # Reihenfolge = Reihenfolge der Vorschläge in der Karte.

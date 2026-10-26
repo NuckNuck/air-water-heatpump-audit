@@ -157,40 +157,41 @@ def check_history_depth(recorder_keep_days: float | None, long_term_days: float 
                        {"recorder_keep_days": recorder_keep_days, "long_term_days": long_term_days})
 
 
-def check_meter_vs_ftc(meter: Series, ftc_consumed: list[Series], uptime: Series, start: float, end: float,
+def check_meter_vs_controller(meter: Series, controller_consumed: list[Series], uptime: Series, start: float, end: float,
                        tz: str = days.DEFAULT_TZ, min_days: int = 7) -> CheckResult:
-    """D5: FTC-Strom ÷ Zählerstrom über volle Tage mit lückenlosem Heartbeat.
+    """D5: Strom laut Steuerung ÷ Zählerstrom über volle Tage mit lückenlosem Heartbeat.
 
-    Die FTC meldet um ihre Mitternacht den Vortag; der für Tag D gültige FTC-Wert steht deshalb am Mittag von D+1.
+    Rolle = Verbrauch des Vortags, wie ihn die Steuerung um ihre Mitternacht meldet; der für Tag D gültige Wert steht
+    deshalb sicher erst am Mittag von D+1.
     """
     rows = []
     for a, b in days.full_days(start, end, tz):
         if check_coverage(uptime, a, b).verdict != OK:
             continue
         m_a, m_b = value_at(meter, a), value_at(meter, b)
-        ftc = [value_at(s, b + 12 * 3600) for s in ftc_consumed]
-        if None in (m_a, m_b) or None in ftc or b + 12 * 3600 > end:
+        ctrl = [value_at(s, b + 12 * 3600) for s in controller_consumed]
+        if None in (m_a, m_b) or None in ctrl or b + 12 * 3600 > end:
             continue
         rows.append({"day": days.label(a, tz), "meter_kwh": round(float(m_b) - float(m_a), 2),
-                     "ftc_kwh": round(sum(float(x) for x in ftc), 2)})
-    # Der FTC-Wert eines Tages steht erst am Mittag danach: ein Tag wird 12 h nach seiner Mitternacht zählbar.
+                     "controller_kwh": round(sum(float(x) for x in ctrl), 2)})
+    # Der Wert der Steuerung für einen Tag steht erst am Mittag danach: ein Tag wird 12 h nach seiner Mitternacht zählbar.
     prog = progress(len(rows), min_days, "days", FULL_DAYS, start, lag_h=12)
     if len(rows) < min_days:
-        return CheckResult("D5", "meter_vs_ftc", NOT_ASSESSABLE, text=f"{len(rows)} vergleichbare Tage, nötig {min_days}.",
+        return CheckResult("D5", "meter_vs_controller", NOT_ASSESSABLE, text=f"{len(rows)} vergleichbare Tage, nötig {min_days}.",
                            origin=DERIVED, details={"days": rows}, progress=prog)
     meter_sum = sum(r["meter_kwh"] for r in rows)
-    ftc_sum = sum(r["ftc_kwh"] for r in rows)
-    ratio = ftc_sum / meter_sum if meter_sum else float("inf")
+    ctrl_sum = sum(r["controller_kwh"] for r in rows)
+    ratio = ctrl_sum / meter_sum if meter_sum else float("inf")
     verdict = OK if 0.95 <= ratio <= 1.20 else WARN if ratio < 0.80 or ratio > 1.50 else HINT
-    return CheckResult("D5", "meter_vs_ftc", verdict, round(ratio, 3), "",
-                       f"FTC {num(ftc_sum, '.1f')} kWh gegen Zähler {num(meter_sum, '.1f')} kWh an {len(rows)} Tagen.",
+    return CheckResult("D5", "meter_vs_controller", verdict, round(ratio, 3), "",
+                       f"Steuerung {num(ctrl_sum, '.1f')} kWh gegen Zähler {num(meter_sum, '.1f')} kWh an {len(rows)} Tagen.",
                        DERIVED,
                        {"days": rows}, progress=prog)
 
 
-def check_ftc_day_boundary(controller_date: Series, start: float, end: float,
+def check_controller_day_boundary(controller_date: Series, start: float, end: float,
                            tz: str = days.DEFAULT_TZ, window_s: float = 3 * 3600) -> CheckResult:
-    """D6: Wechselt das Datum der FTC zur lokalen Mitternacht? Versatz = Wechselzeit − Mitternacht."""
+    """D6: Wechselt das Datum der Steuerung zur lokalen Mitternacht? Versatz = Wechselzeit − Mitternacht."""
     changes = [t for t, _ in dedupe(controller_date)[1:]]
     offsets = []
     for m in days.midnights(start, end, tz):
@@ -198,26 +199,27 @@ def check_ftc_day_boundary(controller_date: Series, start: float, end: float,
         if near:
             offsets.append(round((near[0] - m) / 60, 1))
     if not offsets:
-        return CheckResult("D6", "ftc_day_boundary", NOT_ASSESSABLE, text="Noch kein Tageswechsel der FTC im Zeitraum.",
+        return CheckResult("D6", "controller_day_boundary", NOT_ASSESSABLE,
+                           text="Noch kein Tageswechsel der Steuerung im Zeitraum.",
                            origin=SOURCED)
     worst = max(offsets, key=abs)
     verdict = OK if abs(worst) <= 15 else HINT
-    text = f"FTC-Datum wechselt {num(worst, '+.0f')} min gegen lokale Mitternacht ({len(offsets)} Wechsel)."
+    text = f"Datum der Steuerung wechselt {num(worst, '+.0f')} min gegen lokale Mitternacht ({len(offsets)} Wechsel)."
     if verdict == HINT:
-        text += " FTC-Uhr prüfen (Sommerzeit wird an der FTC von Hand umgestellt)."
-    return CheckResult("D6", "ftc_day_boundary", verdict, worst, "min", text, SOURCED, {"offsets_min": offsets})
+        text += " Uhr der Steuerung prüfen (manche Steuerungen stellen die Sommerzeit nicht selbst um)."
+    return CheckResult("D6", "controller_day_boundary", verdict, worst, "min", text, SOURCED, {"offsets_min": offsets})
 
 
 def check_outdoor_sensor(outdoor: Series, reference: Series, defrost: Series, start: float, end: float,
                          tz: str = days.DEFAULT_TZ, min_days: int = 3) -> CheckResult:
-    """D10: Tagesmittel TH7 gegen Wetterdienst; Tage mit > 10 % Abtauzeit fallen heraus."""
+    """D10: Tagesmittel des Außenfühlers der Wärmepumpe gegen Wetterdienst; Tage mit > 10 % Abtauzeit fallen heraus."""
     rows = []
     for a, b in days.full_days(start, end, tz):
         if total(intervals_where(defrost, lambda v: v in (1, 1.0, True, "on"), a, b)) > 0.1 * (b - a):
             continue
         own, ref = time_mean(outdoor, [(a, b)]), time_mean(reference, [(a, b)])
         if own is not None and ref is not None:
-            rows.append({"day": days.label(a, tz), "th7": round(own, 2), "reference": round(ref, 2),
+            rows.append({"day": days.label(a, tz), "own": round(own, 2), "reference": round(ref, 2),
                          "diff": round(own - ref, 2)})
     prog = progress(len(rows), min_days, "days", FULL_DAYS, start)
     if len(rows) < min_days:
@@ -225,5 +227,5 @@ def check_outdoor_sensor(outdoor: Series, reference: Series, defrost: Series, st
                            origin=DERIVED, details={"days": rows}, progress=prog)
     bias = sum(r["diff"] for r in rows) / len(rows)
     return CheckResult("D10", "outdoor_sensor", grade(abs(bias), 1.5, 3.0), round(bias, 2), "K",
-                       f"TH7 im Mittel {num(bias, '+.1f')} K gegen Wetterdienst ({len(rows)} Tage).", DERIVED,
+                       f"Außenfühler im Mittel {num(bias, '+.1f')} K gegen Wetterdienst ({len(rows)} Tage).", DERIVED,
                        {"days": rows}, progress=prog)

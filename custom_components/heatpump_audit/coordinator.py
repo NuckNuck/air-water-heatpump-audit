@@ -76,7 +76,8 @@ class HeatpumpAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if max_days is not None:
             days = min(days, max_days)
         start = end - timedelta(days=days)
-        since = dt_util.parse_datetime(str(self._option(CONF_DATA_SINCE)))
+        raw_since = self._option(CONF_DATA_SINCE)
+        since = dt_util.parse_datetime(str(raw_since)) if raw_since else None
         if since is not None:
             since = dt_util.as_utc(since if since.tzinfo else since.replace(tzinfo=dt_util.get_default_time_zone()))
             start = max(start, since)
@@ -87,9 +88,9 @@ class HeatpumpAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _compute(self, series: dict, start: float, end: float, keep_days: float, long_term_days: float | None,
                  controls: dict[str, dict]) -> dict[str, Any]:
-        heater_kw = {"immersion_heater": float(self._option(CONF_IMMERSION_HEATER_KW)),
-                     "booster_heater": float(self._option(CONF_BOOSTER_HEATER_KW)),
-                     "booster_heater_2": float(self._option(CONF_BOOSTER_HEATER_2_KW))}
+        heater_kw = {role: self._option(key) for role, key in (("immersion_heater", CONF_IMMERSION_HEATER_KW),
+                                                                ("booster_heater", CONF_BOOSTER_HEATER_KW),
+                                                                ("booster_heater_2", CONF_BOOSTER_HEATER_2_KW))}
         master = {k: self._option(k) for k in MASTER_KEYS}
         return run_audits(series, start, end, recorder_keep_days=keep_days, long_term_days=long_term_days,
                           heater_kw=heater_kw, master=master, events=self._events(), controls=controls,

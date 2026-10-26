@@ -1,9 +1,9 @@
-"""Config Flow in fünf Schritten (Betriebssignale, Messwerte, Werte der Steuerung, Heizkreis, Stellgrößen), Options
-Flow für Stammdaten, Untereinträge für Ereignisse. Reconfigure geht dieselben Schritte mit den gespeicherten
-Zuordnungen durch.
+"""Config Flow: zuerst Profile wählen (Schnittstelle, Modell), dann fünf Schritte Rollen (Betriebssignale, Messwerte,
+Werte der Steuerung, Heizkreis, Stellgrößen). Options Flow für Stammdaten, Untereinträge für Ereignisse.
+Reconfigure geht die Rollen-Schritte mit den gespeicherten Zuordnungen durch.
 
-Jede Rolle ist optional: fehlt sie, enden die abhängigen Prüfungen in „nicht bewertbar“. Vorbelegt wird die
-Mahtanar-Zuordnung, aber nur mit Entitäten, die es in dieser HA-Instanz gibt.
+Jede Rolle ist optional: fehlt sie, enden die abhängigen Prüfungen in „nicht bewertbar“. Vorbelegt wird aus dem
+gewählten Schnittstellen-Profil, aber nur mit Entitäten, die es in dieser HA-Instanz gibt.
 """
 
 from __future__ import annotations
@@ -26,8 +26,12 @@ from .const import (CONF_BOOSTER_HEATER_2_KW, CONF_BOOSTER_HEATER_KW, CONF_CAPAC
                     CONF_WINDOW_DAYS, DATA_SOURCES, DEFAULT_OPTIONS, DOMAIN, EVENT_KIND_LABELS, EVENT_KINDS,
                     HYDRAULIC_SEPARATIONS, OPTION_SECTIONS, OPTIONAL_OPTIONS, ROLE_DOMAINS, ROLE_STEPS,
                     SUBENTRY_EVENT)
+from .profiles import COMMON_ROLE_SUGGESTIONS, INTERFACE_PROFILES, MODEL_PROFILES
 
 STEP_ORDER = list(ROLE_STEPS)
+NO_PROFILE = "none"
+CONF_INTERFACE_PROFILE = "interface_profile"
+CONF_MODEL_PROFILE = "model_profile"
 
 
 def _kw() -> selector.NumberSelector:
@@ -36,15 +40,20 @@ def _kw() -> selector.NumberSelector:
 
 
 class HeatpumpAuditConfigFlow(ConfigFlow, domain=DOMAIN):
-    VERSION = 1
+    VERSION = 2
 
     def __init__(self) -> None:
         self._data: dict[str, str] = {}
         self._reconfigure = False
 
+    def _suggestions(self) -> dict[str, str]:
+        return COMMON_ROLE_SUGGESTIONS | INTERFACE_PROFILES.get(self._data.get(CONF_INTERFACE_PROFILE, NO_PROFILE), {})
+
     def _role_schema(self, step: str) -> vol.Schema:
         fields = {}
-        for role, default in ROLE_STEPS[step].items():
+        suggestions = self._suggestions()
+        for role in ROLE_STEPS[step]:
+            default = suggestions.get(role)
             if self._reconfigure:
                 suggested = self._data.get(role) or None  # bewusst geleerte Rollen nicht neu vorbelegen
                 if role not in self._data and default and self.hass.states.get(default):
@@ -66,10 +75,25 @@ class HeatpumpAuditConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_update_reload_and_abort(self._get_reconfigure_entry(), data=self._data)
         await self.async_set_unique_id(self._data.get("compressor_running") or DOMAIN)
         self._abort_if_unique_id_configured()
-        return self.async_create_entry(title="WP-Audit", data=self._data, options=dict(DEFAULT_OPTIONS))
+        model = MODEL_PROFILES.get(self._data.get(CONF_MODEL_PROFILE, NO_PROFILE), {})
+        return self.async_create_entry(title="WP-Audit", data=self._data, options=DEFAULT_OPTIONS | model)
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        return await self._role_step("user", user_input)
+        """Profile: Vorschläge für die Rollen (Schnittstelle) und für die Stammdaten (Modell). „Keins“ ist erlaubt."""
+        if user_input is not None:
+            self._data.update(user_input)
+            return await self._role_step("signals", None)
+        def choice(key: str, options: list[str]) -> selector.SelectSelector:
+            return selector.SelectSelector(selector.SelectSelectorConfig(
+                options=[NO_PROFILE, *options], translation_key=key, mode=selector.SelectSelectorMode.DROPDOWN))
+        return self.async_show_form(step_id="user", data_schema=vol.Schema({
+            vol.Required(CONF_INTERFACE_PROFILE, default=NO_PROFILE): choice(CONF_INTERFACE_PROFILE,
+                                                                             list(INTERFACE_PROFILES)),
+            vol.Required(CONF_MODEL_PROFILE, default=NO_PROFILE): choice(CONF_MODEL_PROFILE, list(MODEL_PROFILES)),
+        }))
+
+    async def async_step_signals(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return await self._role_step("signals", user_input)
 
     async def async_step_measurements(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         return await self._role_step("measurements", user_input)
@@ -86,7 +110,7 @@ class HeatpumpAuditConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         self._reconfigure = True
         self._data = dict(self._get_reconfigure_entry().data)
-        return await self._role_step("user", None)
+        return await self._role_step("signals", None)
 
     @staticmethod
     def async_get_options_flow(config_entry) -> HeatpumpAuditOptionsFlow:

@@ -3,3 +3,4 @@ reports/
 .pytest_cache/
 .pytest_cache/
 influx_credentials.txt
+prototype/site.json

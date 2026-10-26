@@ -1,67 +1,45 @@
-"""Konstanten: Rollen, Mahtanar-Vorbelegung, Stammdaten, Prüfungen."""
+"""Konstanten: Rollen, Stammdaten, Prüfungen."""
 
 from __future__ import annotations
 
 from datetime import timedelta
 
 from .audit_core.actions import CONTROL_ROLES
-from .audit_core.profiles import HEATING_HOURS_EXAMPLE_SITE, PUD_SHWM140_MIN_CAPACITY_KW
 from .audit_core.runner import CAPACITY, DATA_BASIS, EFFICIENCY, FLOW_TEMPERATURE
 
 DOMAIN = "heatpump_audit"
 UPDATE_INTERVAL = timedelta(hours=1)
 
-# Rollen je Config-Flow-Schritt (Spezifikation 1.3). Wert = Vorbelegung für die Mahtanar-Anlage.
-ROLE_STEPS: dict[str, dict[str, str]] = {
-    "user": {
-        "compressor_running": "binary_sensor.heatpump_compressor",
-        "compressor_frequency": "sensor.heatpump_compressor_frequency",
-        "pump_running": "binary_sensor.heatpump_water_pump_status",
-        "defrost": "binary_sensor.heatpump_defrost",
-        "dhw_active": "binary_sensor.heatpump_3_way_valve",
-        "immersion_heater": "binary_sensor.heatpump_immersion_heater",
-        "booster_heater": "binary_sensor.heatpump_booster_heater",
-        "booster_heater_2": "binary_sensor.heatpump_booster_heater_2",
-        "heartbeat": "sensor.heatpump_esp_uptime",
-    },
-    "measurements": {
-        "electricity_meter": "sensor.wp_zaehler_bezug",
-        "flow_temp": "sensor.heatpump_feed_temp",
-        "return_temp": "sensor.heatpump_return_temp",
-        "flow_rate": "sensor.heatpump_flow_rate",
-        "outdoor_temp": "sensor.heatpump_outside_temp",
-        "outdoor_temp_reference": "weather.home",
-    },
-    "controller": {
-        "ftc_heating_consumed": "sensor.heatpump_heating_consumed",
-        "ftc_dhw_consumed": "sensor.heatpump_dhw_consumed",
-        "ftc_controller_date": "sensor.heatpump_controller_date",
-    },
+# Rollen je Config-Flow-Schritt (Spezifikation 1.3). Vorschläge für Entitäten kommen aus den Profilen (profiles.py).
+ROLE_STEPS: dict[str, tuple[str, ...]] = {
+    "signals": ("compressor_running", "compressor_frequency", "pump_running", "defrost", "dhw_active", "immersion_heater",
+             "booster_heater", "booster_heater_2", "heartbeat"),
+    "measurements": ("electricity_meter", "flow_temp", "return_temp", "flow_rate", "outdoor_temp",
+                     "outdoor_temp_reference"),
+    "controller": ("controller_heating_consumed", "controller_dhw_consumed", "controller_date"),
     # Heizkreis hinter Puffer oder Weiche und Raum (Audit 2); bei Anlagen ohne Trennung leer lassen
-    "circuit": {
-        "flow_setpoint": "sensor.heatpump_zone_1_setpoint_value",
-        "circuit_flow_temp": "sensor.heatpump_z1_feed_temp",
-        "circuit_return_temp": "sensor.heatpump_z1_return_temp",
-        "circuit_pump_running": "",
-        "room_temp": "",
-    },
+    "circuit": ("flow_setpoint", "circuit_flow_temp", "circuit_return_temp", "circuit_pump_running", "room_temp"),
     # Stellgrößen (Spezifikation 1.8): Was die Schnittstelle zur Wärmepumpe schreiben kann. Nur zugeordnete Rollen
-    # erscheinen als Vorschlag in der Spalte „Aktion“; Heizkurve und Pumpe kann der Mahtanar nicht schreiben.
-    "controls": {
-        "circuit_pump_speed": "",
-        "heating_curve_shift": "",
-        "short_cycle_lockout": "select.heatpump_short_cycle_lockout_duration_min",
-        "short_cycle_min_run": "number.heatpump_short_cycle_minimum_on_time",
-    },
+    # erscheinen als Vorschlag in der Spalte „Aktion“.
+    "controls": tuple(CONTROL_ROLES),
 }
-assert list(ROLE_STEPS["controls"]) == list(CONTROL_ROLES)
 ROLE_DOMAINS: dict[str, list[str]] = {
-    role: ["binary_sensor"] for role in ROLE_STEPS["user"] if role not in ("compressor_frequency", "heartbeat")
+    role: ["binary_sensor"] for role in ROLE_STEPS["signals"] if role not in ("compressor_frequency", "heartbeat")
 } | {"outdoor_temp_reference": ["sensor", "weather"], "circuit_pump_running": ["binary_sensor"]} | {
     role: list(spec.domains) for role, spec in CONTROL_ROLES.items()
 }
+# Umbenannte Rollen (Version 1 → 2): herstellerneutrale Namen statt FTC (Mitsubishi-Steuerung).
+ROLE_RENAMES = {"ftc_heating_consumed": "controller_heating_consumed", "ftc_dhw_consumed": "controller_dhw_consumed",
+                "ftc_controller_date": "controller_date"}
+
+
+def migrate_roles(data: dict) -> dict:
+    """Rollen-Zuordnung eines älteren Eintrags auf die heutigen Rollen-Keys bringen."""
+    return {ROLE_RENAMES.get(k, k): v for k, v in data.items()}
+
+
 # Rollen mit Text-Zustand; alle anderen werden als Zahl gelesen (on/off → 1/0).
-TEXT_ROLES = {"ftc_controller_date"}
+TEXT_ROLES = {"controller_date"}
 # Bei einer weather-Entität wird dieses Attribut statt des Zustands gelesen.
 WEATHER_ATTRIBUTE = "temperature"
 
@@ -86,26 +64,26 @@ OPTION_SECTIONS: dict[str, tuple[str, ...]] = {
     "evaluation": (CONF_WINDOW_DAYS, CONF_DATA_SINCE, CONF_DATA_SOURCE),
 }
 # Optionale Stammdaten: leer heißt „unbekannt“, die abhängige Prüfung ist dann nicht bewertbar.
-OPTIONAL_OPTIONS = (CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_CAPACITY_MIN_TABLE, CONF_HEATING_HOURS)
+OPTIONAL_OPTIONS = (CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_CAPACITY_MIN_TABLE, CONF_HEATING_HOURS,
+                    CONF_IMMERSION_HEATER_KW, CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW, CONF_DATA_SINCE)
 HYDRAULIC_SEPARATIONS = ["unknown", "none", "series_buffer", "parallel_buffer", "hydraulic_separator"]
 # auto: InfluxDB 2, wenn die HA-Integration InfluxDB eingerichtet ist, sonst Recorder
 DATA_SOURCES = ["auto", "influxdb", "recorder"]
 SOURCE_INFLUXDB = "influxdb"
 SOURCE_RECORDER = "recorder"
 DEFAULT_OPTIONS = {
-    CONF_IMMERSION_HEATER_KW: 3.0,  # EHPT20X Werkseinstellung, OCH714E Tab. 9.5.2
-    CONF_BOOSTER_HEATER_KW: 0.0,
-    CONF_BOOSTER_HEATER_2_KW: 0.0,
+    CONF_IMMERSION_HEATER_KW: None,  # Datenblatt; ohne Wert ist C5 nicht bewertbar, sobald der Heizstab läuft
+    CONF_BOOSTER_HEATER_KW: None,
+    CONF_BOOSTER_HEATER_2_KW: None,
     CONF_WINDOW_DAYS: 30,  # mit Recorder wirkt höchstens dessen Aufbewahrung (Standard 10 Tage)
-    CONF_DATA_SINCE: "2026-10-24 15:46:00",  # Einbau Mahtanar
+    CONF_DATA_SINCE: None,  # z. B. Einbau der Schnittstelle; ohne Wert gilt das ganze Fenster
     CONF_DATA_SOURCE: "auto",
     CONF_HYDRAULIC_SEPARATION: "unknown",
     CONF_FLOW_RATE_MIN_LPM: None,  # Herstellerangabe, ohne Wert wird der Durchfluss nicht gegen ein Minimum geprüft
     CONF_CIRCUIT_FLOW_MAX_LPM: None,  # größter Förderstrom der Heizkreispumpe; ohne Wert wird T3 nicht gekappt
     CONF_ROOM_TEMP_TARGET: 20.0,  # Norm-Innentemperatur Wohnräume (DIN EN 12831)
-    # Vorbelegung dieser Anlage (PUD-SHWM140, PLZ 53560); bei anderen Anlagen leeren oder ersetzen
-    CONF_CAPACITY_MIN_TABLE: PUD_SHWM140_MIN_CAPACITY_KW,
-    CONF_HEATING_HOURS: HEATING_HOURS_EXAMPLE_SITE,
+    CONF_CAPACITY_MIN_TABLE: None,  # Datenblatt, Vorschlag aus dem Modell-Profil (profiles.py)
+    CONF_HEATING_HOURS: None,  # Klimakarte des Bundesverbands Wärmepumpe für den Standort
 }
 MASTER_KEYS = (CONF_HYDRAULIC_SEPARATION, CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_ROOM_TEMP_TARGET, CONF_CAPACITY_MIN_TABLE,
                CONF_HEATING_HOURS)
@@ -134,8 +112,8 @@ CHECKS: list[tuple[str, str, str]] = [
     (DATA_BASIS, "D2", "coverage"),
     (DATA_BASIS, "D3", "resolution"),
     (DATA_BASIS, "D4", "sensor_offset"),
-    (DATA_BASIS, "D5", "meter_vs_ftc"),
-    (DATA_BASIS, "D6", "ftc_day_boundary"),
+    (DATA_BASIS, "D5", "meter_vs_controller"),
+    (DATA_BASIS, "D6", "controller_day_boundary"),
     (DATA_BASIS, "D8", "meter_resolution"),
     (DATA_BASIS, "D9", "restart_artifacts"),
     (DATA_BASIS, "D10", "outdoor_sensor"),

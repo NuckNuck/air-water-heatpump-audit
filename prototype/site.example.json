@@ -1,0 +1,20 @@
+{
+  "interface_profile": "esphome_ecodan",
+  "model_profile": "mitsubishi_pud_shwm140",
+  "roles": {
+    "electricity_meter": "sensor.heat_pump_meter_import"
+  },
+  "master": {
+    "hydraulic_separation": "parallel_buffer",
+    "flow_rate_min_lpm": 14.3,
+    "room_temp_target": 21.0,
+    "heating_hours": 6000
+  },
+  "heater_kw": {
+    "booster_heater": 0.0,
+    "booster_heater_2": 0.0
+  },
+  "data_since": "2026-01-01T00:00",
+  "influx_since": "2026-01-01T00:00",
+  "recorder_keep_days": 10
+}

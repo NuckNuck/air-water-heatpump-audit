@@ -2,6 +2,14 @@
   "config": {
     "step": {
       "user": {
+        "title": "WP-Audit: Profile",
+        "description": "Vorschläge für die folgende Zuordnung. Ein Schnittstellen-Profil schlägt passende Entitäten vor, ein Modell-Profil Werte aus dem Datenblatt. „Keins“ wählen, wenn nichts passt – alles lässt sich danach ändern.",
+        "data": {
+          "interface_profile": "Schnittstelle zur Wärmepumpe",
+          "model_profile": "Modell der Wärmepumpe"
+        }
+      },
+      "signals": {
         "title": "WP-Audit: Betriebssignale",
         "description": "Ein/Aus-Signale der Wärmepumpe zuordnen. Jedes Feld ist optional; Prüfungen ohne Daten werden „nicht bewertbar“.",
         "data": {
@@ -32,9 +40,9 @@
         "title": "WP-Audit: Werte der Steuerung",
         "description": "Nur zur Plausibilisierung in Audit 0.",
         "data": {
-          "ftc_heating_consumed": "Steuerung: Strom Heizen, Vortag",
-          "ftc_dhw_consumed": "Steuerung: Strom Warmwasser, Vortag",
-          "ftc_controller_date": "Datum der Steuerung"
+          "controller_heating_consumed": "Steuerung: Strom Heizen, Vortag",
+          "controller_dhw_consumed": "Steuerung: Strom Warmwasser, Vortag",
+          "controller_date": "Datum der Steuerung"
         }
       },
       "circuit": {
@@ -185,7 +193,7 @@
           "not_assessable": "Nicht bewertbar"
         }
       },
-      "meter_vs_ftc": {
+      "meter_vs_controller": {
         "name": "D5 Zähler gegen Steuerung",
         "state": {
           "ok": "OK",
@@ -195,7 +203,7 @@
           "not_assessable": "Nicht bewertbar"
         }
       },
-      "ftc_day_boundary": {
+      "controller_day_boundary": {
         "name": "D6 Tageswechsel der Steuerung",
         "state": {
           "ok": "OK",
@@ -456,6 +464,18 @@
         "dhw_setting": "Warmwasser-Einstellung",
         "hardware": "Umbau an der Anlage",
         "other": "Sonstiges"
+      }
+    },
+    "interface_profile": {
+      "options": {
+        "none": "Keins",
+        "esphome_ecodan": "Mitsubishi Ecodan mit ESPHome (esphome-ecodan-hp, z. B. Mahtanar)"
+      }
+    },
+    "model_profile": {
+      "options": {
+        "none": "Keins",
+        "mitsubishi_pud_shwm140": "Mitsubishi PUD-SHWM140YAA"
       }
     }
   },

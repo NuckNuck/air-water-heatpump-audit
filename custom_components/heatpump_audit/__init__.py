@@ -14,7 +14,8 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CARD_URL, DOMAIN
+from .const import CARD_URL, DOMAIN, migrate_roles
+from .profiles import INTERFACE_PROFILES
 from .coordinator import HeatpumpAuditConfigEntry, HeatpumpAuditCoordinator, timeline_store
 
 PLATFORMS = [Platform.SENSOR]
@@ -29,6 +30,20 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """
     card = Path(__file__).parent / "frontend" / "heatpump-audit-card.js"
     await hass.http.async_register_static_paths([StaticPathConfig(CARD_URL, str(card), False)])
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: HeatpumpAuditConfigEntry) -> bool:
+    """Version 1 → 2: Rollen der Steuerung herstellerneutral benannt (F146)."""
+    if entry.version > 2:
+        return False  # neuere Fassung, die diese nicht kennt
+    if entry.version == 1:
+        data = migrate_roles(dict(entry.data))
+        # Version 1 belegte die Rollen fest mit esphome-ecodan-hp vor; das ist jetzt ein wählbares Profil.
+        ecodan = INTERFACE_PROFILES["esphome_ecodan"]
+        if any(data.get(role) == eid for role, eid in ecodan.items()):
+            data.setdefault("interface_profile", "esphome_ecodan")
+        hass.config_entries.async_update_entry(entry, data=data, version=2)
     return True
 
 

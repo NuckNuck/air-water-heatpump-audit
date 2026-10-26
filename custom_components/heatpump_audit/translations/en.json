@@ -2,6 +2,14 @@
   "config": {
     "step": {
       "user": {
+        "title": "Heat pump audit: profiles",
+        "description": "Suggestions for the following mapping. An interface profile suggests matching entities, a model profile values from the data sheet. Choose “None” if nothing fits – everything can be changed afterwards.",
+        "data": {
+          "interface_profile": "Interface to the heat pump",
+          "model_profile": "Heat pump model"
+        }
+      },
+      "signals": {
         "title": "Heat pump audit: operating signals",
         "description": "Assign the on/off signals of the heat pump. Every field is optional; checks without data become 'not assessable'.",
         "data": {
@@ -32,9 +40,9 @@
         "title": "Heat pump audit: controller values",
         "description": "Only used for plausibility checks in audit 0.",
         "data": {
-          "ftc_heating_consumed": "Controller: electricity heating, previous day",
-          "ftc_dhw_consumed": "Controller: electricity hot water, previous day",
-          "ftc_controller_date": "Controller date"
+          "controller_heating_consumed": "Controller: electricity heating, previous day",
+          "controller_dhw_consumed": "Controller: electricity hot water, previous day",
+          "controller_date": "Controller date"
         }
       },
       "circuit": {
@@ -185,7 +193,7 @@
           "not_assessable": "Not assessable"
         }
       },
-      "meter_vs_ftc": {
+      "meter_vs_controller": {
         "name": "D5 meter vs. controller",
         "state": {
           "ok": "OK",
@@ -195,7 +203,7 @@
           "not_assessable": "Not assessable"
         }
       },
-      "ftc_day_boundary": {
+      "controller_day_boundary": {
         "name": "D6 controller day boundary",
         "state": {
           "ok": "OK",
@@ -456,6 +464,18 @@
         "dhw_setting": "Hot water setting",
         "hardware": "Hardware change",
         "other": "Other"
+      }
+    },
+    "interface_profile": {
+      "options": {
+        "none": "None",
+        "esphome_ecodan": "Mitsubishi Ecodan with ESPHome (esphome-ecodan-hp, e.g. Mahtanar)"
+      }
+    },
+    "model_profile": {
+      "options": {
+        "none": "None",
+        "mitsubishi_pud_shwm140": "Mitsubishi PUD-SHWM140YAA"
       }
     }
   },

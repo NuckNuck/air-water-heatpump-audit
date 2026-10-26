@@ -104,6 +104,15 @@ class CycleTest(unittest.TestCase):
         r = c3.check_backup_heater({"immersion_heater": heater}, {"immersion_heater": 3.0}, 1000, 0, 7 * 24 * H)
         self.assertEqual((r.value, r.verdict), (3.0, HINT))
 
+    def test_backup_heater_without_power_is_not_assessable(self):
+        heater = onoff(0, 10 * H)
+        r = c3.check_backup_heater({"immersion_heater": heater}, {"immersion_heater": None}, 1000, 0, 7 * 24 * H)
+        self.assertEqual(r.verdict, NOT_ASSESSABLE)
+        self.assertIn("Stammdaten fehlen", r.text)
+        # Lief der Heizstab nie, braucht es seine Leistung nicht
+        r = c3.check_backup_heater({"immersion_heater": []}, {"immersion_heater": None}, 1000, 0, 7 * 24 * H)
+        self.assertEqual((r.value, r.verdict), (0.0, OK))
+
 
 class DataBasisTest(unittest.TestCase):
     def test_heartbeat_gaps_and_coverage(self):
@@ -167,7 +176,12 @@ if __name__ == "__main__":
 
 
 from audit_core import heat
-from audit_core.profiles import PUD_SHWM140_MIN_CAPACITY_KW as TABLE
+import importlib.util as _ilu
+_spec = _ilu.spec_from_file_location("profiles", __import__("pathlib").Path(__file__).parents[1]
+                                     / "custom_components" / "heatpump_audit" / "profiles.py")
+_profiles = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(_profiles)
+TABLE = _profiles.MODEL_PROFILES["mitsubishi_pud_shwm140"]["capacity_min_table"]
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -220,17 +234,17 @@ class DailyChecksTest(unittest.TestCase):
         a, b = days.full_days(self.start, self.end)[0]
         self.assertEqual(b - a, 25 * H)
 
-    def test_meter_vs_ftc(self):
+    def test_meter_vs_controller(self):
         meter = [(m, 10.0 * i) for i, m in enumerate(self._midnights())]  # 10 kWh/Tag laut Zähler
-        ftc = [(m + 600, 11.0) for m in self._midnights()]  # FTC meldet je Vortag 11 kWh
-        r = d0.check_meter_vs_ftc(meter, [ftc], self.hb, self.start, self.end)
+        ctrl = [(m + 600, 11.0) for m in self._midnights()]  # Steuerung meldet je Vortag 11 kWh
+        r = d0.check_meter_vs_controller(meter, [ctrl], self.hb, self.start, self.end)
         self.assertEqual((r.value, r.verdict), (1.1, OK))
 
-    def test_ftc_day_boundary(self):
+    def test_controller_day_boundary(self):
         dates = [(m + 2 * M, str(i)) for i, m in enumerate(self._midnights())]
-        self.assertEqual(d0.check_ftc_day_boundary(dates, self.start, self.end).verdict, OK)
+        self.assertEqual(d0.check_controller_day_boundary(dates, self.start, self.end).verdict, OK)
         late = [(m - 60 * M, str(i)) for i, m in enumerate(self._midnights())]
-        r = d0.check_ftc_day_boundary(late, self.start - 2 * H, self.end)
+        r = d0.check_controller_day_boundary(late, self.start - 2 * H, self.end)
         self.assertEqual((r.value, r.verdict), (-60, HINT))
 
     def test_outdoor_sensor(self):
@@ -498,8 +512,8 @@ class ActionTest(unittest.TestCase):
         self.assertIn("≈ 32,6 statt 33,6 °C", t6.action["target"])
 
     def test_day_boundary_direction(self):
-        late, early = attach_actions([CheckResult("D6", "ftc_day_boundary", HINT, 60.0, "min"),
-                                      CheckResult("D6", "ftc_day_boundary", HINT, -60.0, "min")])
+        late, early = attach_actions([CheckResult("D6", "controller_day_boundary", HINT, 60.0, "min"),
+                                      CheckResult("D6", "controller_day_boundary", HINT, -60.0, "min")])
         self.assertEqual(late.action["target"], "Uhr um 60 min vorstellen")
         self.assertEqual(early.action["target"], "Uhr um 60 min zurückstellen")
 
@@ -641,7 +655,7 @@ class ReadinessTest(unittest.TestCase):
         self.assertEqual(rd.check_eta(p, local(2026, 10, 26, 21)), (False, local(2026, 10, 28)))
 
     def test_full_days_lag_and_reached(self):
-        p = progress(1, 7, "days", FULL_DAYS, local(2026, 10, 24, 15, 46), lag_h=12)  # D5: FTC-Wert erst mittags
+        p = progress(1, 7, "days", FULL_DAYS, local(2026, 10, 24, 15, 46), lag_h=12)  # D5: Wert der Steuerung erst mittags
         self.assertEqual(rd.check_eta(p, local(2026, 10, 26, 21)), (False, local(2026, 11, 1, 12)))
         p = progress(3, 3, "days", FULL_DAYS, local(2026, 10, 24, 15, 46))
         self.assertEqual(rd.check_eta(p, local(2026, 10, 30)), (True, local(2026, 10, 28)))

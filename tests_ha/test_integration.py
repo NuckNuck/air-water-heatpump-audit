@@ -12,16 +12,18 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.components.recorder.common import async_wait_recording_done
 
 from custom_components.heatpump_audit.const import CHECKS, DEFAULT_OPTIONS, DOMAIN, OPTION_SECTIONS, ROLE_STEPS
+from custom_components.heatpump_audit.profiles import COMMON_ROLE_SUGGESTIONS, INTERFACE_PROFILES, MODEL_PROFILES
 from custom_components.heatpump_audit.recorder_source import to_series
 
-MAHTANAR = {role: eid for step in ROLE_STEPS.values() for role, eid in step.items()}
+MAHTANAR = ({"interface_profile": "esphome_ecodan", "electricity_meter": "sensor.wp_zaehler_bezug"}
+            | COMMON_ROLE_SUGGESTIONS | INTERFACE_PROFILES["esphome_ecodan"])
 
 
 def test_to_series_converts_states():
     states = [State("binary_sensor.x", "on"), State("binary_sensor.x", "unavailable"), State("binary_sensor.x", "off")]
     assert [v for _, v in to_series("compressor_running", states)] == [1.0, 0.0]
     assert [v for _, v in to_series("flow_temp", [State("sensor.t", "31.5"), State("sensor.t", "x")])] == [31.5]
-    assert [v for _, v in to_series("ftc_controller_date", [State("sensor.d", "2026-10-24")])] == ["2026-10-24"]
+    assert [v for _, v in to_series("controller_date", [State("sensor.d", "2026-10-24")])] == ["2026-10-24"]
     weather = State("weather.home", "cloudy", {"temperature": 9.5})
     assert [v for _, v in to_series("outdoor_temp_reference", [weather])] == [9.5]
 
@@ -29,7 +31,10 @@ def test_to_series_converts_states():
 async def test_config_flow_prefills_and_creates_entry(hass: HomeAssistant):
     hass.states.async_set("binary_sensor.heatpump_compressor", "off")
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
-    assert result["step_id"] == "user"
+    assert result["step_id"] == "user"  # Profile
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"interface_profile": "esphome_ecodan", "model_profile": "mitsubishi_pud_shwm140"})
+    assert result["step_id"] == "signals"
     schema = {str(k): k.description for k in result["data_schema"].schema}
     assert schema["compressor_running"] == {"suggested_value": "binary_sensor.heatpump_compressor"}
     assert schema["defrost"] is None  # existiert hier nicht → keine Vorbelegung
@@ -47,7 +52,31 @@ async def test_config_flow_prefills_and_creates_entry(hass: HomeAssistant):
         result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"]["compressor_running"] == "binary_sensor.heatpump_compressor"
-    assert result["options"] == DEFAULT_OPTIONS
+    assert result["options"]["capacity_min_table"] == MODEL_PROFILES["mitsubishi_pud_shwm140"]["capacity_min_table"]
+    assert result["options"]["immersion_heater_kw"] == 3.0  # aus dem Modell-Profil
+    assert result["options"]["heating_hours"] is None  # kein Standort-Profil
+
+
+async def test_config_flow_without_profile_has_no_suggestions(hass: HomeAssistant):
+    hass.states.async_set("binary_sensor.heatpump_compressor", "off")
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"interface_profile": "none", "model_profile": "none"})
+    schema = {str(k): k.description for k in result["data_schema"].schema}
+    assert schema["compressor_running"] is None
+
+
+async def test_migrate_v1_renames_controller_roles(hass: HomeAssistant):
+    data = {"compressor_running": "binary_sensor.heatpump_compressor",
+            "ftc_heating_consumed": "sensor.heatpump_heating_consumed", "ftc_controller_date": "sensor.d"}
+    entry = MockConfigEntry(domain=DOMAIN, data=data, options=DEFAULT_OPTIONS, version=1)
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert entry.version == 2
+    assert entry.data["controller_heating_consumed"] == "sensor.heatpump_heating_consumed"
+    assert entry.data["controller_date"] == "sensor.d" and "ftc_controller_date" not in entry.data
+    assert entry.data["interface_profile"] == "esphome_ecodan"
 
 
 async def test_sensors_from_recorder(hass: HomeAssistant):
@@ -169,7 +198,7 @@ async def test_reconfigure_adds_new_roles_and_keeps_cleared(hass: HomeAssistant)
     entry.add_to_hass(hass)
     with patch("custom_components.heatpump_audit.async_setup_entry", return_value=True):
         result = await entry.start_reconfigure_flow(hass)
-        assert result["step_id"] == "user"
+        assert result["step_id"] == "signals"
         schema = {str(k): k.description for k in result["data_schema"].schema}
         assert schema["defrost"] is None  # bewusst geleert, bleibt leer
         for _ in range(3):

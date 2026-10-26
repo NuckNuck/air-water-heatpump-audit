@@ -17,12 +17,12 @@ from .actions import attach_actions
 from .result import FULL_DAYS, HINT, NOT_ASSESSABLE, OK, CheckResult, overall, progress
 from .series import Series, clip, intervals_where
 
-# Rollen-Keys (Spezifikation 1.3); die FTC-Werte sind je Kreis eigene Rollen.
+# Rollen-Keys (Spezifikation 1.3): herstellerneutral; was eine Rolle bedeutet, steht in den Übersetzungen.
 ROLE_KEYS = (
     "electricity_meter", "compressor_running", "compressor_frequency", "flow_temp", "return_temp", "flow_rate",
     "outdoor_temp", "outdoor_temp_reference", "pump_running", "defrost", "dhw_active", "immersion_heater",
-    "booster_heater", "booster_heater_2", "heartbeat", "ftc_heating_consumed", "ftc_dhw_consumed",
-    "ftc_controller_date", "flow_setpoint", "circuit_flow_temp", "circuit_return_temp", "circuit_pump_running",
+    "booster_heater", "booster_heater_2", "heartbeat", "controller_heating_consumed", "controller_dhw_consumed",
+    "controller_date", "flow_setpoint", "circuit_flow_temp", "circuit_return_temp", "circuit_pump_running",
     "room_temp",
 )
 HEATER_ROLES = ("immersion_heater", "booster_heater", "booster_heater_2")
@@ -87,9 +87,9 @@ def run_audits(s: dict[str, Series], start: float, end: float, *, recorder_keep_
         d0.check_resolution({k: s[k] for k in ("flow_temp", "return_temp", "flow_rate", "outdoor_temp")},
                             s["flow_temp"], s["return_temp"], running, start, end),
         offset,
-        d0.check_meter_vs_ftc(s["electricity_meter"], [s["ftc_heating_consumed"], s["ftc_dhw_consumed"]], hb, start,
-                              end, tz),
-        d0.check_ftc_day_boundary(s["ftc_controller_date"], start, end, tz),
+        d0.check_meter_vs_controller(s["electricity_meter"], [s["controller_heating_consumed"],
+                                                              s["controller_dhw_consumed"]], hb, start, end, tz),
+        d0.check_controller_day_boundary(s["controller_date"], start, end, tz),
         d0.check_meter_resolution(s["electricity_meter"]),
         d0.check_restarts(hb, start, end),
         d0.check_outdoor_sensor(s["outdoor_temp"], s["outdoor_temp_reference"], s["defrost"], start, end, tz),

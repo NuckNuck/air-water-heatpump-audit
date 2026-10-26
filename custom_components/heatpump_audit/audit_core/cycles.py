@@ -142,11 +142,19 @@ def starts_per_year_verdict(projection: float) -> str:
     return HINT if verdict == WARN else verdict
 
 
-def check_backup_heater(heaters: dict[str, Series], power_kw: dict[str, float], electricity_kwh: float | None,
+def check_backup_heater(heaters: dict[str, Series], power_kw: dict[str, float | None], electricity_kwh: float | None,
                         start: float, end: float, min_days: float = 7) -> CheckResult:
-    """C5: Heizstab-Anteil am Strom ≈ Einschaltdauer × Nennleistung ÷ Zählerstrom."""
+    """C5: Heizstab-Anteil am Strom ≈ Einschaltdauer × Nennleistung ÷ Zählerstrom.
+
+    Ein Heizstab, der lief, dessen Leistung aber nicht in den Stammdaten steht, macht die Prüfung nicht bewertbar.
+    """
     hours = {k: total(intervals_where(s, _on, start, end)) / 3600 for k, s in heaters.items()}
-    heater_kwh = sum(hours[k] * power_kw.get(k, 0.0) for k in hours)
+    unknown = [k for k, h in hours.items() if h > 0 and power_kw.get(k) is None]
+    if unknown:
+        return CheckResult("C5", "backup_heater_share", NOT_ASSESSABLE,
+                           text="Stammdaten fehlen: Leistung von Heizstab bzw. Zusatzheizung.", origin=DERIVED,
+                           details={"on_hours": hours, "missing_power": unknown})
+    heater_kwh = sum(hours[k] * float(power_kw.get(k) or 0.0) for k in hours)
     details = {"on_hours": hours, "heater_kwh": round(heater_kwh, 2)}
     prog = progress((end - start) / 3600, min_days * 24, "hours", ELAPSED, start)
     if (end - start) < min_days * 86400 or not electricity_kwh:
