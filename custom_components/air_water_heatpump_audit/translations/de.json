@@ -106,7 +106,7 @@
               "hydraulic_separation": "Wie sind Wärmepumpe und Heizkreis verbunden? Bestimmt, ob der Pufferverlust (T1) geprüft wird.",
               "flow_rate_min_lpm": "Kleinster zulässiger Durchfluss der Wärmepumpe laut Hersteller (T4).",
               "circuit_flow_max_lpm": "Größter Förderstrom der Heizkreispumpe laut Datenblatt (höchste Kennlinie bei Förderhöhe 0); gilt unabhängig von der Einstellung als Obergrenze. Die Schätzung in T3 zeigt nie mehr an (1 m³/h = 16,7 l/min).",
-              "capacity_min_table": "Kleinste Heizleistung in kW je Vorlauftemperatur und Außentemperatur (C4). Form: Vorlauf: {Außentemperatur: kW}, z. B. 35: {-7: 3.9, 2: 3.5, 7: 3.5}. Zwischenwerte werden linear interpoliert.",
+              "capacity_min_table": "Kleinste Heizleistung in kW je Vorlauftemperatur und Außentemperatur (C4). Form (YAML): je Vorlauftemperatur eine Zeile, darunter eingerückt Außentemperatur: kW, z. B. „35:“ und darunter „-7: 3.9“, „2: 3.5“, „7: 3.5“. Zwischenwerte werden linear interpoliert.",
               "immersion_heater_kw": "Elektrischer Heizstab im Speicher (C5).",
               "booster_heater_kw": "Elektrische Zusatzheizung im Heizkreis (C5).",
               "booster_heater_2_kw": "Zweite Stufe der Zusatzheizung, falls vorhanden (C5)."
@@ -141,7 +141,7 @@
       }
     },
     "error": {
-      "invalid_capacity_table": "Die Mindestleistung hat nicht die erwartete Form. Beispiel: 35: {-7: 3.9, 2: 3.5, 7: 3.5}"
+      "invalid_capacity_table": "Die Mindestleistung hat nicht die erwartete Form. Beispiel: „35:“ und darunter eingerückt „-7: 3.9“, „2: 3.5“, „7: 3.5“."
     }
   },
   "entity": {

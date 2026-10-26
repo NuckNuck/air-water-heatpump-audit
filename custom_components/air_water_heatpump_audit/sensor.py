@@ -11,6 +11,7 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -28,6 +29,12 @@ def _iso(t: float) -> str:
     return datetime.fromtimestamp(t, timezone.utc).isoformat()
 
 
+def _main_device_info(entry: AirWaterAuditConfigEntry) -> DeviceInfo:
+    """Hauptgerät des Eintrags (Zeitstrahl); die Audit-Geräte hängen darunter."""
+    return DeviceInfo(identifiers={(DOMAIN, entry.entry_id)}, name="Luft-Wasser-Wärmepumpen-Audit",
+                      manufacturer="air-water-heatpump-audit", model="Zeitstrahl", entry_type=DeviceEntryType.SERVICE)
+
+
 def check_entity_id(check_id: str, key: str) -> str:
     return f"sensor.air_water_heatpump_audit_{check_id.lower()}_{key}"
 
@@ -35,12 +42,17 @@ def check_entity_id(check_id: str, key: str) -> str:
 async def async_setup_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry,
                             async_add_entities: AddConfigEntryEntitiesCallback) -> None:
     coordinator = entry.runtime_data
+    # Hauptgerät vorab anlegen: Die Audit-Geräte verweisen per via_device_id auf seine Registry-ID.
+    main = dr.async_get(hass).async_get_or_create(config_entry_id=entry.entry_id, **_main_device_info(entry))
     for sub in entry.subentries.values():
         if sub.subentry_type != SUBENTRY_AUDIT or sub.data.get(CONF_AUDIT) not in BY_ID:
             continue
         spec = BY_ID[sub.data[CONF_AUDIT]]
-        entities: list[SensorEntity] = [AuditSensor(coordinator, spec.audit_id)]
-        entities += [CheckSensor(coordinator, spec.audit_id, c.check_id, c.key) for c in spec.checks]
+        device = DeviceInfo(identifiers={(DOMAIN, f"{entry.entry_id}_{spec.audit_id}")},
+                            name=audit_title(spec.audit_id, language(hass)), manufacturer="air-water-heatpump-audit",
+                            model=spec.audit_id, via_device_id=main.id, entry_type=DeviceEntryType.SERVICE)
+        entities: list[SensorEntity] = [AuditSensor(coordinator, spec.audit_id, device)]
+        entities += [CheckSensor(coordinator, spec.audit_id, c.check_id, c.key, device) for c in spec.checks]
         async_add_entities(entities, config_subentry_id=sub.subentry_id)
     async_add_entities([TimelineSensor(coordinator)])
 
@@ -48,21 +60,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry
 class _Entity(CoordinatorEntity[AirWaterAuditCoordinator], SensorEntity):
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: AirWaterAuditCoordinator, unique_key: str, audit: str | None = None) -> None:
+    def __init__(self, coordinator: AirWaterAuditCoordinator, unique_key: str,
+                 device: DeviceInfo | None = None) -> None:
         super().__init__(coordinator)
         entry = coordinator.config_entry
         self._attr_unique_id = f"{entry.entry_id}_{unique_key}"
-        if audit is None:
-            self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, entry.entry_id)},
-                                                name="Luft-Wasser-Wärmepumpen-Audit",
-                                                manufacturer="air-water-heatpump-audit", model="Zeitstrahl",
-                                                entry_type=DeviceEntryType.SERVICE)
-        else:
-            self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, f"{entry.entry_id}_{audit}")},
-                                                name=audit_title(audit, language(coordinator.hass)),
-                                                manufacturer="air-water-heatpump-audit", model=audit,
-                                                via_device=(DOMAIN, entry.entry_id),
-                                                entry_type=DeviceEntryType.SERVICE)
+        self._attr_device_info = device or _main_device_info(entry)
 
     @property
     def available(self) -> bool:
@@ -79,8 +82,8 @@ class AuditSensor(_Base):
                                         "readiness", "audit", "audit_name", "color"})
     _attr_name = None  # Name = Gerät „Audit: …“
 
-    def __init__(self, coordinator: AirWaterAuditCoordinator, audit: str) -> None:
-        super().__init__(coordinator, audit, audit)
+    def __init__(self, coordinator: AirWaterAuditCoordinator, audit: str, device: DeviceInfo) -> None:
+        super().__init__(coordinator, audit, device)
         self._audit = audit
         self._attr_translation_key = audit
         self.entity_id = f"sensor.air_water_heatpump_audit_{audit}"
@@ -134,8 +137,9 @@ class AuditSensor(_Base):
 class CheckSensor(_Base):
     _unrecorded_attributes = frozenset({"action", "details", "help", "text", "progress"})
 
-    def __init__(self, coordinator: AirWaterAuditCoordinator, audit: str, check_id: str, key: str) -> None:
-        super().__init__(coordinator, f"{check_id.lower()}_{key}", audit)
+    def __init__(self, coordinator: AirWaterAuditCoordinator, audit: str, check_id: str, key: str,
+                 device: DeviceInfo) -> None:
+        super().__init__(coordinator, f"{check_id.lower()}_{key}", device)
         self._audit, self._check_id = audit, check_id
         self._attr_translation_key = key
         self.entity_id = check_entity_id(check_id, key)
