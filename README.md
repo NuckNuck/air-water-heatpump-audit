@@ -84,7 +84,7 @@ Jedes Grad weniger Vorlauftemperatur spart etwa 2–3 % Strom. Dieses Audit such
 | T3 Volumenstrom | Ob die Heizkreispumpe mehr Wasser bewegt als die Wärmepumpe (häufigste Ursache für T1). |
 | T4 Spreizung und Durchfluss | Temperaturunterschied Vor-/Rücklauf und Durchfluss im Vergleich zur Herstellerangabe. |
 | T5 Ist gegen Soll | Wie weit der tatsächliche Vorlauf über dem Sollwert der Heizkurve liegt (nur Info). |
-| T6 Reserve der Heizkurve | Ob die Räume dauerhaft wärmer sind als gewünscht – dann kann die Heizkurve tiefer. Braucht einen Raumthermometer. |
+| T6 Reserve der Heizkurve | Ob die Räume dauerhaft wärmer sind als gewünscht – dann kann die Heizkurve tiefer. Braucht ein Raumthermometer; ein Tag zählt erst, wenn es fast den ganzen Tag gemessen hat (der Einbautag zählt also meist nicht). |
 
 ### Audit 3 – Leistung: Passt die Wärmepumpe zum Haus?
 
@@ -323,6 +323,9 @@ entfernen.
   `prototype/site.example.json`, Verbindung über `HEATPUMP_AUDIT_INFLUX_URL` und `HEATPUMP_AUDIT_CREDENTIALS`.
 - Tests: `python3 -m unittest` (Kern, inkl. Vergleichsbericht `tests/golden/` einer synthetischen Anlage),
   `pytest tests_ha` in einer venv mit `pytest-homeassistant-custom-component` (Integration).
+- Texte: Zahlen mit `audit_core.result.num()` (Dezimalkomma), Anzahlen mit `count(n, Einzahl, Mehrzahl)`. In
+  `strings.json`/`translations/*.json` sind `{…}` Platzhalter – jede Sprache braucht genau die des englischen Texts
+  (Test `test_translation_placeholders_match_english`), Beispiele mit Klammern also nicht in diese Dateien.
 - Aufbau und Entscheidungen: [`docs/audit_modules_design.md`](docs/audit_modules_design.md).
 
 ## Lizenz
