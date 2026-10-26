@@ -1,4 +1,4 @@
-# WP-Audit – Prüfung für Luft-Wasser-Wärmepumpen in Home Assistant
+# Luft-Wasser-Wärmepumpen-Audit für Home Assistant
 
 > ## ⚠️ Entwicklungsversion
 >
@@ -6,10 +6,6 @@
 > Einstellungen können sich mit jedem Update noch ändern – auch so, dass man sie neu einrichten muss.** Sie liest nur
 > mit und ändert nichts an der Wärmepumpe. Die Urteile sind Hinweise, kein Gutachten: Bitte nichts an der Anlage
 > verstellen, ohne die Erklärung zur jeweiligen Prüfung gelesen zu haben, und im Zweifel den Fachbetrieb fragen.
->
-> Geplant ist die Umbenennung in **„Luft-Wasser-Wärmepumpen-Audit“** (neuer interner Name
-> `air_water_heatpump_audit`). Dann muss die Integration einmal neu eingerichtet werden; Einstellungen und Ereignisse
-> werden übernommen.
 
 ## Worum geht es?
 
@@ -17,8 +13,9 @@ Eine Wärmepumpe heizt fast immer – aber oft nicht so sparsam, wie sie könnte
 hoch eingestellt, die Pumpen fördern zu viel Wasser, die Wärmepumpe schaltet ständig ein und aus („taktet“) oder ein
 Temperaturfühler misst daneben. Von außen merkt man davon nichts, nur an der Stromrechnung.
 
-**WP-Audit** schaut sich die Messwerte an, die Home Assistant ohnehin von der Wärmepumpe aufzeichnet, und beantwortet
-vier Fragen:
+Das **Luft-Wasser-Wärmepumpen-Audit** schaut sich die Messwerte an, die Home Assistant ohnehin von der Wärmepumpe
+aufzeichnet, und beantwortet bis zu vier Fragen – jede ist ein eigenes **Audit**, das man einzeln zu- oder abschalten
+kann:
 
 | Audit | Frage | Beispiel für einen Befund |
 |---|---|---|
@@ -173,7 +170,7 @@ HACS ist ein „App-Store“ für Erweiterungen von Home Assistant. Falls noch n
 2. Oben rechts auf die **drei Punkte ⋮** → **Benutzerdefinierte Repositories**.
 3. Bei *Repository* eintragen: `https://github.com/NuckNuck/air-water-heatpump-audit`
    Bei *Typ*: **Integration** wählen → **Hinzufügen**.
-4. In HACS nach **WP-Audit** suchen, anklicken → unten rechts **Herunterladen** → nochmal **Herunterladen**.
+4. In HACS nach **Luft-Wasser-Wärmepumpen-Audit** suchen, anklicken → unten rechts **Herunterladen** → nochmal **Herunterladen**.
 5. **Home Assistant neu starten:** Einstellungen → oben rechts ⋮ → **Home Assistant neu starten** → **Neu starten**.
    Etwa eine Minute warten.
 
@@ -185,15 +182,21 @@ Weiter mit [Einrichten](#einrichten).
 2. In Home Assistant das Add-on **Samba share** oder **File editor** installieren (Einstellungen → Add-ons →
    Add-on-Store), damit man an die Dateien von Home Assistant kommt.
 3. Im Ordner `config` von Home Assistant einen Ordner `custom_components` anlegen, falls es ihn noch nicht gibt.
-4. Aus der entpackten ZIP-Datei den Ordner `custom_components/heatpump_audit` **komplett** dorthin kopieren. Danach
-   muss es `config/custom_components/heatpump_audit/manifest.json` geben.
+4. Aus der entpackten ZIP-Datei den Ordner `custom_components/air_water_heatpump_audit` **komplett** dorthin kopieren.
+   Danach muss es `config/custom_components/air_water_heatpump_audit/manifest.json` geben.
 5. **Home Assistant neu starten** (Einstellungen → ⋮ → Home Assistant neu starten).
 
 ### Einrichten
 
 1. **Einstellungen** → **Geräte & Dienste** → unten rechts **Integration hinzufügen**.
-2. Nach **WP-Audit** suchen und anklicken.
-3. Nun kommen fünf Seiten, auf denen Sie die Messwerte zuordnen (siehe Tabelle oben). In jedem Feld kann man tippen,
+2. Nach **Luft-Wasser-Wärmepumpen-Audit** suchen und anklicken.
+3. **Profile und Audits:**
+   - *Schnittstelle zur Wärmepumpe:* Gibt es Ihre Schnittstelle in der Liste (z. B. Mitsubishi Ecodan mit ESPHome),
+     wählen Sie sie aus – dann sind die folgenden Felder schon ausgefüllt. Sonst **Keins**.
+   - *Modell der Wärmepumpe:* liefert Werte aus dem Datenblatt. Steht Ihr Modell nicht drin: **Keins**.
+   - *Audits:* Haken bei den Audits, die laufen sollen. **Datenbasis** ist empfohlen – sie zeigt, wie belastbar die
+     anderen Urteile sind. Weitere Audits lassen sich später jederzeit zuschalten.
+4. Nun kommen fünf Seiten, auf denen Sie die Messwerte zuordnen (siehe Tabelle oben). In jedem Feld kann man tippen,
    um die passende Entität zu suchen, z. B. „vorlauf“ oder „flow“. Was es bei Ihrer Anlage nicht gibt, **leer
    lassen**.
    - **Betriebssignale:** Verdichter, Pumpe, Abtauen, Warmwasser, Heizstab, Lebenszeichen.
@@ -202,14 +205,26 @@ Weiter mit [Einrichten](#einrichten).
    - **Heizkreis und Raum:** nur ausfüllen, wenn zwischen Wärmepumpe und Heizkörpern ein Pufferspeicher oder eine
      hydraulische Weiche sitzt, und für den Raumthermometer.
    - **Stellgrößen:** nur, wenn Ihre Schnittstelle diese Werte verstellen kann. Das Audit ändert **nie** selbst etwas.
-4. **Absenden.** Die Integration rechnet einmal pro Stunde und direkt nach jedem Neustart.
+5. **Absenden.** Die Integration rechnet einmal pro Stunde und direkt nach jedem Neustart.
+
+Später ändern:
+
+- **Audit zuschalten:** Einstellungen → Geräte & Dienste → Luft-Wasser-Wärmepumpen-Audit → **Audit hinzufügen**.
+- **Audit abschalten:** auf derselben Seite beim Eintrag des Audits (z. B. „Audit: Leistung“) ⋮ → **Löschen**. Seine
+  Anzeigen verschwinden mit.
+- **Messwerte anders zuordnen:** beim Haupteintrag ⋮ → **Neu konfigurieren**.
+
+**Umstieg von „WP-Audit“:** Wer die Vorgängerin (interner Name `heatpump_audit`) noch eingerichtet hat, bekommt beim
+Einrichten die Wahl **Aus WP-Audit übernehmen**. Übernommen werden die Zuordnung der Messwerte, die Anlagendaten, die
+Ereignisse und die gespeicherten Tageswerte des Zeitstrahls; alle Audits werden zugeschaltet. Danach den alten Eintrag
+„WP-Audit“ löschen.
 
 ### Anlagendaten ergänzen (empfohlen)
 
 Manches lässt sich nicht messen, sondern steht im Datenblatt. Ohne diese Angaben zeigen einzelne Prüfungen „nicht
 bewertbar – Stammdaten fehlen“.
 
-**Einstellungen → Geräte & Dienste → WP-Audit → Zahnrad ⚙ (Konfigurieren):**
+**Einstellungen → Geräte & Dienste → Luft-Wasser-Wärmepumpen-Audit → Zahnrad ⚙ (Konfigurieren):**
 
 - **Anlage:** Art der Verbindung zwischen Wärmepumpe und Heizkreis (direkt, Pufferspeicher, Weiche), Mindestdurchfluss
   der Wärmepumpe, größter Förderstrom der Heizkreispumpe, kleinste Heizleistung laut Datenblatt, Leistung von
@@ -221,39 +236,38 @@ bewertbar – Stammdaten fehlen“.
 
 ### Karte auf dem Dashboard anzeigen
 
-Die Karten liefert die Integration mit; man muss sie einmal bekannt machen.
+Die Karten liefert die Integration mit und meldet sie selbst bei Home Assistant an – es ist nichts zu installieren.
 
-1. **Erweiterten Modus einschalten:** unten links auf Ihren Namen (Profil) → **Erweiterter Modus** an.
-2. **Einstellungen → Dashboards** → oben rechts ⋮ → **Ressourcen** → unten rechts **Ressource hinzufügen**.
-3. URL: `/heatpump_audit/heatpump-audit-card.js`
-   Ressourcentyp: **JavaScript-Modul** → **Erstellen**.
-4. Browser neu laden (Taste **F5**; in der Handy-App: Einstellungen der App → Companion App → Debugging →
-   Frontend-Cache zurücksetzen).
-5. Gewünschtes Dashboard öffnen → oben rechts ✏ **Bearbeiten** → **Karte hinzufügen** → ganz unten **Manuell** und
+1. Nach der Einrichtung einmal den Browser neu laden (Taste **F5**; in der Handy-App: Einstellungen der App →
+   Companion App → Debugging → Frontend-Cache zurücksetzen).
+2. Gewünschtes Dashboard öffnen → oben rechts ✏ **Bearbeiten** → **Karte hinzufügen** → ganz unten **Manuell** und
    Folgendes einfügen:
 
 ```yaml
 type: vertical-stack
 cards:
-  - type: custom:heatpump-audit-card
-    entities:
-      - sensor.heatpump_audit_data_basis
-      - sensor.heatpump_audit_efficiency
-      - sensor.heatpump_audit_flow_temperature
-      - sensor.heatpump_audit_capacity
-  - type: custom:heatpump-audit-timeline-card
-    entity: sensor.heatpump_audit_timeline
+  - type: custom:air-water-heatpump-audit-card
+  - type: custom:air-water-heatpump-audit-timeline-card
 ```
 
-6. **Speichern.** Tipp: Die Tabelle ist breit. Am besten wirkt sie in einer eigenen Ansicht mit dem Ansichtstyp
-   **Panel (eine Karte)**.
+3. **Speichern.** Die erste Karte zeigt alle zugeschalteten Audits, die zweite den Zeitstrahl. Tipp: Die Tabelle ist
+   breit. Am besten wirkt sie in einer eigenen Ansicht mit dem Ansichtstyp **Panel (eine Karte)**.
+
+Nur bestimmte Audits zeigen: bei der ersten Karte eine Liste angeben, z. B.
+
+```yaml
+type: custom:air-water-heatpump-audit-card
+entities:
+  - sensor.air_water_heatpump_audit_efficiency
+  - sensor.air_water_heatpump_audit_capacity
+```
 
 ### Ereignis eintragen
 
 Nach jeder Änderung an der Anlage:
 
 - in der **Zeitstrahl-Karte** auf **Ereignis hinzufügen** (nur für Administratoren sichtbar), oder
-- **Einstellungen → Geräte & Dienste → WP-Audit → Ereignis hinzufügen.**
+- **Einstellungen → Geräte & Dienste → Luft-Wasser-Wärmepumpen-Audit → Ereignis hinzufügen.**
 
 Zeitpunkt, Art (z. B. „Heizkurve geändert“) und eine kurze Notiz eintragen. Ändern und löschen geht auf derselben Seite.
 
@@ -268,8 +282,9 @@ Normal in den ersten Tagen. Der Balken oben in der Karte zeigt, wann welches Aud
 dauerhaft grau, steht in der Erläuterung, welcher Messwert oder welche Anlagenangabe fehlt.
 
 **Die Karte zeigt „Custom element doesn't exist“.**
-Die Ressource fehlt oder der Browser hat die alte Seite im Speicher: Schritt 2–4 unter „Karte auf dem Dashboard
-anzeigen“ prüfen, dann die Seite neu laden.
+Der Browser hat noch die alte Seite im Speicher: Seite neu laden (F5). Hilft das nicht und Lovelace läuft im
+YAML-Modus, die Ressource von Hand eintragen: URL `/air_water_heatpump_audit/air-water-heatpump-audit-card.js`, Typ
+JavaScript-Modul.
 
 **Gelb heißt kaputt?**
 Nein. Gelb heißt: Hier lässt sich vermutlich etwas verbessern. Die Erklärung hinter dem „?“ sagt, warum.
@@ -279,26 +294,36 @@ Noch nicht. Der Gütegrad (E3) rechnet mit der Außenluft als Wärmequelle, Abta
 Luft-Wasser-Wärmepumpen.
 
 **Wie entferne ich die Integration?**
-Einstellungen → Geräte & Dienste → WP-Audit → ⋮ → **Löschen**. Danach ggf. den Ordner
-`custom_components/heatpump_audit` und die Ressource unter Dashboards → Ressourcen entfernen.
+Einstellungen → Geräte & Dienste → Luft-Wasser-Wärmepumpen-Audit → ⋮ → **Löschen**, danach in HACS entfernen (bzw.
+den Ordner `custom_components/air_water_heatpump_audit` löschen) und die Ressource unter Dashboards → Ressourcen
+entfernen.
 
 ## Für Entwickler
 
-- `custom_components/heatpump_audit/` – Integration: Datenquelle (Recorder oder InfluxDB 2 über die vorhandene
-  InfluxDB-Integration) → Audits → Ergebnis-Sensoren und Lovelace-Karten.
-  - `audit_core/` – alle Prüfungen als reines Python ohne Abhängigkeiten; kennt die Anlage nur über Rollen und
-    Stammdaten. `audit_core` im Projektroot ist ein Symlink darauf.
-  - `frontend/heatpump-audit-card.js` – `custom:heatpump-audit-card` (Ampel, Datenreife, Tabelle) und
-    `custom:heatpump-audit-timeline-card` (Zeitstrahl), ausgeliefert unter `/heatpump_audit/heatpump-audit-card.js`.
-- Sensoren: `sensor.heatpump_audit_<audit>` (Gesamturteil, Attribute `dq`, `checks`, `readiness`),
-  `sensor.heatpump_audit_<id>_<key>` je Prüfung (Zustand = Urteil, Attribute `value`, `unit`, `text`, `origin`,
-  `details`, `progress`, `help`, `action`), `sensor.heatpump_audit_timeline`.
+- `custom_components/air_water_heatpump_audit/` – Integration: Datenquelle (Recorder oder InfluxDB 2 über die
+  vorhandene InfluxDB-Integration) → zugeschaltete Audits → Ergebnis-Sensoren und Lovelace-Karten.
+  - `audit_core/` – alle Prüfungen als reines Python ohne Abhängigkeiten und ohne Herstellerbezug; kennt die Anlage
+    nur über Rollen und Stammdaten. `audit_core` im Projektroot ist ein Symlink darauf.
+    - `audits/` – ein Modul je Audit (`AUDIT = AuditSpec(...)`: Rollen, Stammdaten, Prüfungen, Zeitstrahl),
+      `registry.py` die Schnittstelle, `context.py` die gemeinsamen Grundgrößen (Fühler-Offset, Wärme, Zyklen,
+      Datenqualität), `runner.py` rechnet die zugeschalteten Audits. Neues Audit: Modul anlegen, in
+      `audits/__init__.py` eintragen, Texte in `translations/*.json`, `help.py` und `actions.py` ergänzen.
+  - `profiles.py` – Vorschläge für bekannte Schnittstellen und Modelle (außerhalb des Kerns).
+  - `frontend/air-water-heatpump-audit-card.js` – `custom:air-water-heatpump-audit-card` (Ampel, Datenreife,
+    Tabelle) und `custom:air-water-heatpump-audit-timeline-card` (Zeitstrahl); die Integration trägt die Datei selbst
+    als Lovelace-Ressource ein.
+- Einträge: Haupteintrag = Anlage (Rollen, Stammdaten), Untereinträge `audit` (je zugeschaltetem Audit, mit eigenem
+  Gerät) und `event` (Änderungen an der Anlage).
+- Sensoren: `sensor.air_water_heatpump_audit_<audit>` (Gesamturteil, Attribute `dq`, `checks`, `readiness`,
+  `audit_name`, `color`), `sensor.air_water_heatpump_audit_<id>_<key>` je Prüfung (Zustand = Urteil, Attribute
+  `value`, `unit`, `text`, `origin`, `details`, `progress`, `help`, `action`),
+  `sensor.air_water_heatpump_audit_timeline` (Tageswerte, Skalen, zugeschaltete Audits, Ereignisse).
 - `prototype/` – Kommandozeilen-Bericht direkt aus InfluxDB:
-  `python3 -m prototype.run_audit [START] [ENDE] [--out reports]`; Verbindung über die Umgebungsvariablen
-  `HEATPUMP_AUDIT_INFLUX_URL` und `HEATPUMP_AUDIT_CREDENTIALS`.
-- Tests: `python3 -m unittest` (Kern), `pytest tests_ha` in einer venv mit `homeassistant` und
-  `pytest-homeassistant-custom-component` (Integration).
-- Geplanter Umbau auf zuschaltbare Audit-Module: [`docs/audit_modules_design.md`](docs/audit_modules_design.md).
+  `python3 -m prototype.run_audit [START] [ENDE] [--site prototype/site.json]`; Vorlage
+  `prototype/site.example.json`, Verbindung über `HEATPUMP_AUDIT_INFLUX_URL` und `HEATPUMP_AUDIT_CREDENTIALS`.
+- Tests: `python3 -m unittest` (Kern, inkl. Vergleichsbericht `tests/golden/` einer synthetischen Anlage),
+  `pytest tests_ha` in einer venv mit `pytest-homeassistant-custom-component` (Integration).
+- Aufbau und Entscheidungen: [`docs/audit_modules_design.md`](docs/audit_modules_design.md).
 
 ## Lizenz
 

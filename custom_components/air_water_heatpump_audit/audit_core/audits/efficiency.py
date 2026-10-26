@@ -47,6 +47,6 @@ AUDIT = AuditSpec(
                                                                                      ctx.offset_robust)),
         CheckSpec("E4", "dhw_share", lambda ctx: e1.check_dhw_share(ctx.daily_rows)),
     ),
-    timeline=TimelineSpec(scale=_scale, point=_point),
+    timeline=TimelineSpec(scale=_scale, point=_point, metric_names={"de": "Gütegrad", "en": "Carnot efficiency"}),
     finish=_finish,
 )

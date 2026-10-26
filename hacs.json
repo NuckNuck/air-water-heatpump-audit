@@ -1,5 +1,5 @@
 {
-  "name": "WP-Audit (Luft-Wasser-Wärmepumpe)",
+  "name": "Luft-Wasser-Wärmepumpen-Audit",
   "render_readme": true,
   "homeassistant": "2026.10.0"
 }

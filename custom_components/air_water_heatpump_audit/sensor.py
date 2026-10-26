@@ -1,4 +1,5 @@
-"""Ergebnis-Sensoren: je Audit einer (Gesamturteil) und je Prüfung einer (Urteil, Wert, Text, Herkunft).
+"""Ergebnis-Sensoren: je zugeschaltetem Audit einer (Gesamturteil) und je Prüfung einer (Urteil, Wert, Text, Herkunft),
+gebündelt in einem Gerät je Audit-Untereintrag. Der Zeitstrahl gehört zum Haupteintrag.
 
 Zustand ist immer das Urteil (Enum). Große Attribute (Details, Zyklen) landen nicht im Recorder.
 """
@@ -15,8 +16,10 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .audit_core.help import CHECK_HELP
-from .const import AUDITS, CHECKS, DOMAIN, VERDICTS
-from .coordinator import HeatpumpAuditConfigEntry, HeatpumpAuditCoordinator
+from .audit_core.audits import BY_ID
+from .audit_core.registry import WINDOW
+from .const import CONF_AUDIT, DOMAIN, SUBENTRY_AUDIT, VERDICTS, audit_title, language
+from .coordinator import AirWaterAuditConfigEntry, AirWaterAuditCoordinator
 
 MAX_CYCLES_IN_ATTRIBUTES = 200
 
@@ -26,28 +29,40 @@ def _iso(t: float) -> str:
 
 
 def check_entity_id(check_id: str, key: str) -> str:
-    return f"sensor.heatpump_audit_{check_id.lower()}_{key}"
+    return f"sensor.air_water_heatpump_audit_{check_id.lower()}_{key}"
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: HeatpumpAuditConfigEntry,
+async def async_setup_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry,
                             async_add_entities: AddConfigEntryEntitiesCallback) -> None:
     coordinator = entry.runtime_data
-    entities: list[SensorEntity] = [AuditSensor(coordinator, audit) for audit in AUDITS]
-    entities += [CheckSensor(coordinator, audit, check_id, key) for audit, check_id, key in CHECKS]
-    entities.append(TimelineSensor(coordinator))
-    async_add_entities(entities)
+    for sub in entry.subentries.values():
+        if sub.subentry_type != SUBENTRY_AUDIT or sub.data.get(CONF_AUDIT) not in BY_ID:
+            continue
+        spec = BY_ID[sub.data[CONF_AUDIT]]
+        entities: list[SensorEntity] = [AuditSensor(coordinator, spec.audit_id)]
+        entities += [CheckSensor(coordinator, spec.audit_id, c.check_id, c.key) for c in spec.checks]
+        async_add_entities(entities, config_subentry_id=sub.subentry_id)
+    async_add_entities([TimelineSensor(coordinator)])
 
 
-class _Entity(CoordinatorEntity[HeatpumpAuditCoordinator], SensorEntity):
+class _Entity(CoordinatorEntity[AirWaterAuditCoordinator], SensorEntity):
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: HeatpumpAuditCoordinator, unique_key: str) -> None:
+    def __init__(self, coordinator: AirWaterAuditCoordinator, unique_key: str, audit: str | None = None) -> None:
         super().__init__(coordinator)
         entry = coordinator.config_entry
         self._attr_unique_id = f"{entry.entry_id}_{unique_key}"
-        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, entry.entry_id)}, name="WP-Audit",
-                                            manufacturer="ha-heatpump-audit", model="Audit 0–3",
-                                            entry_type=DeviceEntryType.SERVICE)
+        if audit is None:
+            self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, entry.entry_id)},
+                                                name="Luft-Wasser-Wärmepumpen-Audit",
+                                                manufacturer="air-water-heatpump-audit", model="Zeitstrahl",
+                                                entry_type=DeviceEntryType.SERVICE)
+        else:
+            self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, f"{entry.entry_id}_{audit}")},
+                                                name=audit_title(audit, language(coordinator.hass)),
+                                                manufacturer="air-water-heatpump-audit", model=audit,
+                                                via_device=(DOMAIN, entry.entry_id),
+                                                entry_type=DeviceEntryType.SERVICE)
 
     @property
     def available(self) -> bool:
@@ -61,13 +76,18 @@ class _Base(_Entity):
 
 class AuditSensor(_Base):
     _unrecorded_attributes = frozenset({"checks", "cycles", "heat", "points", "runtime_s", "source", "entry_id",
-                                        "readiness"})
+                                        "readiness", "audit", "audit_name", "color"})
+    _attr_name = None  # Name = Gerät „Audit: …“
 
-    def __init__(self, coordinator: HeatpumpAuditCoordinator, audit: str) -> None:
-        super().__init__(coordinator, audit)
+    def __init__(self, coordinator: AirWaterAuditCoordinator, audit: str) -> None:
+        super().__init__(coordinator, audit, audit)
         self._audit = audit
         self._attr_translation_key = audit
-        self.entity_id = f"sensor.heatpump_audit_{audit}"
+        self.entity_id = f"sensor.air_water_heatpump_audit_{audit}"
+
+    @property
+    def available(self) -> bool:
+        return super().available and self._audit in self.coordinator.data["audits"]
 
     @property
     def native_value(self) -> str | None:
@@ -77,7 +97,11 @@ class AuditSensor(_Base):
     def extra_state_attributes(self) -> dict[str, Any]:
         data = self.coordinator.data
         audit = data["audits"][self._audit]
+        spec = BY_ID[self._audit]
         attrs: dict[str, Any] = {
+            "audit": self._audit,
+            "audit_name": spec.names[language(self.hass)],
+            "color": spec.color,
             "dq": audit["dq"],
             "period_start": _iso(data["period"]["start"]),
             "period_end": _iso(data["period"]["end"]),
@@ -94,13 +118,13 @@ class AuditSensor(_Base):
                                   "eta": _iso(ready["eta"]) if ready["eta"] is not None else None,
                                   "checks": [c | {"eta": _iso(c["eta"]) if c["eta"] is not None else None}
                                              for c in ready["checks"]]}
-        if self._audit != "data_basis" and (event := data.get("section", {}).get("event")):
+        if BY_ID[self._audit].section != WINDOW and (event := data.get("section", {}).get("event")):
             # Audits 1–3 rechnen ab dem letzten Ereignis (Spezifikation 1.5)
             attrs["section"] = {"start": _iso(event["time"]), "kind": event["kind"], "title": event.get("title"),
                                 "note": event.get("note")}
-        if self._audit == "data_basis":
+        if self._audit == "data_basis" and "heat" in data:
             attrs["heat"] = data["heat"]
-        elif self._audit == "capacity":
+        elif self._audit == "capacity" and "cycles" in data:
             attrs["cycles"] = [{k: c[k] for k in ("start", "end", "duration_min", "pause_before", "kind",
                                                   "open_start", "open_end", "defrost_stops")}
                                for c in data["cycles"][-MAX_CYCLES_IN_ATTRIBUTES:]]
@@ -110,14 +134,14 @@ class AuditSensor(_Base):
 class CheckSensor(_Base):
     _unrecorded_attributes = frozenset({"action", "details", "help", "text", "progress"})
 
-    def __init__(self, coordinator: HeatpumpAuditCoordinator, audit: str, check_id: str, key: str) -> None:
-        super().__init__(coordinator, f"{check_id.lower()}_{key}")
+    def __init__(self, coordinator: AirWaterAuditCoordinator, audit: str, check_id: str, key: str) -> None:
+        super().__init__(coordinator, f"{check_id.lower()}_{key}", audit)
         self._audit, self._check_id = audit, check_id
         self._attr_translation_key = key
         self.entity_id = check_entity_id(check_id, key)
 
     def _result(self) -> dict | None:
-        for r in self.coordinator.data["audits"][self._audit]["checks"]:
+        for r in self.coordinator.data["audits"].get(self._audit, {}).get("checks", []):
             if r["check_id"] == self._check_id:
                 return r
         return None
@@ -143,11 +167,11 @@ class TimelineSensor(_Entity):
     """Zeitstrahl für die Karte: Tageswerte je Audit, Ampel-Bänder und Ereignisse. Zustand = Zahl der Tage."""
 
     _attr_translation_key = "timeline"
-    _unrecorded_attributes = frozenset({"days", "scales", "events", "entry_id"})
+    _unrecorded_attributes = frozenset({"days", "scales", "events", "entry_id", "audits"})
 
-    def __init__(self, coordinator: HeatpumpAuditCoordinator) -> None:
+    def __init__(self, coordinator: AirWaterAuditCoordinator) -> None:
         super().__init__(coordinator, "timeline")
-        self.entity_id = "sensor.heatpump_audit_timeline"
+        self.entity_id = "sensor.air_water_heatpump_audit_timeline"
 
     @property
     def native_value(self) -> int:
@@ -156,7 +180,11 @@ class TimelineSensor(_Entity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         data = self.coordinator.data
-        return {"days": data["timeline"]["days"], "scales": data["timeline"]["scales"],
+        lang = language(self.hass)
+        audits = [{"id": a, "name": BY_ID[a].names[lang], "color": BY_ID[a].color, "order": BY_ID[a].order,
+                   "metric": BY_ID[a].timeline.metric_names.get(lang, ""), "entity_id": f"sensor.{DOMAIN}_{a}"}
+                  for a in data["audits"] if BY_ID[a].timeline]
+        return {"days": data["timeline"]["days"], "scales": data["timeline"]["scales"], "audits": audits,
                 "events": [{"time": _iso(e["time"]), "kind": e["kind"], "note": e.get("note"),
                             "title": e.get("title"), "subentry_id": e.get("subentry_id")}
                            for e in data.get("events", [])],

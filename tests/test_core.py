@@ -178,7 +178,7 @@ if __name__ == "__main__":
 from audit_core import heat
 import importlib.util as _ilu
 _spec = _ilu.spec_from_file_location("profiles", __import__("pathlib").Path(__file__).parents[1]
-                                     / "custom_components" / "heatpump_audit" / "profiles.py")
+                                     / "custom_components" / "air_water_heatpump_audit" / "profiles.py")
 _profiles = _ilu.module_from_spec(_spec)
 _spec.loader.exec_module(_profiles)
 TABLE = _profiles.MODEL_PROFILES["mitsubishi_pud_shwm140"]["capacity_min_table"]

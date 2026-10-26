@@ -141,7 +141,7 @@ def _fixed(who: str, text: str, target: Callable[[CheckResult], str | None] | No
 
 _ACTIONS: dict[str, Callable[[CheckResult, dict], Action]] = {
     "D1": _fixed(OWNER, "Langzeitdaten einrichten, sonst fehlen die Vergleiche über Wochen und Monate.", steps=[
-        "Am einfachsten: die Integration InfluxDB einrichten (Einstellungen → Geräte & Dienste); das WP-Audit nutzt "
+        "Am einfachsten: die Integration InfluxDB einrichten (Einstellungen → Geräte & Dienste); das Audit nutzt "
         "sie automatisch.",
         "Alternativ die Recorder-Aufbewahrung erhöhen (`recorder: purge_keep_days: 400` in configuration.yaml), "
         "dann besser auf einer USB-SSD statt auf dem eingebauten Speicher."]),

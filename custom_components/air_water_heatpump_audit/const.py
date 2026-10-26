@@ -5,9 +5,10 @@ from __future__ import annotations
 from datetime import timedelta
 
 from .audit_core.actions import CONTROL_ROLES
+from .audit_core.audits import BY_ID, REGISTRY
 from .audit_core.runner import CAPACITY, DATA_BASIS, EFFICIENCY, FLOW_TEMPERATURE
 
-DOMAIN = "heatpump_audit"
+DOMAIN = "air_water_heatpump_audit"
 UPDATE_INTERVAL = timedelta(hours=1)
 
 # Rollen je Config-Flow-Schritt (Spezifikation 1.3). Vorschläge für Entitäten kommen aus den Profilen (profiles.py).
@@ -28,7 +29,7 @@ ROLE_DOMAINS: dict[str, list[str]] = {
 } | {"outdoor_temp_reference": ["sensor", "weather"], "circuit_pump_running": ["binary_sensor"]} | {
     role: list(spec.domains) for role, spec in CONTROL_ROLES.items()
 }
-# Umbenannte Rollen (Version 1 → 2): herstellerneutrale Namen statt FTC (Mitsubishi-Steuerung).
+# Umbenannte Rollen der Vorgänger-Integration (WP-Audit Version 1): herstellerneutral statt FTC (Mitsubishi).
 ROLE_RENAMES = {"ftc_heating_consumed": "controller_heating_consumed", "ftc_dhw_consumed": "controller_dhw_consumed",
                 "ftc_controller_date": "controller_date"}
 
@@ -106,35 +107,26 @@ EVENT_KIND_LABELS = {
 
 VERDICTS = ["ok", "hint", "warn", "info", "not_assessable"]
 
-# Prüfungen je Audit: (Audit, check_id, key). Daraus entstehen die Sensoren, auch bevor Daten da sind.
-CHECKS: list[tuple[str, str, str]] = [
-    (DATA_BASIS, "D1", "history_depth"),
-    (DATA_BASIS, "D2", "coverage"),
-    (DATA_BASIS, "D3", "resolution"),
-    (DATA_BASIS, "D4", "sensor_offset"),
-    (DATA_BASIS, "D5", "meter_vs_controller"),
-    (DATA_BASIS, "D6", "controller_day_boundary"),
-    (DATA_BASIS, "D8", "meter_resolution"),
-    (DATA_BASIS, "D9", "restart_artifacts"),
-    (DATA_BASIS, "D10", "outdoor_sensor"),
-    (EFFICIENCY, "E1", "daily_cop"),
-    (EFFICIENCY, "E2", "weekly_cop"),
-    (EFFICIENCY, "E3", "carnot_efficiency"),
-    (EFFICIENCY, "E4", "dhw_share"),
-    (FLOW_TEMPERATURE, "T1", "buffer_flow_loss"),
-    (FLOW_TEMPERATURE, "T2", "circuit_sensor_offset"),
-    (FLOW_TEMPERATURE, "T3", "flow_ratio"),
-    (FLOW_TEMPERATURE, "T4", "heat_pump_spread"),
-    (FLOW_TEMPERATURE, "T5", "flow_vs_setpoint"),
-    (FLOW_TEMPERATURE, "T6", "heating_curve_headroom"),
-    (CAPACITY, "C1", "starts_per_year"),
-    (CAPACITY, "C2", "max_starts_per_hour"),
-    (CAPACITY, "C3", "short_cycles"),
-    (CAPACITY, "C4", "load_vs_min_capacity"),
-    (CAPACITY, "C5", "backup_heater_share"),
-    (CAPACITY, "C6", "defrost"),
-    (CAPACITY, "C7", "modulation"),
-]
-AUDITS = [DATA_BASIS, EFFICIENCY, FLOW_TEMPERATURE, CAPACITY]
+# Prüfungen je Audit: (Audit, check_id, key) aus der Registry. Daraus entstehen die Sensoren, auch bevor Daten da sind.
+CHECKS: list[tuple[str, str, str]] = [(a.audit_id, c.check_id, c.key) for a in REGISTRY for c in a.checks]
+AUDITS = [a.audit_id for a in REGISTRY]
 
-CARD_URL = "/heatpump_audit/heatpump-audit-card.js"
+# Audits als Untereinträge („Audit hinzufügen“): je Audit höchstens einer
+SUBENTRY_AUDIT = "audit"
+CONF_AUDIT = "audit"
+CONF_AUDITS = "audits"
+
+# Übernahme aus der Vorgänger-Integration „WP-Audit“ (Domain heatpump_audit)
+LEGACY_DOMAIN = "heatpump_audit"
+CONF_IMPORT_TIMELINE_FROM = "import_timeline_from"
+
+
+def language(hass) -> str:
+    return "de" if (hass.config.language or "en").startswith("de") else "en"
+
+
+def audit_title(audit_id: str, lang: str) -> str:
+    return f"Audit: {BY_ID[audit_id].names[lang]}"
+
+
+CARD_URL = "/air_water_heatpump_audit/air-water-heatpump-audit-card.js"

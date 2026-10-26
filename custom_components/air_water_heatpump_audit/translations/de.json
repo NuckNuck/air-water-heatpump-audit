@@ -2,15 +2,28 @@
   "config": {
     "step": {
       "user": {
-        "title": "WP-Audit: Profile",
-        "description": "Vorschläge für die folgende Zuordnung. Ein Schnittstellen-Profil schlägt passende Entitäten vor, ein Modell-Profil Werte aus dem Datenblatt. „Keins“ wählen, wenn nichts passt – alles lässt sich danach ändern.",
+        "title": "Luft-Wasser-Wärmepumpen-Audit",
+        "description": "Es gibt noch einen Eintrag der Vorgängerin „WP-Audit“. Seine Einstellungen lassen sich übernehmen.",
+        "menu_options": {
+          "import_legacy": "Aus WP-Audit übernehmen",
+          "setup": "Neu einrichten"
+        }
+      },
+      "import_legacy": {
+        "title": "Aus WP-Audit übernehmen",
+        "description": "Übernommen werden aus „{title}“: Zuordnung der Messwerte, Anlagendaten, Ereignisse und die gespeicherten Tageswerte des Zeitstrahls. Alle Audits werden zugeschaltet. Den alten Eintrag danach unter Geräte & Dienste löschen."
+      },
+      "setup": {
+        "title": "Wärmepumpen-Audit: Profile und Audits",
+        "description": "Profile schlagen passende Entitäten (Schnittstelle) und Werte aus dem Datenblatt (Modell) vor. „Keins“ wählen, wenn nichts passt – alles lässt sich danach ändern. Darunter die Audits, die laufen sollen; weitere lassen sich später mit „Audit hinzufügen“ zuschalten.",
         "data": {
           "interface_profile": "Schnittstelle zur Wärmepumpe",
-          "model_profile": "Modell der Wärmepumpe"
+          "model_profile": "Modell der Wärmepumpe",
+          "audits": "Audits"
         }
       },
       "signals": {
-        "title": "WP-Audit: Betriebssignale",
+        "title": "Wärmepumpen-Audit: Betriebssignale",
         "description": "Ein/Aus-Signale der Wärmepumpe zuordnen. Jedes Feld ist optional; Prüfungen ohne Daten werden „nicht bewertbar“.",
         "data": {
           "compressor_running": "Verdichter läuft",
@@ -25,7 +38,7 @@
         }
       },
       "measurements": {
-        "title": "WP-Audit: Messwerte",
+        "title": "Wärmepumpen-Audit: Messwerte",
         "description": "Strom immer vom Zähler, nie aus Schätzungen der Steuerung.",
         "data": {
           "electricity_meter": "Stromzähler WP, Bezug (kWh)",
@@ -37,7 +50,7 @@
         }
       },
       "controller": {
-        "title": "WP-Audit: Werte der Steuerung",
+        "title": "Wärmepumpen-Audit: Werte der Steuerung",
         "description": "Nur zur Plausibilisierung in Audit 0.",
         "data": {
           "controller_heating_consumed": "Steuerung: Strom Heizen, Vortag",
@@ -46,7 +59,7 @@
         }
       },
       "circuit": {
-        "title": "WP-Audit: Heizkreis und Raum",
+        "title": "Wärmepumpen-Audit: Heizkreis und Raum",
         "description": "Nur nötig, wenn zwischen Wärmepumpe und Heizkörpern ein Pufferspeicher oder eine hydraulische Weiche sitzt, und für Audit 2. Was es nicht gibt, leer lassen.",
         "data": {
           "flow_setpoint": "Soll-Vorlauf (Heizkurve)",
@@ -57,7 +70,7 @@
         }
       },
       "controls": {
-        "title": "WP-Audit: Stellgrößen",
+        "title": "Wärmepumpen-Audit: Stellgrößen",
         "description": "Werte, die die Schnittstelle zur Wärmepumpe schreiben kann. Ist eine Rolle zugeordnet, schlägt die Spalte „Aktion“ einen Wert vor, den ein Admin mit einem Klick übernehmen kann; das Audit ändert nie selbst etwas. Leer lassen, was die Schnittstelle nicht kann.",
         "data": {
           "circuit_pump_speed": "Stufe der Heizkreispumpe (T1)",
@@ -477,9 +490,39 @@
         "none": "Keins",
         "mitsubishi_pud_shwm140": "Mitsubishi PUD-SHWM140YAA"
       }
+    },
+    "audits": {
+      "options": {
+        "data_basis": "Datenbasis – kann man den Messwerten trauen? (empfohlen)",
+        "efficiency": "Effizienz – wie gut arbeitet die Wärmepumpe?",
+        "flow_temperature": "Vorlauf – heizt sie wärmer als nötig?",
+        "capacity": "Leistung – passt die Wärmepumpe zum Haus?"
+      }
     }
   },
   "config_subentries": {
+    "audit": {
+      "entry_type": "Audit",
+      "initiate_flow": {
+        "user": "Audit hinzufügen"
+      },
+      "step": {
+        "user": {
+          "title": "Audit hinzufügen",
+          "description": "Welches Audit soll zusätzlich laufen? Abschalten: den Eintrag des Audits löschen.{missing}",
+          "data": {
+            "audit": "Audit",
+            "confirmed": "Trotzdem zuschalten"
+          }
+        }
+      },
+      "error": {
+        "missing_roles": "Für dieses Audit fehlen Pflicht-Messwerte. Ohne sie bleibt es „nicht bewertbar“. Zuordnen über „Neu konfigurieren“ des Haupteintrags."
+      },
+      "abort": {
+        "all_audits_added": "Alle Audits sind schon zugeschaltet."
+      }
+    },
     "event": {
       "entry_type": "Ereignis",
       "initiate_flow": {

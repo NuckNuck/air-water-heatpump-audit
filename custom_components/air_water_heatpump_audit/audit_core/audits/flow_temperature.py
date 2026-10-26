@@ -83,6 +83,6 @@ AUDIT = AuditSpec(
         CheckSpec("T5", "flow_vs_setpoint", _t5),
         CheckSpec("T6", "heating_curve_headroom", _t6),
     ),
-    timeline=TimelineSpec(scale=_scale, point=_point),
+    timeline=TimelineSpec(scale=_scale, point=_point, metric_names={"de": "Pufferverlust", "en": "Buffer loss"}),
     finish=_finish,
 )

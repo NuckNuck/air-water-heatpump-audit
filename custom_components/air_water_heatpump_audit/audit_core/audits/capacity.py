@@ -61,5 +61,5 @@ AUDIT = AuditSpec(
                                                                 ctx.end)),
         CheckSpec("C7", "modulation", lambda ctx: c3.check_modulation(ctx.s["compressor_frequency"], ctx.cycles)),
     ),
-    timeline=TimelineSpec(scale=_scale, point=_point),
+    timeline=TimelineSpec(scale=_scale, point=_point, metric_names={"de": "Starts pro Tag", "en": "Starts per day"}),
 )

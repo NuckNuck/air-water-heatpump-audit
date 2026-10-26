@@ -373,7 +373,7 @@
     {
      "action": {
       "steps": [
-       "Am einfachsten: die Integration InfluxDB einrichten (Einstellungen → Geräte & Dienste); das WP-Audit nutzt sie automatisch.",
+       "Am einfachsten: die Integration InfluxDB einrichten (Einstellungen → Geräte & Dienste); das Audit nutzt sie automatisch.",
        "Alternativ die Recorder-Aufbewahrung erhöhen (`recorder: purge_keep_days: 400` in configuration.yaml), dann besser auf einer USB-SSD statt auf dem eingebauten Speicher."
       ],
       "target": null,

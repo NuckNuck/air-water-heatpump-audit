@@ -177,3 +177,18 @@ mit Hinweis „Empfohlen: zeigt, wie belastbar die anderen Urteile sind“ (F150
 - Prüfstein: `tests/golden/synthetic_report.json` (synthetische Anlage `tests/synthetic.py`, erzeugt vor dem Umbau) ist
   unverändert; jedes Audit liefert allein und nur mit seinen angemeldeten Rollen dasselbe wie im Gesamtlauf. Mit
   echten InfluxDB-Daten (24.–26.10.) ebenfalls identisch.
+
+## Umsetzung HA-Teil (26.10.2026, Version 0.9.0)
+
+- Neue Domain `air_water_heatpump_audit`, Anzeigename „Luft-Wasser-Wärmepumpen-Audit“ (F147); Config-Eintrag
+  Version 1 der neuen Domain. Statt Migration: Menü „Aus WP-Audit übernehmen“, solange es einen Eintrag der Domain
+  `heatpump_audit` gibt (Rollen über `migrate_roles`, Optionen, Ereignisse, Zeitstrahl-Speicher beim ersten Laden).
+- Einrichtung: Profile und Audits in einem Schritt (Datenbasis empfohlen und vorausgewählt, F150), danach die
+  Rollen-Schritte. Untereintrag `audit` („Audit hinzufügen“) warnt bei fehlenden Pflichtrollen und lässt trotzdem zu.
+- Ein Gerät je Audit-Untereintrag („Audit: Effizienz“), Zeitstrahl am Haupteintrag; der Coordinator lädt nur Rollen
+  der zugeschalteten Audits.
+- Karte ohne feste Audit-Liste: Zeitstrahl-Sensor liefert `audits` (Name, Farbe, Reihenfolge, Kennzahl), Audit-Sensor
+  `audit_name` und `color`; die Karte ohne `entities` zeigt alle zugeschalteten Audits. Die Integration trägt die
+  Karte selbst als Lovelace-Ressource ein (Storage-Modus).
+- Abweichung vom Entwurf: Rollen-Schritte zeigen weiterhin alle Rollen (alle optional), nicht nur die der gewählten
+  Audits.
