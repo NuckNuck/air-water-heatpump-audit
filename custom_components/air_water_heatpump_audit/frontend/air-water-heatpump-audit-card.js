@@ -11,10 +11,17 @@ const COLORS = {
   not_assessable: "var(--disabled-color, #9e9e9e)",
 };
 
-// Datenreife-Balken: feste Farbe je Audit (bewusst keine Ampelfarben, die stehen für Urteile)
+// Datenreife-Balken: feste Farbe je Audit (bewusst keine Ampelfarben, die stehen für Urteile). Die Farbe liefert
+// der Audit-Sensor (Attribut `color`, aus der Registry der Integration); hier nur der Rückfall.
 const AUDIT_COLORS = {
   efficiency: "#8e24aa", flow_temperature: "#00897b", capacity: "#d81b60", data_basis: "#6d4c41",
 };
+// Zeitstrahl-Sensor: kennt die zugeschalteten Audits (Attribut `audits`), daraus entsteht die Karte ohne `entities`.
+const TIMELINE_ENTITY = "sensor.air_water_heatpump_audit_timeline";
+
+function enabledAudits(hass) {
+  return [...(hass?.states[TIMELINE_ENTITY]?.attributes?.audits ?? [])].sort((a, b) => a.order - b.order);
+}
 
 const TEXT = {
   de: {
@@ -123,12 +130,10 @@ function formatValue(value, unit, locale) {
 
 class AirWaterAuditCard extends HTMLElement {
   // `entities`: mehrere Audits in einer gemeinsamen Tabelle (gleiche Spaltenbreiten, Audit-Titel als Zwischenzeile).
-  // `entity`: ein einzelnes Audit, wie bisher.
+  // `entity`: ein einzelnes Audit. Ohne beides: alle zugeschalteten Audits in Registry-Reihenfolge.
   setConfig(config) {
-    const entities = config.entities ?? (config.entity ? [config.entity] : []);
-    if (!entities.length) throw new Error("entity oder entities fehlt (z. B. sensor.air_water_heatpump_audit_data_basis)");
     this._config = config;
-    this._entities = entities;
+    this._configured = config.entities ?? (config.entity ? [config.entity] : []);
     this._signature = null;
     this._open ??= new Set();  // aufgeklappte Tagestabellen und Schrittlisten, bleiben beim Neuzeichnen offen
     this._ctl ??= new Map();  // Stellgrößen-Vorschläge der aktuellen Darstellung: Schlüssel → {p}
@@ -201,7 +206,8 @@ class AirWaterAuditCard extends HTMLElement {
     const at = st?.attributes ?? {};
     const verdict = st?.state ?? c.verdict;
     const action = at.action ? this._action(c, at.action, t) : "";
-    const name = (at.friendly_name || c.key).replace(/^(WP-Audit|Luft-Wasser-Wärmepumpen-Audit|Air-to-water heat pump audit)\s+/, "").replace(new RegExp(`^${c.check_id}\\s+`), "");
+    // Anzeigename ohne Gerätenamen und Prüf-ID: „Audit: Effizienz E3 Gütegrad“ → „Gütegrad“
+    const name = (at.friendly_name || c.key).replace(new RegExp(`^.*?\\b${c.check_id}\\s+`), "");
     const rows = c.check_id === "E1" ? at.details?.days ?? [] : [];
     const open = rows.length && this._open.has(c.check_id);
     const toggle = rows.length ? `<div><span class="toggle" role="button" tabindex="0" data-days="${esc(c.check_id)}">${open ? t.days.hide : t.days.show(rows.length)}</span></div>` : "";
@@ -318,8 +324,9 @@ class AirWaterAuditCard extends HTMLElement {
       const st = hass.states[e];
       const rd = st?.attributes?.readiness;
       if (!rd) return null;
-      const key = e.replace(/^sensor\.air_water_heatpump_audit_/, "");
-      return { key, rd, eta: ms(rd.eta), name: (st.attributes.friendly_name || key).replace(/^(WP-Audit|Luft-Wasser-Wärmepumpen-Audit|Air-to-water heat pump audit)\s+/, "") };
+      const key = st.attributes.audit ?? e.replace(/^sensor\.air_water_heatpump_audit_/, "");
+      return { key, rd, eta: ms(rd.eta), color: st.attributes.color ?? AUDIT_COLORS[key],
+               name: st.attributes.audit_name ?? st.attributes.friendly_name ?? key };
     }).filter((x) => x);
     if (!items.length) return "";
     const now = Date.now();
@@ -347,10 +354,10 @@ class AirWaterAuditCard extends HTMLElement {
     };
     const order = [...items].sort((a, b) => (a.eta ?? Infinity) - (b.eta ?? Infinity));
     const markers = known.map((x) => `<div class="mk${x.rd.reached ? " done" : ""}" style="left:${pos(x.eta)}%;`
-      + `--c:${AUDIT_COLORS[x.key] ?? "var(--primary-color)"}" title="${esc(x.name)}: `
+      + `--c:${x.color ?? "var(--primary-color)"}" title="${esc(x.name)}: `
       + `${esc(x.rd.reached ? r.reached : r.from(date(x.eta)))}"></div>`).join("");
     const legend = order.map((x) => `<li><span class="dot${x.rd.reached ? " done" : ""}" `
-      + `style="--c:${AUDIT_COLORS[x.key] ?? "var(--primary-color)"}"></span><b>${esc(x.name)}</b> – `
+      + `style="--c:${x.color ?? "var(--primary-color)"}"></span><b>${esc(x.name)}</b> – `
       + (x.rd.reached ? r.reached : `${x.eta !== null ? r.from(date(x.eta)) : r.open} · ${esc(missing(x))}`) + `</li>`).join("");
     return `<div class="ready">
         <div class="rhead"><span class="rtitle">${r.title}</span>${left ? `<b>${left}</b>` : ""}<span class="muted">${esc(summary)}</span></div>
@@ -366,7 +373,7 @@ class AirWaterAuditCard extends HTMLElement {
     const span = t.columns.length;
     if (!audit) return `<tr><td colspan="${span}" class="msg">${t.missing}: ${esc(entityId)}</td></tr>`;
     const a = audit.attributes;
-    const title = (single && this._config.title) || (a.friendly_name || "").replace(/^(WP-Audit|Luft-Wasser-Wärmepumpen-Audit|Air-to-water heat pump audit)\s+/, "");
+    const title = (single && this._config.title) || a.audit_name || a.friendly_name || "";
     const head = `<tr class="audit"><td colspan="${span}"><div class="head">
         <div class="light" style="background:${COLORS[audit.state] ?? COLORS.not_assessable}"></div>
         <div class="title">${esc(title)}</div>
@@ -484,8 +491,13 @@ class AirWaterAuditCard extends HTMLElement {
     return { columns: "full" };
   }
 
+  // Ohne Konfiguration: alle zugeschalteten Audits (Liste vom Zeitstrahl-Sensor)
+  get _entities() {
+    return this._configured.length ? this._configured : enabledAudits(this._hass).map((x) => x.entity_id);
+  }
+
   static getStubConfig() {
-    return { entity: "sensor.air_water_heatpump_audit_data_basis" };
+    return {};
   }
 }
 
@@ -710,15 +722,30 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     geo.x = (s) => geo.left + (s - x0) / (x1 - x0) * (width - geo.left - geo.right);
     geo.days = this._dayGrid(x0, x1, now, geo, t);
     const visible = events.filter((e) => e.t >= x0 && e.t <= x1);
-    const charts = TL_AUDITS.map((audit, k) => this._chart(audit, a.scales?.[audit] ?? {}, days, visible, geo, t,
-      k === 0, k === TL_AUDITS.length - 1)).join("");
+    const audits = this._tlAudits(a);
+    const charts = audits.map((audit, k) => this._chart(audit, a.scales?.[audit] ?? {}, days, visible, geo, t,
+      k === 0, k === audits.length - 1)).join("");
     const sel = this._selected !== null && days[this._selected] ? this._dayDetails(days[this._selected], a.scales, t, events)
       : `<div class="muted" style="margin-top:8px">${t.pick}</div>`;
     this._charts.innerHTML = title + charts + sel + this._eventList(events, x0, t);
   }
 
+  // Zugeschaltete Audits mit Zeitstrahl: Linien zuerst, Streifen (Datenbasis) zuletzt
+  _tlAudits(a) {
+    const meta = a.audits ?? TL_AUDITS.map((id, order) => ({ id, order }));
+    this._meta = Object.fromEntries(meta.map((x) => [x.id, x]));
+    return meta.filter((x) => a.scales?.[x.id])
+      .sort((x, y) => (a.scales[x.id].strip ? 1 : 0) - (a.scales[y.id].strip ? 1 : 0) || x.order - y.order)
+      .map((x) => x.id);
+  }
+
+  _names(audit, t) {
+    const m = this._meta?.[audit] ?? {};
+    return t.audits[audit] ?? [m.name ?? audit, m.metric ?? ""];
+  }
+
   _chart(audit, scale, days, events, geo, t, first, last) {
-    const [name, metric] = t.audits[audit];
+    const [name, metric] = this._names(audit, t);
     const strip = !!scale.strip;
     const top = first ? 14 : 4;
     const plotH = strip ? 16 : 90;
@@ -849,16 +876,17 @@ class AirWaterAuditTimelineCard extends HTMLElement {
   }
 
   _dayDetails(d, scales, t, events) {
-    const parts = TL_AUDITS.map((audit) => {
+    const parts = Object.keys(scales ?? {}).filter((audit) => d[audit]).map((audit) => {
       const p = d[audit] ?? {};
       const sc = scales?.[audit] ?? {};
-      let text = `${t.audits[audit][1]} ${this._fmt(p.value, sc.strip ? 1 : sc.decimals)}${p.value == null ? "" : this._unit(sc.unit, t)}`
+      const [name, metric] = this._names(audit, t);
+      let text = `${metric} ${this._fmt(p.value, sc.strip ? 1 : sc.decimals)}${p.value == null ? "" : this._unit(sc.unit, t)}`
         + ` (${t.verdicts[p.verdict] ?? p.verdict ?? "–"})`;
       if (audit === "efficiency" && p.cop != null) {
         text += `, ${t.cop} ${this._fmt(p.cop, 1)} = ${this._fmt(p.heat_kwh, 1)} kWh ÷ ${this._fmt(p.electricity_kwh, 0)} kWh`;
         if (p.outdoor_mean != null) text += `, ${this._fmt(p.outdoor_mean, 1)} °C`;
       }
-      return `<div><b>${esc(t.audits[audit][0])}:</b> ${esc(text)}</div>`;
+      return `<div><b>${esc(name)}:</b> ${esc(text)}</div>`;
     }).join("");
     const mixed = this._mixed(d, events ?? []) ? `<div class="muted">${esc(t.mixed)}</div>` : "";
     return `<div class="day"><div><b>${esc(new Date(d.start * 1000).toLocaleDateString(this._locale(), { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }))}</b></div>${mixed}${parts}</div>`;
