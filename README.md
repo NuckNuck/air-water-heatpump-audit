@@ -126,7 +126,9 @@ sie bleiben also auch erhalten, wenn Home Assistant die alten Rohdaten löscht.
    ab. Entwickelt und getestet wurde mit einer **Mitsubishi Ecodan** und der Schnittstelle
    [Mahtanar](https://github.com/tinwer-group/mahtanar) mit der ESPHome-Firmware
    [esphome-ecodan-hp](https://github.com/gekkekoe/esphome-ecodan-hp). Jede andere
-   Wärmepumpe geht auch, sofern die Werte unten als Entitäten in Home Assistant vorhanden sind.
+   Wärmepumpe geht auch, sofern die Werte unten als Entitäten in Home Assistant vorhanden sind. Wie diese Anlage
+   aufgebaut und eingerichtet ist, steht im Beispiel
+   [Mitsubishi Ecodan mit Mahtanar](docs/examples/mitsubishi_ecodan_mahtanar.md).
 3. **Ein eigener Stromzähler für die Wärmepumpe**, dessen Zählerstand (kWh) in Home Assistant ankommt – z. B. über
    einen Infrarot-Lesekopf am Zähler. Schätzungen der Wärmepumpe selbst reichen nicht für ein Urteil.
 4. Empfohlen: **InfluxDB** als Langzeitspeicher (Home-Assistant-Integration „InfluxDB“, Version 2). Ohne InfluxDB nutzt
@@ -192,7 +194,8 @@ Weiter mit [Einrichten](#einrichten).
 2. Nach **Luft-Wasser-Wärmepumpen-Audit** suchen und anklicken.
 3. **Profile und Audits:**
    - *Schnittstelle zur Wärmepumpe:* Gibt es Ihre Schnittstelle in der Liste (z. B. Mitsubishi Ecodan mit ESPHome),
-     wählen Sie sie aus – dann sind die folgenden Felder schon ausgefüllt. Sonst **Keins**.
+     wählen Sie sie aus – dann sind die folgenden Felder schon ausgefüllt (beim Ecodan-Profil für deutsche und
+     englische Labels der Firmware). Sonst **Keins**.
    - *Modell der Wärmepumpe:* liefert Werte aus dem Datenblatt. Steht Ihr Modell nicht drin: **Keins**.
    - *Audits:* Haken bei den Audits, die laufen sollen. **Datenbasis** ist empfohlen – sie zeigt, wie belastbar die
      anderen Urteile sind. Weitere Audits lassen sich später jederzeit zuschalten.
@@ -308,7 +311,9 @@ entfernen.
       `registry.py` die Schnittstelle, `context.py` die gemeinsamen Grundgrößen (Fühler-Offset, Wärme, Zyklen,
       Datenqualität), `runner.py` rechnet die zugeschalteten Audits. Neues Audit: Modul anlegen, in
       `audits/__init__.py` eintragen, Texte in `translations/*.json`, `help.py` und `actions.py` ergänzen.
-  - `profiles.py` – Vorschläge für bekannte Schnittstellen und Modelle (außerhalb des Kerns).
+  - `profiles.py` – Vorschläge für bekannte Schnittstellen und Modelle (außerhalb des Kerns). Je Schnittstelle eine
+    Grundform und weitere Schreibweisen (`INTERFACE_VARIANTS`, z. B. je Sprache der Firmware-Labels); der Config
+    Flow schlägt die erste vor, die es in der Instanz gibt.
   - `frontend/air-water-heatpump-audit-card.js` – `custom:air-water-heatpump-audit-card` (Ampel, Datenreife,
     Tabelle) und `custom:air-water-heatpump-audit-timeline-card` (Zeitstrahl); die Integration trägt die Datei selbst
     als Lovelace-Ressource ein.

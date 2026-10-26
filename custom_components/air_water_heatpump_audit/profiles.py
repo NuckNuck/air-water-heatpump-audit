@@ -10,7 +10,8 @@ from __future__ import annotations
 
 # Schnittstellen: Rolle → vorgeschlagene Entität. Nur Rollen, die die Schnittstelle liefert.
 INTERFACE_PROFILES: dict[str, dict[str, str]] = {
-    # Mitsubishi Ecodan mit ESPHome-Firmware esphome-ecodan-hp (z. B. Mahtanar-Modul), Entitäten-Präfix „heatpump_“
+    # Mitsubishi Ecodan mit ESPHome-Firmware esphome-ecodan-hp (z. B. Mahtanar-Modul), Gerätename „heatpump“
+    # (englische Labels); weitere Schreibweisen in INTERFACE_VARIANTS
     "esphome_ecodan": {
         "compressor_running": "binary_sensor.heatpump_compressor",
         "compressor_frequency": "sensor.heatpump_compressor_frequency",
@@ -35,6 +36,51 @@ INTERFACE_PROFILES: dict[str, dict[str, str]] = {
         "short_cycle_min_run": "number.heatpump_short_cycle_minimum_on_time",
     },
 }
+
+# Andere Schreibweisen derselben Entitäten. Die Firmware benennt sie nach Gerätename und Sprache der Labels: mit dem
+# Standard-Gerätenamen „Ecodan heatpump“ entsteht `sensor.ecodan_heatpump_feed_temp` (englische Labels) bzw.
+# `sensor.ecodan_heatpump_vorlauftemperatur` (deutsche Labels, confs/ecodan-labels-de.yaml). Abgeleitet aus den
+# Label-Dateien von esphome-ecodan-hp; andere Sprachen ordnet man im Config Flow von Hand zu.
+_ECODAN_DE = {
+    "compressor_running": "binary_sensor.ecodan_heatpump_kompressor",
+    "compressor_frequency": "sensor.ecodan_heatpump_kompressor_frequenz",
+    "pump_running": "binary_sensor.ecodan_heatpump_wasserpumpen_status",
+    "defrost": "binary_sensor.ecodan_heatpump_abtauen",
+    "dhw_active": "binary_sensor.ecodan_heatpump_3_wege_ventil",
+    "immersion_heater": "binary_sensor.ecodan_heatpump_elektroheizung",
+    "booster_heater": "binary_sensor.ecodan_heatpump_zusatzheizung",
+    "booster_heater_2": "binary_sensor.ecodan_heatpump_zusatzheizung_2",
+    "heartbeat": "sensor.ecodan_heatpump_esp_betriebszeit",
+    "flow_temp": "sensor.ecodan_heatpump_vorlauftemperatur",
+    "return_temp": "sensor.ecodan_heatpump_rucklauftemperatur",
+    "flow_rate": "sensor.ecodan_heatpump_durchflussrate",
+    "outdoor_temp": "sensor.ecodan_heatpump_aussentemperatur",
+    "controller_heating_consumed": "sensor.ecodan_heatpump_heizung_verbraucht",
+    "controller_dhw_consumed": "sensor.ecodan_heatpump_tww_verbraucht",
+    "controller_date": "sensor.ecodan_heatpump_controller_datum",
+    "flow_setpoint": "sensor.ecodan_heatpump_zone_1_sollwert",
+    "circuit_flow_temp": "sensor.ecodan_heatpump_z1_vorlauftemperatur",
+    "circuit_return_temp": "sensor.ecodan_heatpump_z1_rucklauftemperatur",
+    "short_cycle_lockout": "select.ecodan_heatpump_kurzzyklus_sperrdauer_min",
+    "short_cycle_min_run": "number.ecodan_heatpump_kurzzyklus_minimale_laufzeit",
+}
+INTERFACE_VARIANTS: dict[str, list[dict[str, str]]] = {
+    "esphome_ecodan": [
+        {role: eid.replace(".heatpump_", ".ecodan_heatpump_", 1)
+         for role, eid in INTERFACE_PROFILES["esphome_ecodan"].items()},
+        _ECODAN_DE,
+    ],
+}
+
+
+def role_candidates(profile: str | None) -> dict[str, list[str]]:
+    """Je Rolle alle bekannten Schreibweisen des Profils, die Grundform zuerst."""
+    out: dict[str, list[str]] = {}
+    for mapping in [INTERFACE_PROFILES.get(profile or "", {}), *INTERFACE_VARIANTS.get(profile or "", [])]:
+        for role, eid in mapping.items():
+            out.setdefault(role, []).append(eid)
+    return out
+
 
 # Rollen, die zu keiner Wärmepumpe gehören, aber in fast jeder HA-Instanz gleich heißen
 COMMON_ROLE_SUGGESTIONS: dict[str, str] = {"outdoor_temp_reference": "weather.home"}

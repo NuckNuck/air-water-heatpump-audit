@@ -48,7 +48,9 @@ Zu jedem Urteil gehört eine Datenqualität `dq` (`high`, `medium`, `low`), sieh
 ### 1.3 Eingänge (Rollen)
 
 Die Prüfungen kennen die Anlage nur über Rollen. Welche Entität eine Rolle erfüllt, legt der Besitzer im Config Flow
-fest; bekannte Schnittstellen schlagen eine Zuordnung vor (Profile in `profiles.py`, außerhalb des Kerns).
+fest; bekannte Schnittstellen schlagen eine Zuordnung vor (Profile in `profiles.py`, außerhalb des Kerns). Ein
+Profil kennt mehrere Schreibweisen je Rolle (z. B. je Sprache der Firmware-Labels); vorgeschlagen wird die erste, die
+es in der Instanz gibt. Beispiel einer vollständigen Anlage: [`examples/mitsubishi_ecodan_mahtanar.md`](examples/mitsubishi_ecodan_mahtanar.md).
 
 | Rolle | Bedeutung | Genutzt von |
 |---|---|---|
