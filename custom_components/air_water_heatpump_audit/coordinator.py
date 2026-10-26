@@ -17,7 +17,9 @@ from homeassistant.util import dt as dt_util
 from . import influx_source
 from .audit_core import timeline
 from .audit_core.actions import CONTROL_ROLES
-from .audit_core.runner import ROLE_KEYS, run_audits
+from .audit_core.audits import REGISTRY
+from .audit_core.runner import ROLE_KEYS, roles_for, run_audits
+from .const import (CONF_AUDIT, CONF_IMPORT_TIMELINE_FROM, LEGACY_DOMAIN, SUBENTRY_AUDIT)
 from .const import (CONF_BOOSTER_HEATER_2_KW, CONF_BOOSTER_HEATER_KW, CONF_DATA_SINCE, CONF_DATA_SOURCE,
                     CONF_EVENT_KIND, CONF_EVENT_NOTE, CONF_EVENT_TIME, CONF_IMMERSION_HEATER_KW, CONF_WINDOW_DAYS,
                     DEFAULT_OPTIONS, DOMAIN, MASTER_KEYS, SOURCE_INFLUXDB, SOURCE_RECORDER, SUBENTRY_EVENT,
@@ -29,6 +31,7 @@ _LOGGER = logging.getLogger(__name__)
 type AirWaterAuditConfigEntry = ConfigEntry[AirWaterAuditCoordinator]
 
 TIMELINE_STORE_VERSION = 1
+ROLE_AUDIT_ORDER = [a.audit_id for a in REGISTRY]
 
 
 def timeline_store(hass: HomeAssistant, entry_id: str) -> Store:
@@ -54,8 +57,16 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _option(self, key: str):
         return self.config_entry.options.get(key, DEFAULT_OPTIONS[key])
 
+    def audits(self) -> list[str]:
+        """Zugeschaltete Audits (Untereinträge) in Registry-Reihenfolge."""
+        chosen = {sub.data.get(CONF_AUDIT) for sub in self.config_entry.subentries.values()
+                  if sub.subentry_type == SUBENTRY_AUDIT}
+        return [a for a in ROLE_AUDIT_ORDER if a in chosen]
+
     def _roles(self) -> dict[str, str]:
-        return {r: e for r, e in self.config_entry.data.items() if r in ROLE_KEYS and e}
+        """Nur Rollen, die die zugeschalteten Audits lesen; weniger Last für Recorder und InfluxDB."""
+        needed = roles_for(self.audits())
+        return {r: e for r, e in self.config_entry.data.items() if r in ROLE_KEYS and r in needed and e}
 
     def _controls(self) -> dict[str, dict]:
         """Heutiger Zustand der zugeordneten Stellgrößen; daraus schlagen die Aktionen Werte vor."""
@@ -94,7 +105,7 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         master = {k: self._option(k) for k in MASTER_KEYS}
         return run_audits(series, start, end, recorder_keep_days=keep_days, long_term_days=long_term_days,
                           heater_kw=heater_kw, master=master, events=self._events(), controls=controls,
-                          tz=str(dt_util.get_default_time_zone()))
+                          tz=str(dt_util.get_default_time_zone()), audits=self.audits())
 
     def _events(self) -> list[dict[str, Any]]:
         """Ereignisse aus den Untereinträgen; Zeit ohne Zone gilt als lokale Zeit."""
@@ -168,6 +179,9 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _merge_timeline(self, fresh: list[dict]) -> list[dict]:
         if self._timeline_days is None:
             stored = await self._store.async_load() or {}
+            if not stored and (old := self.config_entry.data.get(CONF_IMPORT_TIMELINE_FROM)):
+                # Übernahme aus „WP-Audit“: dessen gespeicherte Tageswerte einmalig lesen
+                stored = await Store(self.hass, TIMELINE_STORE_VERSION, f"{LEGACY_DOMAIN}.timeline.{old}").async_load() or {}
             self._timeline_days = stored.get("days", [])
         self._timeline_days = timeline.merge(self._timeline_days, fresh)
         await self._store.async_save({"days": self._timeline_days})

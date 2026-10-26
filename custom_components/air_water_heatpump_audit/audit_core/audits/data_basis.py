@@ -48,5 +48,5 @@ AUDIT = AuditSpec(
         CheckSpec("D10", "outdoor_sensor", lambda ctx: d0.check_outdoor_sensor(
             ctx.s["outdoor_temp"], ctx.s["outdoor_temp_reference"], ctx.s["defrost"], ctx.start, ctx.end, ctx.tz)),
     ),
-    timeline=TimelineSpec(scale=_scale, point=_point),
+    timeline=TimelineSpec(scale=_scale, point=_point, metric_names={"de": "Abdeckung", "en": "Coverage"}),
 )

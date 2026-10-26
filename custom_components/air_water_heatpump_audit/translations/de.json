@@ -2,11 +2,24 @@
   "config": {
     "step": {
       "user": {
-        "title": "Wärmepumpen-Audit: Profile",
-        "description": "Vorschläge für die folgende Zuordnung. Ein Schnittstellen-Profil schlägt passende Entitäten vor, ein Modell-Profil Werte aus dem Datenblatt. „Keins“ wählen, wenn nichts passt – alles lässt sich danach ändern.",
+        "title": "Luft-Wasser-Wärmepumpen-Audit",
+        "description": "Es gibt noch einen Eintrag der Vorgängerin „WP-Audit“. Seine Einstellungen lassen sich übernehmen.",
+        "menu_options": {
+          "import_legacy": "Aus WP-Audit übernehmen",
+          "setup": "Neu einrichten"
+        }
+      },
+      "import_legacy": {
+        "title": "Aus WP-Audit übernehmen",
+        "description": "Übernommen werden aus „{title}“: Zuordnung der Messwerte, Anlagendaten, Ereignisse und die gespeicherten Tageswerte des Zeitstrahls. Alle Audits werden zugeschaltet. Den alten Eintrag danach unter Geräte & Dienste löschen."
+      },
+      "setup": {
+        "title": "Wärmepumpen-Audit: Profile und Audits",
+        "description": "Profile schlagen passende Entitäten (Schnittstelle) und Werte aus dem Datenblatt (Modell) vor. „Keins“ wählen, wenn nichts passt – alles lässt sich danach ändern. Darunter die Audits, die laufen sollen; weitere lassen sich später mit „Audit hinzufügen“ zuschalten.",
         "data": {
           "interface_profile": "Schnittstelle zur Wärmepumpe",
-          "model_profile": "Modell der Wärmepumpe"
+          "model_profile": "Modell der Wärmepumpe",
+          "audits": "Audits"
         }
       },
       "signals": {
@@ -477,9 +490,39 @@
         "none": "Keins",
         "mitsubishi_pud_shwm140": "Mitsubishi PUD-SHWM140YAA"
       }
+    },
+    "audits": {
+      "options": {
+        "data_basis": "Datenbasis – kann man den Messwerten trauen? (empfohlen)",
+        "efficiency": "Effizienz – wie gut arbeitet die Wärmepumpe?",
+        "flow_temperature": "Vorlauf – heizt sie wärmer als nötig?",
+        "capacity": "Leistung – passt die Wärmepumpe zum Haus?"
+      }
     }
   },
   "config_subentries": {
+    "audit": {
+      "entry_type": "Audit",
+      "initiate_flow": {
+        "user": "Audit hinzufügen"
+      },
+      "step": {
+        "user": {
+          "title": "Audit hinzufügen",
+          "description": "Welches Audit soll zusätzlich laufen? Abschalten: den Eintrag des Audits löschen.{missing}",
+          "data": {
+            "audit": "Audit",
+            "confirmed": "Trotzdem zuschalten"
+          }
+        }
+      },
+      "error": {
+        "missing_roles": "Für dieses Audit fehlen Pflicht-Messwerte. Ohne sie bleibt es „nicht bewertbar“. Zuordnen über „Neu konfigurieren“ des Haupteintrags."
+      },
+      "abort": {
+        "all_audits_added": "Alle Audits sind schon zugeschaltet."
+      }
+    },
     "event": {
       "entry_type": "Ereignis",
       "initiate_flow": {

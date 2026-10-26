@@ -2,11 +2,24 @@
   "config": {
     "step": {
       "user": {
-        "title": "Heat pump audit: profiles",
-        "description": "Suggestions for the following mapping. An interface profile suggests matching entities, a model profile values from the data sheet. Choose “None” if nothing fits – everything can be changed afterwards.",
+        "title": "Air-to-water heat pump audit",
+        "description": "There is still an entry of the predecessor “WP-Audit”. Its settings can be taken over.",
+        "menu_options": {
+          "import_legacy": "Take over from WP-Audit",
+          "setup": "Set up from scratch"
+        }
+      },
+      "import_legacy": {
+        "title": "Take over from WP-Audit",
+        "description": "Taken over from “{title}”: entity mapping, plant data, events and the stored daily values of the timeline. All audits are enabled. Delete the old entry afterwards under Devices & services."
+      },
+      "setup": {
+        "title": "Heat pump audit: profiles and audits",
+        "description": "Profiles suggest matching entities (interface) and data sheet values (model). Choose “None” if nothing fits – everything can be changed afterwards. Below, the audits that should run; more can be added later via “Add audit”.",
         "data": {
           "interface_profile": "Interface to the heat pump",
-          "model_profile": "Heat pump model"
+          "model_profile": "Heat pump model",
+          "audits": "Audits"
         }
       },
       "signals": {
@@ -477,9 +490,39 @@
         "none": "None",
         "mitsubishi_pud_shwm140": "Mitsubishi PUD-SHWM140YAA"
       }
+    },
+    "audits": {
+      "options": {
+        "data_basis": "Data basis – can the measurements be trusted? (recommended)",
+        "efficiency": "Efficiency – how well does the heat pump work?",
+        "flow_temperature": "Flow temperature – does it heat hotter than needed?",
+        "capacity": "Capacity – does the heat pump fit the house?"
+      }
     }
   },
   "config_subentries": {
+    "audit": {
+      "entry_type": "Audit",
+      "initiate_flow": {
+        "user": "Add audit"
+      },
+      "step": {
+        "user": {
+          "title": "Add audit",
+          "description": "Which audit should run in addition? To disable an audit, delete its entry.{missing}",
+          "data": {
+            "audit": "Audit",
+            "confirmed": "Enable anyway"
+          }
+        }
+      },
+      "error": {
+        "missing_roles": "Required measurements are missing for this audit. Without them it stays “not assessable”. Map them via “Reconfigure” of the main entry."
+      },
+      "abort": {
+        "all_audits_added": "All audits are already enabled."
+      }
+    },
     "event": {
       "entry_type": "Event",
       "initiate_flow": {
