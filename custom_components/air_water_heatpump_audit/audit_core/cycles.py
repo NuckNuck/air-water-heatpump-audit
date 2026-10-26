@@ -8,7 +8,7 @@ from . import days
 from .data_basis import check_coverage
 from .heat import CapacityTable, energy_kwh, min_capacity_kw, time_mean
 from .result import (DERIVED, DESCRIPTIVE, ELAPSED, FULL_DAYS, HINT, INFO, NOT_ASSESSABLE, OK, PHYSICAL, RATE, SOURCED,
-                     WARN, CheckResult, grade, num, progress)
+                     WARN, CheckResult, count, grade, num, progress)
 from .series import Interval, Series, intersect, intervals_where, overlaps, subtract, total, weighted_values
 
 MIN_OFF_S = 30
@@ -93,7 +93,7 @@ def check_max_starts_per_hour(cycles: list[Cycle], start: float, end: float) -> 
                            origin=SOURCED, progress=prog)
     peak = max((sum(1 for u in ts if t <= u < t + 3600) for t in ts), default=0)
     return CheckResult("C2", "max_starts_per_hour", grade(peak, 6, 12), peak, "1/h",
-                       f"Höchstens {peak} Start(s) in einer Stunde. Herstellergrenzen 6–12/h (WPQS S. 98, Danfoss).",
+                       f"Höchstens {count(peak, 'Start', 'Starts')} in einer Stunde. Herstellergrenzen 6–12/h (WPQS S. 98, Danfoss).",
                        SOURCED, progress=prog)
 
 
@@ -104,7 +104,7 @@ def check_short_cycles(cycles: list[Cycle], min_cycles: int = 20, since: float =
     prog = progress(len(heating), min_cycles, "cycles", RATE, since)
     if len(heating) < min_cycles:
         return CheckResult("C3", "short_cycles", NOT_ASSESSABLE,
-                           text=f"{len(heating)} abgeschlossene Heizzyklen, nötig {min_cycles}.", origin=DESCRIPTIVE,
+                           text=f"{count(len(heating), 'abgeschlossener Heizzyklus', 'abgeschlossene Heizzyklen')}, nötig {min_cycles}.", origin=DESCRIPTIVE,
                            details=details, progress=prog)
     short = sum(1 for c in heating if c.duration < SHORT_CYCLE_S)
     very_short = sum(1 for c in heating if c.duration < VERY_SHORT_CYCLE_S)
@@ -175,7 +175,7 @@ def check_defrost(defrost: Series, cycles: list[Cycle], start: float, end: float
     run_h = sum(c.duration for c in cycles) / 3600
     rate = len(events) / run_h if run_h else 0.0
     return CheckResult("C6", "defrost", INFO, round(rate, 2), "1/h Lauf",
-                       f"{len(events)} Abtauung(en) in {num(run_h, '.1f')} h Verdichterlauf.", DERIVED,
+                       f"{count(len(events), 'Abtauung', 'Abtauungen')} in {num(run_h, '.1f')} h Verdichterlauf.", DERIVED,
                        {"events": events, "minutes": round(total(events) / 60, 1)})
 
 

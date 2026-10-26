@@ -4,7 +4,7 @@ import unittest
 
 from audit_core import cycles as c3
 from audit_core import data_basis as d0
-from audit_core.result import HINT, INFO, NOT_ASSESSABLE, OK, WARN, CheckResult, num, overall
+from audit_core.result import HINT, INFO, NOT_ASSESSABLE, OK, WARN, CheckResult, count, num, overall
 from audit_core.series import combine, intersect, intervals_where, subtract, weighted_median, weighted_values
 
 M = 60
@@ -169,6 +169,11 @@ class OverallTest(unittest.TestCase):
         self.assertEqual(num(14.3), "14,3")
         self.assertEqual(num(2964, ","), "2.964")
         self.assertEqual(num(12345.6, ",.1f"), "12.345,6")
+
+    def test_count_singular_plural(self):
+        self.assertEqual(count(1, "Tag", "Tage"), "1 Tag")
+        self.assertEqual(count(0, "Tag", "Tage"), "0 Tage")
+        self.assertEqual(count(7, "gültiger Tag", "gültige Tage"), "7 gültige Tage")
 
 
 if __name__ == "__main__":

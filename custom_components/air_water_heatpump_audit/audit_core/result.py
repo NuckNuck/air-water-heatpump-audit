@@ -55,6 +55,11 @@ def num(value: float, spec: str = "g") -> str:
     return text.replace(",", "\0").replace(".", ",").replace("\0", ".")
 
 
+def count(n: int, one: str, many: str) -> str:
+    """Anzahl mit passendem Wort für Fließtexte: count(1, "Tag", "Tage") → „1 Tag“, count(3, …) → „3 Tage“."""
+    return f"{n} {one if n == 1 else many}"
+
+
 def grade(value: float, ok_max: float, hint_max: float) -> str:
     """Einseitige Schwelle: ≤ ok_max grün, ≤ hint_max gelb, darüber rot."""
     if value <= ok_max:
