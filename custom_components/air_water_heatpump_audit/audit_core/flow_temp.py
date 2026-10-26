@@ -1,4 +1,4 @@
-"""Audit 2 – Vorlauf so niedrig wie möglich (Spezifikation: docs/heatpump_audit_spec.md, Abschnitt 5).
+"""Audit 2 – Vorlauf so niedrig wie möglich (Spezifikation: docs/specification.md, Abschnitt 5).
 
 Herstellerneutral: Alle Prüfungen arbeiten auf Rollen und Stammdaten (Spezifikation 1.6). Fehlt ein Eingang, ist das
 Ergebnis „nicht bewertbar“ mit Grund.

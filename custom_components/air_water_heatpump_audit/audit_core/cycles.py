@@ -110,7 +110,7 @@ def check_short_cycles(cycles: list[Cycle], min_cycles: int = 20, since: float =
     very_short = sum(1 for c in heating if c.duration < VERY_SHORT_CYCLE_S)
     details["very_short"] = very_short
     share = 100 * short / len(heating)
-    # Spezifikation: < 3 min an ≥ 2 Tagen → hint; die Tagesauswertung liefert der Aufrufer, hier nur der Zeitraum.
+    # Spezifikation 3.2: ≥ 2 Heizzyklen < 3 min im Abschnitt → hint (geplant war „an ≥ 2 Tagen“, bisher nicht nach Tagen getrennt).
     verdict = HINT if very_short >= 2 else INFO
     return CheckResult("C3", "short_cycles", verdict, round(share, 1), "%",
                        f"{short} von {len(heating)} Heizzyklen kürzer als 10 min, {very_short} kürzer als 3 min.",

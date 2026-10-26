@@ -1,4 +1,4 @@
-"""Audit 0 – Datenbasis (Spezifikation: docs/heatpump_audit_spec.md, Abschnitt 2)."""
+"""Audit 0 – Datenbasis (Spezifikation: docs/specification.md, Abschnitt 2)."""
 
 from __future__ import annotations
 
