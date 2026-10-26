@@ -440,3 +440,19 @@ def test_translations_cover_registry():
             assert spec.audit_id in sensors and spec.audit_id in data["selector"]["audits"]["options"], (path, spec)
             for check in spec.checks:
                 assert check.key in sensors, (path.name, check.key)
+
+
+async def test_card_resource_registered_and_updated(hass: HomeAssistant):
+    """Die Integration trägt ihre Karte selbst als Lovelace-Ressource ein und hält die Version aktuell."""
+    from homeassistant.components.lovelace.const import LOVELACE_DATA
+
+    from custom_components.air_water_heatpump_audit.const import CARD_URL
+
+    assert await async_setup_component(hass, "lovelace", {})
+    resources = hass.data[LOVELACE_DATA].resources
+    await resources.async_get_info()
+    await resources.async_create_item({"res_type": "module", "url": f"{CARD_URL}?v=0.0.1"})
+    assert await async_setup_component(hass, DOMAIN, {})
+    await hass.async_block_till_done()
+    urls = [r["url"] for r in resources.async_items() if r["url"].startswith(CARD_URL)]
+    assert len(urls) == 1 and not urls[0].endswith("v=0.0.1")
