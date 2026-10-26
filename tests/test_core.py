@@ -420,6 +420,21 @@ class FlowTemperatureTest(unittest.TestCase):
         none = self.t2.check_heating_curve_headroom([], 21.5, heating, start, end, "UTC")
         self.assertEqual(none.verdict, NOT_ASSESSABLE)
 
+    def test_room_headroom_skips_day_where_sensor_starts_late(self):
+        """Fühler ab 18:30 des ersten Tags: Der Abendwert ist kein Tagesmittel, der Tag zählt nicht."""
+        day = 24 * H
+        start, end = 0, 6 * day
+        comp, t = [], 0
+        while t < end:
+            comp += [(t + 6 * H, 1), (t + 10 * H, 0)]
+            t += day
+        heating, _ = self.t2.heating_windows(c3.detect_cycles([(0, 0)] + comp, start, end), [], [], [], [], start, end)
+        late = self.t2.check_heating_curve_headroom([(18.5 * H, 23.0)], 21.5, heating, start, end, "UTC")
+        self.assertEqual([d for d, _ in late.details["days"]], ["1970-01-02", "1970-01-03", "1970-01-04", "1970-01-05",
+                                                               "1970-01-06"])
+        early = self.t2.check_heating_curve_headroom([(0.5 * H, 23.0)], 21.5, heating, start, end, "UTC")
+        self.assertEqual(len(early.details["days"]), 6)  # ab 00:30 sind ≥ 90 % des Tags abgedeckt
+
 
 from audit_core import efficiency as e1
 
