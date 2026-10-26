@@ -28,7 +28,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     Eingebunden wird sie als Lovelace-Ressource (Modul). add_extra_js_url geht nicht: Das Skript liefe vor dem
     Scoped-Registry-Polyfill des Frontends, die Karte landete in der alten Registry und Lovelace fände sie nicht.
     """
-    card = Path(__file__).parent / "frontend" / "air-water-air-water-heatpump-audit-card.js"
+    card = Path(__file__).parent / "frontend" / "air-water-heatpump-audit-card.js"
     await hass.http.async_register_static_paths([StaticPathConfig(CARD_URL, str(card), False)])
     return True
 

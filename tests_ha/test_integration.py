@@ -349,3 +349,14 @@ async def test_controls_read_from_mapped_entities(hass: HomeAssistant):
                                                "state": "5.0", "min": 1.0, "max": 20.0, "step": 1.0,
                                                "options": None, "unit": "min"}
     assert hass.states.get("sensor.air_water_heatpump_audit_capacity").attributes["entry_id"] == entry.entry_id
+
+
+async def test_card_is_served(hass: HomeAssistant, hass_client):
+    """Die Karte liegt unter CARD_URL (Dateiname und URL passen zusammen)."""
+    from custom_components.air_water_heatpump_audit.const import CARD_URL
+
+    assert await async_setup_component(hass, DOMAIN, {})
+    client = await hass_client()
+    resp = await client.get(CARD_URL)
+    assert resp.status == 200
+    assert "air-water-heatpump-audit-card" in await resp.text()

@@ -137,4 +137,4 @@ CHECKS: list[tuple[str, str, str]] = [
 ]
 AUDITS = [DATA_BASIS, EFFICIENCY, FLOW_TEMPERATURE, CAPACITY]
 
-CARD_URL = "/air_water_heatpump_audit/air-water-air-water-heatpump-audit-card.js"
+CARD_URL = "/air_water_heatpump_audit/air-water-heatpump-audit-card.js"
