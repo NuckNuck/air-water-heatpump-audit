@@ -1,0 +1,18 @@
+{
+  "domain": "heatpump_audit",
+  "name": "WP-Audit",
+  "codeowners": [
+    "@NuckNuck"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "recorder",
+    "http"
+  ],
+  "documentation": "https://github.com/NuckNuck/air-water-heatpump-audit",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/NuckNuck/air-water-heatpump-audit/issues",
+  "requirements": [],
+  "version": "0.8.1"
+}

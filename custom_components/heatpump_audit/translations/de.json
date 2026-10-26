@@ -1,0 +1,501 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "WP-Audit: Betriebssignale",
+        "description": "Ein/Aus-Signale der Wärmepumpe zuordnen. Jedes Feld ist optional; Prüfungen ohne Daten werden „nicht bewertbar“.",
+        "data": {
+          "compressor_running": "Verdichter läuft",
+          "compressor_frequency": "Verdichterfrequenz",
+          "pump_running": "Primärpumpe läuft",
+          "defrost": "Abtauung aktiv",
+          "dhw_active": "Warmwasserbetrieb (3-Wege-Ventil)",
+          "immersion_heater": "Heizstab",
+          "booster_heater": "Zusatzheizung 1",
+          "booster_heater_2": "Zusatzheizung 2",
+          "heartbeat": "Lebenszeichen (z. B. Betriebszeit des Datensammlers)"
+        }
+      },
+      "measurements": {
+        "title": "WP-Audit: Messwerte",
+        "description": "Strom immer vom Zähler, nie aus Schätzungen der Steuerung.",
+        "data": {
+          "electricity_meter": "Stromzähler WP, Bezug (kWh)",
+          "flow_temp": "Vorlauftemperatur",
+          "return_temp": "Rücklauftemperatur",
+          "flow_rate": "Durchfluss (l/min)",
+          "outdoor_temp": "Außentemperatur der WP",
+          "outdoor_temp_reference": "Außentemperatur Referenz (Wetterdienst)"
+        }
+      },
+      "controller": {
+        "title": "WP-Audit: Werte der Steuerung",
+        "description": "Nur zur Plausibilisierung in Audit 0.",
+        "data": {
+          "ftc_heating_consumed": "Steuerung: Strom Heizen, Vortag",
+          "ftc_dhw_consumed": "Steuerung: Strom Warmwasser, Vortag",
+          "ftc_controller_date": "Datum der Steuerung"
+        }
+      },
+      "circuit": {
+        "title": "WP-Audit: Heizkreis und Raum",
+        "description": "Nur nötig, wenn zwischen Wärmepumpe und Heizkörpern ein Pufferspeicher oder eine hydraulische Weiche sitzt, und für Audit 2. Was es nicht gibt, leer lassen.",
+        "data": {
+          "flow_setpoint": "Soll-Vorlauf (Heizkurve)",
+          "circuit_flow_temp": "Heizkreis-Vorlauf (hinter Puffer/Weiche)",
+          "circuit_return_temp": "Heizkreis-Rücklauf",
+          "circuit_pump_running": "Heizkreispumpe läuft",
+          "room_temp": "Raumtemperatur (kältester Raum)"
+        }
+      },
+      "controls": {
+        "title": "WP-Audit: Stellgrößen",
+        "description": "Werte, die die Schnittstelle zur Wärmepumpe schreiben kann. Ist eine Rolle zugeordnet, schlägt die Spalte „Aktion“ einen Wert vor, den ein Admin mit einem Klick übernehmen kann; das Audit ändert nie selbst etwas. Leer lassen, was die Schnittstelle nicht kann.",
+        "data": {
+          "circuit_pump_speed": "Stufe der Heizkreispumpe (T1)",
+          "heating_curve_shift": "Parallelverschiebung der Heizkurve (T6)",
+          "short_cycle_lockout": "Sperrdauer nach zu kurzem Heizlauf (C3)",
+          "short_cycle_min_run": "Mindestlaufzeit für die Sperre (C3)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Diese Wärmepumpe wird bereits geprüft.",
+      "reconfigure_successful": "Die Zuordnung wurde aktualisiert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Stammdaten",
+        "description": "Angaben zur Anlage, die sich nicht messen lassen. Leere Felder sind erlaubt: Die betroffene Prüfung zeigt dann „nicht bewertbar – Stammdaten fehlen“.",
+        "sections": {
+          "plant": {
+            "name": "Anlage",
+            "data": {
+              "hydraulic_separation": "Hydraulische Trennung",
+              "flow_rate_min_lpm": "Mindestdurchfluss",
+              "circuit_flow_max_lpm": "Max. Förderstrom Heizkreispumpe",
+              "capacity_min_table": "Mindestleistung laut Datenblatt",
+              "immersion_heater_kw": "Leistung Heizstab",
+              "booster_heater_kw": "Leistung Zusatzheizung 1",
+              "booster_heater_2_kw": "Leistung Zusatzheizung 2"
+            },
+            "data_description": {
+              "hydraulic_separation": "Wie sind Wärmepumpe und Heizkreis verbunden? Bestimmt, ob der Pufferverlust (T1) geprüft wird.",
+              "flow_rate_min_lpm": "Kleinster zulässiger Durchfluss der Wärmepumpe laut Hersteller (T4).",
+              "circuit_flow_max_lpm": "Größter Förderstrom der Heizkreispumpe laut Datenblatt (höchste Kennlinie bei Förderhöhe 0); gilt unabhängig von der Einstellung als Obergrenze. Die Schätzung in T3 zeigt nie mehr an (1 m³/h = 16,7 l/min).",
+              "capacity_min_table": "Kleinste Heizleistung in kW je Vorlauftemperatur und Außentemperatur (C4). Form: Vorlauf: {Außentemperatur: kW}, z. B. 35: {-7: 3.9, 2: 3.5, 7: 3.5}. Zwischenwerte werden linear interpoliert.",
+              "immersion_heater_kw": "Elektrischer Heizstab im Speicher (C5).",
+              "booster_heater_kw": "Elektrische Zusatzheizung im Heizkreis (C5).",
+              "booster_heater_2_kw": "Zweite Stufe der Zusatzheizung, falls vorhanden (C5)."
+            },
+            "description": "Herstellerangaben aus Datenblatt oder Installationshandbuch."
+          },
+          "site": {
+            "name": "Standort und Komfort",
+            "data": {
+              "heating_hours": "Heizstunden pro Jahr",
+              "room_temp_target": "Ziel-Raumtemperatur"
+            },
+            "data_description": {
+              "heating_hours": "Stunden mit Außentemperatur unter der Heizgrenze (15 °C) am Standort, z. B. aus der Klimakarte des Bundesverbands Wärmepumpe. Für die Hochrechnung der Starts pro Jahr (C1).",
+              "room_temp_target": "Gewünschte Temperatur im Bezugsraum (T6)."
+            }
+          },
+          "evaluation": {
+            "name": "Auswertung",
+            "data": {
+              "window_days": "Auswertefenster",
+              "data_since": "Daten verwenden ab",
+              "data_source": "Datenquelle"
+            },
+            "data_description": {
+              "window_days": "Wie viele Tage zurück gerechnet wird.",
+              "data_since": "Ältere Daten werden ignoriert, z. B. vor dem Einbau der Schnittstelle."
+            },
+            "description": "Der Recorder hält nur seine Aufbewahrungszeit vor (Standard 10 Tage); InfluxDB reicht weiter zurück."
+          }
+        }
+      }
+    },
+    "error": {
+      "invalid_capacity_table": "Die Mindestleistung hat nicht die erwartete Form. Beispiel: 35: {-7: 3.9, 2: 3.5, 7: 3.5}"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "data_basis": {
+        "name": "Audit 0 Datenbasis",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "capacity": {
+        "name": "Audit 3 Leistung passt zum Bedarf",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "history_depth": {
+        "name": "D1 Rohdatentiefe",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "coverage": {
+        "name": "D2 Abdeckung",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "resolution": {
+        "name": "D3 Auflösung",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "sensor_offset": {
+        "name": "D4 Fühler-Offset",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "meter_vs_ftc": {
+        "name": "D5 Zähler gegen Steuerung",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "ftc_day_boundary": {
+        "name": "D6 Tageswechsel der Steuerung",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "meter_resolution": {
+        "name": "D8 Zählerauflösung",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "restart_artifacts": {
+        "name": "D9 Neustarts",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "outdoor_sensor": {
+        "name": "D10 Außenfühler",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "starts_per_year": {
+        "name": "C1 Starts pro Jahr",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "max_starts_per_hour": {
+        "name": "C2 Starts pro Stunde (max.)",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "short_cycles": {
+        "name": "C3 Kurze Zyklen",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "load_vs_min_capacity": {
+        "name": "C4 Last gegen Mindestleistung",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "backup_heater_share": {
+        "name": "C5 Heizstab-Anteil",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "defrost": {
+        "name": "C6 Abtauung",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "modulation": {
+        "name": "C7 Modulation",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "efficiency": {
+        "name": "Audit 1 Effizienz gesamt",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "daily_cop": {
+        "name": "E1 Arbeitszahl Tag",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "weekly_cop": {
+        "name": "E2 Arbeitszahl Woche",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "carnot_efficiency": {
+        "name": "E3 Gütegrad",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "dhw_share": {
+        "name": "E4 Warmwasser-Anteil",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "flow_temperature": {
+        "name": "Audit 2 Vorlauf so niedrig wie möglich",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "buffer_flow_loss": {
+        "name": "T1 Pufferverlust Vorlauf",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "circuit_sensor_offset": {
+        "name": "T2 Fühlerabgleich Vorlauf",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "flow_ratio": {
+        "name": "T3 Volumenstrom Heizkreis zu WP",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "heat_pump_spread": {
+        "name": "T4 Spreizung und Durchfluss",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "flow_vs_setpoint": {
+        "name": "T5 Ist gegen Soll",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "heating_curve_headroom": {
+        "name": "T6 Reserve der Heizkurve",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "timeline": {
+        "name": "Zeitstrahl"
+      }
+    }
+  },
+  "selector": {
+    "data_source": {
+      "options": {
+        "auto": "Automatisch: InfluxDB, wenn eingerichtet, sonst Recorder",
+        "influxdb": "InfluxDB (Verbindung der InfluxDB-Integration)",
+        "recorder": "Nur Recorder"
+      }
+    },
+    "hydraulic_separation": {
+      "options": {
+        "unknown": "Unbekannt",
+        "none": "Keine (Wärmepumpe speist die Heizkörper direkt)",
+        "series_buffer": "Puffer in Reihe (Rücklauf)",
+        "parallel_buffer": "Paralleler Pufferspeicher (4 Anschlüsse)",
+        "hydraulic_separator": "Hydraulische Weiche"
+      }
+    },
+    "kind": {
+      "options": {
+        "heating_curve": "Heizkurve geändert",
+        "valves": "Heizkörperventile verstellt",
+        "hydraulic_balancing": "Hydraulischer Abgleich",
+        "pump_setting": "Pumpe verstellt",
+        "dhw_setting": "Warmwasser-Einstellung",
+        "hardware": "Umbau an der Anlage",
+        "other": "Sonstiges"
+      }
+    }
+  },
+  "config_subentries": {
+    "event": {
+      "entry_type": "Ereignis",
+      "initiate_flow": {
+        "user": "Ereignis hinzufügen"
+      },
+      "step": {
+        "user": {
+          "title": "Ereignis eintragen",
+          "description": "Änderung an der Anlage, z. B. Heizkurve verstellt oder hydraulischer Abgleich. Die Audits Effizienz, Vorlauf und Leistung rechnen danach nur noch ab dem letzten Ereignis, damit nicht über eine Änderung hinweg gemittelt wird.",
+          "data": {
+            "time": "Zeitpunkt",
+            "kind": "Art",
+            "note": "Notiz"
+          },
+          "data_description": {
+            "time": "Wann die Änderung wirksam wurde.",
+            "note": "Was genau geändert wurde, z. B. „Parallelverschiebung −1 K“."
+          }
+        },
+        "reconfigure": {
+          "title": "Ereignis ändern",
+          "description": "Änderung an der Anlage, z. B. Heizkurve verstellt oder hydraulischer Abgleich. Die Audits Effizienz, Vorlauf und Leistung rechnen danach nur noch ab dem letzten Ereignis, damit nicht über eine Änderung hinweg gemittelt wird.",
+          "data": {
+            "time": "Zeitpunkt",
+            "kind": "Art",
+            "note": "Notiz"
+          },
+          "data_description": {
+            "time": "Wann die Änderung wirksam wurde.",
+            "note": "Was genau geändert wurde, z. B. „Parallelverschiebung −1 K“."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Ereignis gespeichert."
+      }
+    }
+  }
+}

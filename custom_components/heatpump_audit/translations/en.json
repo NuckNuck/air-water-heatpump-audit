@@ -1,0 +1,501 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Heat pump audit: operating signals",
+        "description": "Assign the on/off signals of the heat pump. Every field is optional; checks without data become 'not assessable'.",
+        "data": {
+          "compressor_running": "Compressor running",
+          "compressor_frequency": "Compressor frequency",
+          "pump_running": "Primary pump running",
+          "defrost": "Defrost active",
+          "dhw_active": "Domestic hot water active (3-way valve)",
+          "immersion_heater": "Immersion heater",
+          "booster_heater": "Booster heater",
+          "booster_heater_2": "Booster heater 2",
+          "heartbeat": "Heartbeat (e.g. uptime of the data logger)"
+        }
+      },
+      "measurements": {
+        "title": "Heat pump audit: measurements",
+        "description": "Electricity always from the meter, never from controller estimates.",
+        "data": {
+          "electricity_meter": "Electricity meter, import (kWh)",
+          "flow_temp": "Flow temperature",
+          "return_temp": "Return temperature",
+          "flow_rate": "Flow rate (l/min)",
+          "outdoor_temp": "Outdoor temperature of the heat pump",
+          "outdoor_temp_reference": "Outdoor temperature reference (weather service)"
+        }
+      },
+      "controller": {
+        "title": "Heat pump audit: controller values",
+        "description": "Only used for plausibility checks in audit 0.",
+        "data": {
+          "ftc_heating_consumed": "Controller: electricity heating, previous day",
+          "ftc_dhw_consumed": "Controller: electricity hot water, previous day",
+          "ftc_controller_date": "Controller date"
+        }
+      },
+      "circuit": {
+        "title": "Heat pump audit: heating circuit and room",
+        "description": "Only needed with a buffer tank or low loss header between heat pump and radiators, and for audit 2. Leave empty what does not exist.",
+        "data": {
+          "flow_setpoint": "Flow temperature setpoint (heating curve)",
+          "circuit_flow_temp": "Heating circuit flow temperature (after buffer/header)",
+          "circuit_return_temp": "Heating circuit return temperature",
+          "circuit_pump_running": "Heating circuit pump running",
+          "room_temp": "Room temperature (coldest room)"
+        }
+      },
+      "controls": {
+        "title": "Heat pump audit: controls",
+        "description": "Values the heat pump interface can write. If a role is assigned, the action column proposes a value an admin can apply with one click; the audit never changes anything by itself. Leave empty what the interface cannot do.",
+        "data": {
+          "circuit_pump_speed": "Heating circuit pump speed (T1)",
+          "heating_curve_shift": "Heating curve parallel shift (T6)",
+          "short_cycle_lockout": "Lockout after a too short heating run (C3)",
+          "short_cycle_min_run": "Minimum run time for the lockout (C3)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This heat pump is already being audited.",
+      "reconfigure_successful": "The assignment has been updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Master data",
+        "description": "Facts about the system that cannot be measured. Empty fields are allowed: the affected check then shows “not assessable – master data missing”.",
+        "sections": {
+          "plant": {
+            "name": "System",
+            "data": {
+              "hydraulic_separation": "Hydraulic separation",
+              "flow_rate_min_lpm": "Minimum flow rate",
+              "circuit_flow_max_lpm": "Max. heating circuit pump flow",
+              "capacity_min_table": "Minimum capacity from data sheet",
+              "immersion_heater_kw": "Immersion heater power",
+              "booster_heater_kw": "Booster heater 1 power",
+              "booster_heater_2_kw": "Booster heater 2 power"
+            },
+            "data_description": {
+              "hydraulic_separation": "How heat pump and heating circuit are connected. Decides whether the buffer loss (T1) is checked.",
+              "flow_rate_min_lpm": "Smallest permitted heat pump flow rate according to the manufacturer (T4).",
+              "circuit_flow_max_lpm": "Largest flow of the heating circuit pump according to the data sheet (highest curve at zero head); an upper bound regardless of the setting. The estimate in T3 never shows more (1 m³/h = 16.7 l/min).",
+              "capacity_min_table": "Smallest heating capacity in kW per flow temperature and outdoor temperature (C4). Format: flow: {outdoor: kW}, e.g. 35: {-7: 3.9, 2: 3.5, 7: 3.5}. Values in between are interpolated linearly.",
+              "immersion_heater_kw": "Electric immersion heater in the cylinder (C5).",
+              "booster_heater_kw": "Electric booster heater in the heating circuit (C5).",
+              "booster_heater_2_kw": "Second booster stage, if present (C5)."
+            },
+            "description": "Manufacturer data from the data sheet or installation manual."
+          },
+          "site": {
+            "name": "Site and comfort",
+            "data": {
+              "heating_hours": "Heating hours per year",
+              "room_temp_target": "Target room temperature"
+            },
+            "data_description": {
+              "heating_hours": "Hours with outdoor temperature below the heating limit (15 °C) at the site. Used to project starts per year (C1).",
+              "room_temp_target": "Desired temperature in the reference room (T6)."
+            }
+          },
+          "evaluation": {
+            "name": "Evaluation",
+            "data": {
+              "window_days": "Evaluation window",
+              "data_since": "Use data from",
+              "data_source": "Data source"
+            },
+            "data_description": {
+              "window_days": "How many days back are evaluated.",
+              "data_since": "Older data is ignored, e.g. before the interface was installed."
+            },
+            "description": "The recorder only keeps its retention period (default 10 days); InfluxDB goes further back."
+          }
+        }
+      }
+    },
+    "error": {
+      "invalid_capacity_table": "The minimum capacity does not have the expected format. Example: 35: {-7: 3.9, 2: 3.5, 7: 3.5}"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "data_basis": {
+        "name": "Audit 0 data basis",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "capacity": {
+        "name": "Audit 3 capacity matches demand",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "history_depth": {
+        "name": "D1 history depth",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "coverage": {
+        "name": "D2 coverage",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "resolution": {
+        "name": "D3 resolution",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "sensor_offset": {
+        "name": "D4 sensor offset",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "meter_vs_ftc": {
+        "name": "D5 meter vs. controller",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "ftc_day_boundary": {
+        "name": "D6 controller day boundary",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "meter_resolution": {
+        "name": "D8 meter resolution",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "restart_artifacts": {
+        "name": "D9 restarts",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "outdoor_sensor": {
+        "name": "D10 outdoor sensor",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "starts_per_year": {
+        "name": "C1 starts per year",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "max_starts_per_hour": {
+        "name": "C2 max. starts per hour",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "short_cycles": {
+        "name": "C3 short cycles",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "load_vs_min_capacity": {
+        "name": "C4 load vs. minimum capacity",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "backup_heater_share": {
+        "name": "C5 backup heater share",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "defrost": {
+        "name": "C6 defrost",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "modulation": {
+        "name": "C7 modulation",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "efficiency": {
+        "name": "Audit 1 Overall efficiency",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "daily_cop": {
+        "name": "E1 Daily COP",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "weekly_cop": {
+        "name": "E2 Weekly COP",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "carnot_efficiency": {
+        "name": "E3 Carnot efficiency",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "dhw_share": {
+        "name": "E4 Domestic hot water share",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "flow_temperature": {
+        "name": "Audit 2 flow temperature as low as possible",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "buffer_flow_loss": {
+        "name": "T1 buffer flow temperature loss",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "circuit_sensor_offset": {
+        "name": "T2 flow sensor offset",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "flow_ratio": {
+        "name": "T3 flow ratio circuit to heat pump",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "heat_pump_spread": {
+        "name": "T4 heat pump spread and flow",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "flow_vs_setpoint": {
+        "name": "T5 flow vs. setpoint",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "heating_curve_headroom": {
+        "name": "T6 heating curve headroom",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "timeline": {
+        "name": "Timeline"
+      }
+    }
+  },
+  "selector": {
+    "data_source": {
+      "options": {
+        "auto": "Automatic: InfluxDB if set up, otherwise recorder",
+        "influxdb": "InfluxDB (connection of the InfluxDB integration)",
+        "recorder": "Recorder only"
+      }
+    },
+    "hydraulic_separation": {
+      "options": {
+        "unknown": "Unknown",
+        "none": "None (heat pump feeds radiators directly)",
+        "series_buffer": "Buffer in series (return)",
+        "parallel_buffer": "Parallel buffer tank (4 connections)",
+        "hydraulic_separator": "Low loss header"
+      }
+    },
+    "kind": {
+      "options": {
+        "heating_curve": "Heating curve changed",
+        "valves": "Radiator valves adjusted",
+        "hydraulic_balancing": "Hydraulic balancing",
+        "pump_setting": "Pump setting changed",
+        "dhw_setting": "Hot water setting",
+        "hardware": "Hardware change",
+        "other": "Other"
+      }
+    }
+  },
+  "config_subentries": {
+    "event": {
+      "entry_type": "Event",
+      "initiate_flow": {
+        "user": "Add event"
+      },
+      "step": {
+        "user": {
+          "title": "Add event",
+          "description": "A change to the system, e.g. heating curve adjusted or hydraulic balancing. The efficiency, flow temperature and capacity audits then only evaluate data after the latest event, so nothing is averaged across a change.",
+          "data": {
+            "time": "Time",
+            "kind": "Type",
+            "note": "Note"
+          },
+          "data_description": {
+            "time": "When the change took effect.",
+            "note": "What exactly was changed, e.g. “parallel shift −1 K”."
+          }
+        },
+        "reconfigure": {
+          "title": "Edit event",
+          "description": "A change to the system, e.g. heating curve adjusted or hydraulic balancing. The efficiency, flow temperature and capacity audits then only evaluate data after the latest event, so nothing is averaged across a change.",
+          "data": {
+            "time": "Time",
+            "kind": "Type",
+            "note": "Note"
+          },
+          "data_description": {
+            "time": "When the change took effect.",
+            "note": "What exactly was changed, e.g. “parallel shift −1 K”."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Event saved."
+      }
+    }
+  }
+}

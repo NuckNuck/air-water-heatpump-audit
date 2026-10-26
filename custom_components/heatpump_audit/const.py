@@ -1,0 +1,162 @@
+"""Konstanten: Rollen, Mahtanar-Vorbelegung, Stammdaten, Prüfungen."""
+
+from __future__ import annotations
+
+from datetime import timedelta
+
+from .audit_core.actions import CONTROL_ROLES
+from .audit_core.profiles import HEATING_HOURS_EXAMPLE_SITE, PUD_SHWM140_MIN_CAPACITY_KW
+from .audit_core.runner import CAPACITY, DATA_BASIS, EFFICIENCY, FLOW_TEMPERATURE
+
+DOMAIN = "heatpump_audit"
+UPDATE_INTERVAL = timedelta(hours=1)
+
+# Rollen je Config-Flow-Schritt (Spezifikation 1.3). Wert = Vorbelegung für die Mahtanar-Anlage.
+ROLE_STEPS: dict[str, dict[str, str]] = {
+    "user": {
+        "compressor_running": "binary_sensor.heatpump_compressor",
+        "compressor_frequency": "sensor.heatpump_compressor_frequency",
+        "pump_running": "binary_sensor.heatpump_water_pump_status",
+        "defrost": "binary_sensor.heatpump_defrost",
+        "dhw_active": "binary_sensor.heatpump_3_way_valve",
+        "immersion_heater": "binary_sensor.heatpump_immersion_heater",
+        "booster_heater": "binary_sensor.heatpump_booster_heater",
+        "booster_heater_2": "binary_sensor.heatpump_booster_heater_2",
+        "heartbeat": "sensor.heatpump_esp_uptime",
+    },
+    "measurements": {
+        "electricity_meter": "sensor.wp_zaehler_bezug",
+        "flow_temp": "sensor.heatpump_feed_temp",
+        "return_temp": "sensor.heatpump_return_temp",
+        "flow_rate": "sensor.heatpump_flow_rate",
+        "outdoor_temp": "sensor.heatpump_outside_temp",
+        "outdoor_temp_reference": "weather.home",
+    },
+    "controller": {
+        "ftc_heating_consumed": "sensor.heatpump_heating_consumed",
+        "ftc_dhw_consumed": "sensor.heatpump_dhw_consumed",
+        "ftc_controller_date": "sensor.heatpump_controller_date",
+    },
+    # Heizkreis hinter Puffer oder Weiche und Raum (Audit 2); bei Anlagen ohne Trennung leer lassen
+    "circuit": {
+        "flow_setpoint": "sensor.heatpump_zone_1_setpoint_value",
+        "circuit_flow_temp": "sensor.heatpump_z1_feed_temp",
+        "circuit_return_temp": "sensor.heatpump_z1_return_temp",
+        "circuit_pump_running": "",
+        "room_temp": "",
+    },
+    # Stellgrößen (Spezifikation 1.8): Was die Schnittstelle zur Wärmepumpe schreiben kann. Nur zugeordnete Rollen
+    # erscheinen als Vorschlag in der Spalte „Aktion“; Heizkurve und Pumpe kann der Mahtanar nicht schreiben.
+    "controls": {
+        "circuit_pump_speed": "",
+        "heating_curve_shift": "",
+        "short_cycle_lockout": "select.heatpump_short_cycle_lockout_duration_min",
+        "short_cycle_min_run": "number.heatpump_short_cycle_minimum_on_time",
+    },
+}
+assert list(ROLE_STEPS["controls"]) == list(CONTROL_ROLES)
+ROLE_DOMAINS: dict[str, list[str]] = {
+    role: ["binary_sensor"] for role in ROLE_STEPS["user"] if role not in ("compressor_frequency", "heartbeat")
+} | {"outdoor_temp_reference": ["sensor", "weather"], "circuit_pump_running": ["binary_sensor"]} | {
+    role: list(spec.domains) for role, spec in CONTROL_ROLES.items()
+}
+# Rollen mit Text-Zustand; alle anderen werden als Zahl gelesen (on/off → 1/0).
+TEXT_ROLES = {"ftc_controller_date"}
+# Bei einer weather-Entität wird dieses Attribut statt des Zustands gelesen.
+WEATHER_ATTRIBUTE = "temperature"
+
+# Stammdaten (Spezifikation 1.4) im Options Flow
+CONF_IMMERSION_HEATER_KW = "immersion_heater_kw"
+CONF_BOOSTER_HEATER_KW = "booster_heater_kw"
+CONF_BOOSTER_HEATER_2_KW = "booster_heater_2_kw"
+CONF_WINDOW_DAYS = "window_days"
+CONF_DATA_SINCE = "data_since"
+CONF_DATA_SOURCE = "data_source"
+CONF_HYDRAULIC_SEPARATION = "hydraulic_separation"
+CONF_FLOW_RATE_MIN_LPM = "flow_rate_min_lpm"
+CONF_CIRCUIT_FLOW_MAX_LPM = "circuit_flow_max_lpm"
+CONF_ROOM_TEMP_TARGET = "room_temp_target"
+CONF_CAPACITY_MIN_TABLE = "capacity_min_table"
+CONF_HEATING_HOURS = "heating_hours"
+# Abschnitte des Options-Formulars; gespeichert werden die Optionen flach.
+OPTION_SECTIONS: dict[str, tuple[str, ...]] = {
+    "plant": (CONF_HYDRAULIC_SEPARATION, CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_CAPACITY_MIN_TABLE, CONF_IMMERSION_HEATER_KW,
+              CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW),
+    "site": (CONF_HEATING_HOURS, CONF_ROOM_TEMP_TARGET),
+    "evaluation": (CONF_WINDOW_DAYS, CONF_DATA_SINCE, CONF_DATA_SOURCE),
+}
+# Optionale Stammdaten: leer heißt „unbekannt“, die abhängige Prüfung ist dann nicht bewertbar.
+OPTIONAL_OPTIONS = (CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_CAPACITY_MIN_TABLE, CONF_HEATING_HOURS)
+HYDRAULIC_SEPARATIONS = ["unknown", "none", "series_buffer", "parallel_buffer", "hydraulic_separator"]
+# auto: InfluxDB 2, wenn die HA-Integration InfluxDB eingerichtet ist, sonst Recorder
+DATA_SOURCES = ["auto", "influxdb", "recorder"]
+SOURCE_INFLUXDB = "influxdb"
+SOURCE_RECORDER = "recorder"
+DEFAULT_OPTIONS = {
+    CONF_IMMERSION_HEATER_KW: 3.0,  # EHPT20X Werkseinstellung, OCH714E Tab. 9.5.2
+    CONF_BOOSTER_HEATER_KW: 0.0,
+    CONF_BOOSTER_HEATER_2_KW: 0.0,
+    CONF_WINDOW_DAYS: 30,  # mit Recorder wirkt höchstens dessen Aufbewahrung (Standard 10 Tage)
+    CONF_DATA_SINCE: "2026-10-24 15:46:00",  # Einbau Mahtanar
+    CONF_DATA_SOURCE: "auto",
+    CONF_HYDRAULIC_SEPARATION: "unknown",
+    CONF_FLOW_RATE_MIN_LPM: None,  # Herstellerangabe, ohne Wert wird der Durchfluss nicht gegen ein Minimum geprüft
+    CONF_CIRCUIT_FLOW_MAX_LPM: None,  # größter Förderstrom der Heizkreispumpe; ohne Wert wird T3 nicht gekappt
+    CONF_ROOM_TEMP_TARGET: 20.0,  # Norm-Innentemperatur Wohnräume (DIN EN 12831)
+    # Vorbelegung dieser Anlage (PUD-SHWM140, PLZ 53560); bei anderen Anlagen leeren oder ersetzen
+    CONF_CAPACITY_MIN_TABLE: PUD_SHWM140_MIN_CAPACITY_KW,
+    CONF_HEATING_HOURS: HEATING_HOURS_EXAMPLE_SITE,
+}
+MASTER_KEYS = (CONF_HYDRAULIC_SEPARATION, CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_ROOM_TEMP_TARGET, CONF_CAPACITY_MIN_TABLE,
+               CONF_HEATING_HOURS)
+
+# Ereignisse (Spezifikation 1.5) als Untereinträge des Config Entry
+SUBENTRY_EVENT = "event"
+CONF_EVENT_TIME = "time"
+CONF_EVENT_KIND = "kind"
+CONF_EVENT_NOTE = "note"
+EVENT_KINDS = ["heating_curve", "valves", "hydraulic_balancing", "pump_setting", "dhw_setting", "hardware", "other"]
+# Titel der Untereinträge entstehen im Flow und werden nicht übersetzt; daher hier je Sprache.
+EVENT_KIND_LABELS = {
+    "de": {"heating_curve": "Heizkurve geändert", "valves": "Heizkörperventile verstellt",
+           "hydraulic_balancing": "Hydraulischer Abgleich", "pump_setting": "Pumpe verstellt",
+           "dhw_setting": "Warmwasser-Einstellung", "hardware": "Umbau an der Anlage", "other": "Sonstiges"},
+    "en": {"heating_curve": "Heating curve changed", "valves": "Radiator valves adjusted",
+           "hydraulic_balancing": "Hydraulic balancing", "pump_setting": "Pump setting changed",
+           "dhw_setting": "Hot water setting", "hardware": "Hardware change", "other": "Other"},
+}
+
+VERDICTS = ["ok", "hint", "warn", "info", "not_assessable"]
+
+# Prüfungen je Audit: (Audit, check_id, key). Daraus entstehen die Sensoren, auch bevor Daten da sind.
+CHECKS: list[tuple[str, str, str]] = [
+    (DATA_BASIS, "D1", "history_depth"),
+    (DATA_BASIS, "D2", "coverage"),
+    (DATA_BASIS, "D3", "resolution"),
+    (DATA_BASIS, "D4", "sensor_offset"),
+    (DATA_BASIS, "D5", "meter_vs_ftc"),
+    (DATA_BASIS, "D6", "ftc_day_boundary"),
+    (DATA_BASIS, "D8", "meter_resolution"),
+    (DATA_BASIS, "D9", "restart_artifacts"),
+    (DATA_BASIS, "D10", "outdoor_sensor"),
+    (EFFICIENCY, "E1", "daily_cop"),
+    (EFFICIENCY, "E2", "weekly_cop"),
+    (EFFICIENCY, "E3", "carnot_efficiency"),
+    (EFFICIENCY, "E4", "dhw_share"),
+    (FLOW_TEMPERATURE, "T1", "buffer_flow_loss"),
+    (FLOW_TEMPERATURE, "T2", "circuit_sensor_offset"),
+    (FLOW_TEMPERATURE, "T3", "flow_ratio"),
+    (FLOW_TEMPERATURE, "T4", "heat_pump_spread"),
+    (FLOW_TEMPERATURE, "T5", "flow_vs_setpoint"),
+    (FLOW_TEMPERATURE, "T6", "heating_curve_headroom"),
+    (CAPACITY, "C1", "starts_per_year"),
+    (CAPACITY, "C2", "max_starts_per_hour"),
+    (CAPACITY, "C3", "short_cycles"),
+    (CAPACITY, "C4", "load_vs_min_capacity"),
+    (CAPACITY, "C5", "backup_heater_share"),
+    (CAPACITY, "C6", "defrost"),
+    (CAPACITY, "C7", "modulation"),
+]
+AUDITS = [DATA_BASIS, EFFICIENCY, FLOW_TEMPERATURE, CAPACITY]
+
+CARD_URL = "/heatpump_audit/heatpump-audit-card.js"
