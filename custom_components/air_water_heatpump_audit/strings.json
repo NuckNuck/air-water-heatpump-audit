@@ -106,7 +106,7 @@
               "hydraulic_separation": "How heat pump and heating circuit are connected. Decides whether the buffer loss (T1) is checked.",
               "flow_rate_min_lpm": "Smallest permitted heat pump flow rate according to the manufacturer (T4).",
               "circuit_flow_max_lpm": "Largest flow of the heating circuit pump according to the data sheet (highest curve at zero head); an upper bound regardless of the setting. The estimate in T3 never shows more (1 m³/h = 16.7 l/min).",
-              "capacity_min_table": "Smallest heating capacity in kW per flow temperature and outdoor temperature (C4). Format: flow: {outdoor: kW}, e.g. 35: {-7: 3.9, 2: 3.5, 7: 3.5}. Values in between are interpolated linearly.",
+              "capacity_min_table": "Smallest heating capacity in kW per flow temperature and outdoor temperature (C4). Format (YAML): one line per flow temperature, below it indented outdoor: kW, e.g. \"35:\" followed by \"-7: 3.9\", \"2: 3.5\", \"7: 3.5\". Values in between are interpolated linearly.",
               "immersion_heater_kw": "Electric immersion heater in the cylinder (C5).",
               "booster_heater_kw": "Electric booster heater in the heating circuit (C5).",
               "booster_heater_2_kw": "Second booster stage, if present (C5)."
@@ -141,7 +141,7 @@
       }
     },
     "error": {
-      "invalid_capacity_table": "The minimum capacity does not have the expected format. Example: 35: {-7: 3.9, 2: 3.5, 7: 3.5}"
+      "invalid_capacity_table": "The minimum capacity does not have the expected format. Example: \"35:\" followed by indented \"-7: 3.9\", \"2: 3.5\", \"7: 3.5\"."
     }
   },
   "entity": {

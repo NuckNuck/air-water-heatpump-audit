@@ -128,6 +128,22 @@ async def test_add_audit_subentry_and_entities_follow(hass: HomeAssistant):
     assert [a["id"] for a in timeline] == ["efficiency", "capacity"]
 
 
+async def test_audit_devices_hang_below_main_device(hass: HomeAssistant, caplog):
+    """Audit-Geräte verweisen per via_device_id auf das Hauptgerät (via_device ist ab HA 2027.8 entfernt)."""
+    from homeassistant.helpers import device_registry as dr
+
+    entry = MockConfigEntry(domain=DOMAIN, data=MAHTANAR, options=DEFAULT_OPTIONS | {"data_since": "2000-01-01 00:00:00"},
+                            subentries_data=[AUDIT_SUBENTRY("capacity")])
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    devices = {ident[1]: d for d in dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
+               for ident in d.identifiers}
+    main, audit = devices.get(entry.entry_id), devices.get(f"{entry.entry_id}_capacity")
+    assert main is not None and audit is not None and audit.via_device_id == main.id
+    assert "via_device" not in caplog.text
+
+
 async def test_add_audit_warns_about_missing_roles(hass: HomeAssistant):
     entry = MockConfigEntry(domain=DOMAIN, data={"compressor_running": "binary_sensor.c"}, options=DEFAULT_OPTIONS,
                             subentries_data=[AUDIT_SUBENTRY("capacity")])
@@ -423,6 +439,31 @@ async def test_card_is_served(hass: HomeAssistant, hass_client):
     resp = await client.get(CARD_URL)
     assert resp.status == 200
     assert "air-water-heatpump-audit-card" in await resp.text()
+
+
+def test_translation_placeholders_match_english():
+    """Geschweifte Klammern sind Platzhalter: Jede Sprache braucht genau die Platzhalter des englischen Texts,
+    sonst verwirft HA den Text (Log „Validation of translation placeholders“)."""
+    import json
+    import string
+    from pathlib import Path
+
+    def flat(node, prefix=""):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                yield from flat(value, f"{prefix}.{key}" if prefix else key)
+        else:
+            yield prefix, node
+
+    def placeholders(text):
+        return {name for _, name, _, _ in string.Formatter().parse(text) if name is not None}
+
+    base = Path(__file__).parents[1] / "custom_components" / DOMAIN
+    english = dict(flat(json.loads((base / "strings.json").read_text(encoding="utf-8"))))
+    for path in sorted((base / "translations").glob("*.json")):
+        for key, text in flat(json.loads(path.read_text(encoding="utf-8"))):
+            assert placeholders(text) == placeholders(english.get(key, "")), (path.name, key)
+            assert all(name.isidentifier() for name in placeholders(text)), (path.name, key, text)
 
 
 def test_translations_cover_registry():
