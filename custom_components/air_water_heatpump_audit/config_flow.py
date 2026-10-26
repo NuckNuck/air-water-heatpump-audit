@@ -30,7 +30,7 @@ from .const import (CONF_BOOSTER_HEATER_2_KW, CONF_BOOSTER_HEATER_KW, CONF_CAPAC
                     CONF_WINDOW_DAYS, DATA_SOURCES, DEFAULT_OPTIONS, DOMAIN, EVENT_KIND_LABELS, EVENT_KINDS,
                     HYDRAULIC_SEPARATIONS, OPTION_SECTIONS, OPTIONAL_OPTIONS, ROLE_DOMAINS, ROLE_STEPS,
                     SUBENTRY_EVENT)
-from .profiles import COMMON_ROLE_SUGGESTIONS, INTERFACE_PROFILES, MODEL_PROFILES
+from .profiles import COMMON_ROLE_SUGGESTIONS, INTERFACE_PROFILES, MODEL_PROFILES, role_candidates
 
 STEP_ORDER = list(ROLE_STEPS)
 NO_PROFILE = "none"
@@ -62,7 +62,11 @@ class AirWaterAuditConfigFlow(ConfigFlow, domain=DOMAIN):
         self._reconfigure = False
 
     def _suggestions(self) -> dict[str, str]:
-        return COMMON_ROLE_SUGGESTIONS | INTERFACE_PROFILES.get(self._data.get(CONF_INTERFACE_PROFILE, NO_PROFILE), {})
+        """Je Rolle der Vorschlag des Profils: die erste Schreibweise, die es in dieser Instanz gibt."""
+        out = dict(COMMON_ROLE_SUGGESTIONS)
+        for role, candidates in role_candidates(self._data.get(CONF_INTERFACE_PROFILE, NO_PROFILE)).items():
+            out[role] = next((eid for eid in candidates if self.hass.states.get(eid)), candidates[0])
+        return out
 
     def _role_schema(self, step: str) -> vol.Schema:
         fields = {}
@@ -110,8 +114,8 @@ class AirWaterAuditConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is None:
             return self.async_show_form(step_id="import_legacy", description_placeholders={"title": old.title})
         data = migrate_roles(dict(old.data))
-        ecodan = INTERFACE_PROFILES["esphome_ecodan"]
-        if any(data.get(role) == eid for role, eid in ecodan.items()):
+        ecodan = role_candidates("esphome_ecodan")
+        if any(data.get(role) in eids for role, eids in ecodan.items()):
             data.setdefault(CONF_INTERFACE_PROFILE, "esphome_ecodan")  # die Vorgängerin belegte so vor
         data[CONF_IMPORT_TIMELINE_FROM] = old.entry_id
         await self.async_set_unique_id(data.get("compressor_running") or DOMAIN)

@@ -71,6 +71,21 @@ async def test_config_flow_without_profile_has_no_suggestions(hass: HomeAssistan
     assert schema["compressor_running"] is None
 
 
+async def test_config_flow_suggests_default_german_entity_ids(hass: HomeAssistant):
+    """Frisch eingerichtete Firmware mit deutschen Labels heißt „ecodan_heatpump_…“ – das Profil findet sie trotzdem."""
+    hass.states.async_set("binary_sensor.ecodan_heatpump_kompressor", "off")
+    hass.states.async_set("sensor.ecodan_heatpump_feed_temp", "30")  # englische Labels
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"interface_profile": "esphome_ecodan", "model_profile": "none", "audits": ["data_basis"]})
+    schema = {str(k): k.description for k in result["data_schema"].schema}
+    assert schema["compressor_running"] == {"suggested_value": "binary_sensor.ecodan_heatpump_kompressor"}
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    schema = {str(k): k.description for k in result["data_schema"].schema}
+    assert schema["flow_temp"] == {"suggested_value": "sensor.ecodan_heatpump_feed_temp"}
+    assert schema["return_temp"] is None  # gibt es in dieser Instanz in keiner Schreibweise
+
+
 async def test_import_from_legacy_wp_audit(hass: HomeAssistant, hass_storage):
     """Übernahme aus „WP-Audit“ (Domain heatpump_audit, Rollen noch mit ftc_*): Rollen, Optionen, Ereignisse, Zeitstrahl."""
     old = MockConfigEntry(domain="heatpump_audit", title="WP-Audit", version=1,
