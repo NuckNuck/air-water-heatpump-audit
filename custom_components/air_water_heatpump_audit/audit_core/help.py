@@ -98,7 +98,7 @@ CHECK_HELP: dict[str, dict[str, str]] = {
     "T6": {"what": "Ob die Räume dauerhaft wärmer sind als gewünscht – dann könnte die Heizkurve tiefer und die "
                    "Wärmepumpe sparsamer laufen.",
            "rating": "Gelb, wenn der Raum an mindestens 5 von 7 Heiztagen 1 K oder mehr über dem Ziel liegt. "
-                     "Braucht einen Raumfühler.",
+                     "Braucht einen Raumfühler; ein Tag zählt erst, wenn der Fühler seit mindestens 90 % des Tags misst.",
            "source": "Abgeleitet aus der Regelgenauigkeit von Raumreglern (EN 15500)."},
     # Audit 3 – Leistung
     "C1": {"what": "Verdichterstarts, hochgerechnet auf ein Jahr. Viele Starts deuten auf eine zu große oder "

@@ -37,6 +37,7 @@ ROOM_ABOVE_K, ROOM_BELOW_K = 1.0, 0.5  # T6: Regelgenauigkeit Raumregler 0,5 K (
 ROOM_ABOVE_SHARE = 5 / 7  # T6: an ≥ 5 von 7 Heiztagen
 MIN_ROOM_DAYS = 5
 HEATING_DAY_MIN_S = 3600  # ein Tag zählt als Heiztag ab 1 h Heizbetrieb
+ROOM_DAY_MIN_SHARE = 0.9  # T6: Raumfühler misst seit mindestens 90 % des Tags (sonst nur Teil des Tagesgangs)
 
 SEPARATING = ("parallel_buffer", "hydraulic_separator")
 NOT_SEPARATING = ("none", "series_buffer")
@@ -297,7 +298,10 @@ def check_heating_curve_headroom(room: Series, target: float | None, heating: li
         return CheckResult("T6", "heating_curve_headroom", NOT_ASSESSABLE,
                            text="Ziel-Raumtemperatur fehlt in den Stammdaten.", origin=DERIVED)
     means = []
+    first = room[0][0]  # HA speichert gleichbleibende Werte nicht neu → abgedeckt ist alles ab dem ersten Messwert
     for a, b in days.full_days(start, end, tz):
+        if b - max(a, first) < ROOM_DAY_MIN_SHARE * (b - a):
+            continue
         if total(intersect(heating, [(a, b)])) >= HEATING_DAY_MIN_S:
             m = time_mean(room, [(a, b)])
             if m is not None:
