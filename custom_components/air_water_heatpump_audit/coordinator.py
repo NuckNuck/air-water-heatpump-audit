@@ -26,7 +26,7 @@ from .recorder_source import load_series
 
 _LOGGER = logging.getLogger(__name__)
 
-type HeatpumpAuditConfigEntry = ConfigEntry[HeatpumpAuditCoordinator]
+type AirWaterAuditConfigEntry = ConfigEntry[AirWaterAuditCoordinator]
 
 TIMELINE_STORE_VERSION = 1
 
@@ -40,12 +40,12 @@ def timeline_store(hass: HomeAssistant, entry_id: str) -> Store:
 DEPTH_ROLES = ("compressor_running", "flow_temp", "heartbeat")
 
 
-class HeatpumpAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Ein Lauf = alle Audits über das Fenster [max(jetzt − Fenster, Daten ab), jetzt]."""
 
-    config_entry: HeatpumpAuditConfigEntry
+    config_entry: AirWaterAuditConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: HeatpumpAuditConfigEntry) -> None:
+    def __init__(self, hass: HomeAssistant, entry: AirWaterAuditConfigEntry) -> None:
         super().__init__(hass, _LOGGER, config_entry=entry, name=DOMAIN, update_interval=UPDATE_INTERVAL)
         self._influx_since: float | None = None  # ältester Wert in InfluxDB, einmal je Laufzeit ermittelt
         self._store = timeline_store(hass, entry.entry_id)
@@ -162,7 +162,7 @@ class HeatpumpAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         report["points"] = {r: len(s) for r, s in series.items()}
         report["source"] = {"used": SOURCE_INFLUXDB if conn else SOURCE_RECORDER,
                             "roles_from_recorder": from_recorder if conn else [], "note": note}
-        _LOGGER.debug("WP-Audit gerechnet: %s, Quelle %s", report["runtime_s"], report["source"])
+        _LOGGER.debug("Audit gerechnet: %s, Quelle %s", report["runtime_s"], report["source"])
         return report
 
     async def _merge_timeline(self, fresh: list[dict]) -> list[dict]:

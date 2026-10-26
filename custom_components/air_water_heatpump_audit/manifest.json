@@ -1,6 +1,6 @@
 {
-  "domain": "heatpump_audit",
-  "name": "WP-Audit",
+  "domain": "air_water_heatpump_audit",
+  "name": "Luft-Wasser-Wärmepumpen-Audit",
   "codeowners": [
     "@NuckNuck"
   ],

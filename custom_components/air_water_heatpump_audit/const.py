@@ -7,7 +7,7 @@ from datetime import timedelta
 from .audit_core.actions import CONTROL_ROLES
 from .audit_core.runner import CAPACITY, DATA_BASIS, EFFICIENCY, FLOW_TEMPERATURE
 
-DOMAIN = "heatpump_audit"
+DOMAIN = "air_water_heatpump_audit"
 UPDATE_INTERVAL = timedelta(hours=1)
 
 # Rollen je Config-Flow-Schritt (Spezifikation 1.3). Vorschläge für Entitäten kommen aus den Profilen (profiles.py).
@@ -137,4 +137,4 @@ CHECKS: list[tuple[str, str, str]] = [
 ]
 AUDITS = [DATA_BASIS, EFFICIENCY, FLOW_TEMPERATURE, CAPACITY]
 
-CARD_URL = "/heatpump_audit/heatpump-audit-card.js"
+CARD_URL = "/air_water_heatpump_audit/air-water-air-water-heatpump-audit-card.js"

@@ -23,7 +23,7 @@ from .influx_source import InfluxSource
 
 TZ = ZoneInfo("Europe/Berlin")
 DEFAULT_SITE = Path(__file__).with_name("site.json")
-_PROFILES = Path(__file__).parents[1] / "custom_components" / "heatpump_audit" / "profiles.py"
+_PROFILES = Path(__file__).parents[1] / "custom_components" / "air_water_heatpump_audit" / "profiles.py"
 
 
 def _profiles():
@@ -78,7 +78,7 @@ def run(site: dict, start: float, end: float) -> dict:
 
 def markdown(report: dict) -> str:
     p = report["period"]
-    lines = [f"# WP-Audit – Prototyp-Bericht", "",
+    lines = [f"# Luft-Wasser-Wärmepumpen-Audit – Prototyp-Bericht", "",
              f"Zeitraum: {_local(p['start'])} – {_local(p['end'])}", ""]
     h = report["heat"]
     lines += [f"Wärme im Zeitraum (Durchfluss × Spreizung): {h['raw_kwh']} kWh roh, {h['corrected_kwh']} kWh mit "

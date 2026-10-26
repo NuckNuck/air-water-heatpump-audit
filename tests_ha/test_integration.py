@@ -11,9 +11,9 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.components.recorder.common import async_wait_recording_done
 
-from custom_components.heatpump_audit.const import CHECKS, DEFAULT_OPTIONS, DOMAIN, OPTION_SECTIONS, ROLE_STEPS
-from custom_components.heatpump_audit.profiles import COMMON_ROLE_SUGGESTIONS, INTERFACE_PROFILES, MODEL_PROFILES
-from custom_components.heatpump_audit.recorder_source import to_series
+from custom_components.air_water_heatpump_audit.const import CHECKS, DEFAULT_OPTIONS, DOMAIN, OPTION_SECTIONS, ROLE_STEPS
+from custom_components.air_water_heatpump_audit.profiles import COMMON_ROLE_SUGGESTIONS, INTERFACE_PROFILES, MODEL_PROFILES
+from custom_components.air_water_heatpump_audit.recorder_source import to_series
 
 MAHTANAR = ({"interface_profile": "esphome_ecodan", "electricity_meter": "sensor.wp_zaehler_bezug"}
             | COMMON_ROLE_SUGGESTIONS | INTERFACE_PROFILES["esphome_ecodan"])
@@ -48,7 +48,7 @@ async def test_config_flow_prefills_and_creates_entry(hass: HomeAssistant):
     assert result["step_id"] == "circuit"
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["step_id"] == "controls"
-    with patch("custom_components.heatpump_audit.async_setup_entry", return_value=True):
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
         result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"]["compressor_running"] == "binary_sensor.heatpump_compressor"
@@ -96,17 +96,17 @@ async def test_sensors_from_recorder(hass: HomeAssistant):
     await hass.async_block_till_done()
     assert coordinator.last_update_success, coordinator.last_exception
 
-    audit = hass.states.get("sensor.heatpump_audit_data_basis")
+    audit = hass.states.get("sensor.air_water_heatpump_audit_data_basis")
     assert audit is not None and audit.state in ("ok", "hint", "warn", "info", "not_assessable")
     assert audit.attributes["dq"] in ("high", "medium", "low")
     assert {c["entity_id"] for c in audit.attributes["checks"]} <= {
-        f"sensor.heatpump_audit_{cid.lower()}_{key}" for _, cid, key in CHECKS}
-    d1 = hass.states.get("sensor.heatpump_audit_d1_history_depth")
+        f"sensor.air_water_heatpump_audit_{cid.lower()}_{key}" for _, cid, key in CHECKS}
+    d1 = hass.states.get("sensor.air_water_heatpump_audit_d1_history_depth")
     assert d1.state == "hint"  # nur Recorder mit 10 Tagen
     assert d1.attributes["origin"] == "derived"
     assert d1.attributes["action"]["who"] == "owner"
     assert coordinator.data["points"]["compressor_running"] >= 1
-    assert hass.states.get("sensor.heatpump_audit_capacity").attributes["cycles"][0]["open_start"] is True
+    assert hass.states.get("sensor.air_water_heatpump_audit_capacity").attributes["cycles"][0]["open_start"] is True
 
 
 INFLUX = {"api_version": "2", "url": "http://influx.test:8086", "token": "t", "organization": "o", "bucket": "b",
@@ -120,7 +120,7 @@ CSV_VALUE = (",result,table,_time,_value,domain,entity_id\r\n"
 
 
 def test_parse_csv_and_trim():
-    from custom_components.heatpump_audit.influx_source import parse_csv, trim_before
+    from custom_components.air_water_heatpump_audit.influx_source import parse_csv, trim_before
 
     roles = {"compressor_running": "binary_sensor.heatpump_compressor", "flow_temp": "sensor.heatpump_feed_temp"}
     out = parse_csv(CSV_VALUE, roles)
@@ -132,7 +132,7 @@ def test_parse_csv_and_trim():
 
 
 def test_build_query_filters_domain_and_entity():
-    from custom_components.heatpump_audit.influx_source import build_query
+    from custom_components.air_water_heatpump_audit.influx_source import build_query
 
     q = build_query("b", "value", ["sensor.a", "select.a"], 0, 3600)
     assert '(r.domain == "select" and r.entity_id == "a")' in q and '(r.domain == "sensor" and r.entity_id == "a")' in q
@@ -162,8 +162,8 @@ async def test_influx_source_used_and_missing_roles_from_recorder(hass: HomeAssi
     assert "flow_rate" in source["roles_from_recorder"] and "flow_temp" not in source["roles_from_recorder"]
     assert coordinator.data["points"]["flow_temp"] == 1  # Testdaten liegen vor dem Fenster: nur der gültige Wert
     assert coordinator.data["points"]["flow_rate"] == 1  # aus dem Recorder
-    assert hass.states.get("sensor.heatpump_audit_d1_history_depth").state == "ok"  # Langzeitquelle angebunden
-    assert hass.states.get("sensor.heatpump_audit_data_basis").attributes["source"]["used"] == "influxdb"
+    assert hass.states.get("sensor.air_water_heatpump_audit_d1_history_depth").state == "ok"  # Langzeitquelle angebunden
+    assert hass.states.get("sensor.air_water_heatpump_audit_data_basis").attributes["source"]["used"] == "influxdb"
     sent = aioclient_mock.mock_calls[0]
     assert sent[3]["Authorization"] == "Token t"
 
@@ -173,7 +173,7 @@ async def test_influx_error_falls_back_to_recorder(hass: HomeAssistant, aioclien
     coordinator = await _setup_with_influx(hass)
     source = coordinator.data["source"]
     assert source["used"] == "recorder" and "HTTP 401" in source["note"]
-    assert hass.states.get("sensor.heatpump_audit_d1_history_depth").state == "hint"
+    assert hass.states.get("sensor.air_water_heatpump_audit_d1_history_depth").state == "hint"
 
 
 async def test_recorder_option_ignores_influx(hass: HomeAssistant, aioclient_mock):
@@ -196,7 +196,7 @@ async def test_reconfigure_adds_new_roles_and_keeps_cleared(hass: HomeAssistant)
            } | {"defrost": ""}
     entry = MockConfigEntry(domain=DOMAIN, data=old, options=DEFAULT_OPTIONS, unique_id="binary_sensor.heatpump_compressor")
     entry.add_to_hass(hass)
-    with patch("custom_components.heatpump_audit.async_setup_entry", return_value=True):
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
         result = await entry.start_reconfigure_flow(hass)
         assert result["step_id"] == "signals"
         schema = {str(k): k.description for k in result["data_schema"].schema}
@@ -226,7 +226,7 @@ def _sections(values: dict) -> dict:
 async def test_options_flow_master_data(hass: HomeAssistant):
     entry = MockConfigEntry(domain=DOMAIN, data=MAHTANAR, options=DEFAULT_OPTIONS)
     entry.add_to_hass(hass)
-    with patch("custom_components.heatpump_audit.async_setup_entry", return_value=True):
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
         result = await hass.config_entries.options.async_init(entry.entry_id)
         values = DEFAULT_OPTIONS | {"hydraulic_separation": "parallel_buffer", "flow_rate_min_lpm": 14.3,
                                     "room_temp_target": 21.5, "heating_hours": None}
@@ -241,7 +241,7 @@ async def test_options_flow_master_data(hass: HomeAssistant):
 async def test_options_flow_rejects_bad_capacity_table(hass: HomeAssistant):
     entry = MockConfigEntry(domain=DOMAIN, data=MAHTANAR, options=DEFAULT_OPTIONS)
     entry.add_to_hass(hass)
-    with patch("custom_components.heatpump_audit.async_setup_entry", return_value=True):
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
         result = await hass.config_entries.options.async_init(entry.entry_id)
         result = await hass.config_entries.options.async_configure(
             result["flow_id"], _sections(DEFAULT_OPTIONS | {"capacity_min_table": {"35": "viel"}}))
@@ -266,10 +266,10 @@ async def test_event_subentry_starts_new_section(hass: HomeAssistant):
     await hass.async_block_till_done()  # Update-Listener lädt neu
     await entry.runtime_data.async_refresh()
     await hass.async_block_till_done()
-    section = hass.states.get("sensor.heatpump_audit_capacity").attributes["section"]
+    section = hass.states.get("sensor.air_water_heatpump_audit_capacity").attributes["section"]
     assert section["kind"] == "heating_curve" and section["note"] == "Parallelverschiebung −1 K"
-    assert "section" not in hass.states.get("sensor.heatpump_audit_data_basis").attributes
-    events = hass.states.get("sensor.heatpump_audit_timeline").attributes["events"]
+    assert "section" not in hass.states.get("sensor.air_water_heatpump_audit_data_basis").attributes
+    events = hass.states.get("sensor.air_water_heatpump_audit_timeline").attributes["events"]
     assert [e["kind"] for e in events] == ["heating_curve"]
     assert events[0]["subentry_id"] in entry.subentries
 
@@ -286,7 +286,7 @@ async def test_timeline_keeps_stored_days(hass: HomeAssistant, hass_storage):
     await hass.async_block_till_done()
     await entry.runtime_data.async_refresh()
     await hass.async_block_till_done()
-    state = hass.states.get("sensor.heatpump_audit_timeline")
+    state = hass.states.get("sensor.air_water_heatpump_audit_timeline")
     assert state.attributes["days"][0] == old_day
     assert set(state.attributes["scales"]) == {"data_basis", "efficiency", "flow_temperature", "capacity"}
     assert state.attributes["entry_id"] == entry.entry_id
@@ -301,15 +301,15 @@ async def test_flow_temperature_sensors(hass: HomeAssistant):
     await hass.async_block_till_done()
     await entry.runtime_data.async_refresh()
     await hass.async_block_till_done()
-    audit = hass.states.get("sensor.heatpump_audit_flow_temperature")
+    audit = hass.states.get("sensor.air_water_heatpump_audit_flow_temperature")
     assert audit is not None and audit.state == "not_assessable"
     assert len(audit.attributes["checks"]) == 6 and "cycles" not in audit.attributes
-    t6 = hass.states.get("sensor.heatpump_audit_t6_heating_curve_headroom")
+    t6 = hass.states.get("sensor.air_water_heatpump_audit_t6_heating_curve_headroom")
     assert t6.state == "not_assessable" and "Raumfühler" in t6.attributes["text"]
-    efficiency = hass.states.get("sensor.heatpump_audit_efficiency")
+    efficiency = hass.states.get("sensor.air_water_heatpump_audit_efficiency")
     assert efficiency is not None and efficiency.state == "not_assessable"
     assert [c["check_id"] for c in efficiency.attributes["checks"]] == ["E1", "E2", "E3", "E4"]
-    assert hass.states.get("sensor.heatpump_audit_e3_carnot_efficiency").state == "not_assessable"
+    assert hass.states.get("sensor.air_water_heatpump_audit_e3_carnot_efficiency").state == "not_assessable"
 
 
 async def test_card_creates_event_via_rest(hass: HomeAssistant, hass_client):
@@ -348,4 +348,4 @@ async def test_controls_read_from_mapped_entities(hass: HomeAssistant):
     assert controls["short_cycle_min_run"] == {"entity_id": "number.heatpump_short_cycle_minimum_on_time",
                                                "state": "5.0", "min": 1.0, "max": 20.0, "step": 1.0,
                                                "options": None, "unit": "min"}
-    assert hass.states.get("sensor.heatpump_audit_capacity").attributes["entry_id"] == entry.entry_id
+    assert hass.states.get("sensor.air_water_heatpump_audit_capacity").attributes["entry_id"] == entry.entry_id

@@ -16,7 +16,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .audit_core.help import CHECK_HELP
 from .const import AUDITS, CHECKS, DOMAIN, VERDICTS
-from .coordinator import HeatpumpAuditConfigEntry, HeatpumpAuditCoordinator
+from .coordinator import AirWaterAuditConfigEntry, AirWaterAuditCoordinator
 
 MAX_CYCLES_IN_ATTRIBUTES = 200
 
@@ -26,10 +26,10 @@ def _iso(t: float) -> str:
 
 
 def check_entity_id(check_id: str, key: str) -> str:
-    return f"sensor.heatpump_audit_{check_id.lower()}_{key}"
+    return f"sensor.air_water_heatpump_audit_{check_id.lower()}_{key}"
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: HeatpumpAuditConfigEntry,
+async def async_setup_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry,
                             async_add_entities: AddConfigEntryEntitiesCallback) -> None:
     coordinator = entry.runtime_data
     entities: list[SensorEntity] = [AuditSensor(coordinator, audit) for audit in AUDITS]
@@ -38,15 +38,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: HeatpumpAuditConfigEntry
     async_add_entities(entities)
 
 
-class _Entity(CoordinatorEntity[HeatpumpAuditCoordinator], SensorEntity):
+class _Entity(CoordinatorEntity[AirWaterAuditCoordinator], SensorEntity):
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: HeatpumpAuditCoordinator, unique_key: str) -> None:
+    def __init__(self, coordinator: AirWaterAuditCoordinator, unique_key: str) -> None:
         super().__init__(coordinator)
         entry = coordinator.config_entry
         self._attr_unique_id = f"{entry.entry_id}_{unique_key}"
-        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, entry.entry_id)}, name="WP-Audit",
-                                            manufacturer="ha-heatpump-audit", model="Audit 0–3",
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, entry.entry_id)}, name="Luft-Wasser-Wärmepumpen-Audit",
+                                            manufacturer="air-water-heatpump-audit", model="Audit 0–3",
                                             entry_type=DeviceEntryType.SERVICE)
 
     @property
@@ -63,11 +63,11 @@ class AuditSensor(_Base):
     _unrecorded_attributes = frozenset({"checks", "cycles", "heat", "points", "runtime_s", "source", "entry_id",
                                         "readiness"})
 
-    def __init__(self, coordinator: HeatpumpAuditCoordinator, audit: str) -> None:
+    def __init__(self, coordinator: AirWaterAuditCoordinator, audit: str) -> None:
         super().__init__(coordinator, audit)
         self._audit = audit
         self._attr_translation_key = audit
-        self.entity_id = f"sensor.heatpump_audit_{audit}"
+        self.entity_id = f"sensor.air_water_heatpump_audit_{audit}"
 
     @property
     def native_value(self) -> str | None:
@@ -110,7 +110,7 @@ class AuditSensor(_Base):
 class CheckSensor(_Base):
     _unrecorded_attributes = frozenset({"action", "details", "help", "text", "progress"})
 
-    def __init__(self, coordinator: HeatpumpAuditCoordinator, audit: str, check_id: str, key: str) -> None:
+    def __init__(self, coordinator: AirWaterAuditCoordinator, audit: str, check_id: str, key: str) -> None:
         super().__init__(coordinator, f"{check_id.lower()}_{key}")
         self._audit, self._check_id = audit, check_id
         self._attr_translation_key = key
@@ -145,9 +145,9 @@ class TimelineSensor(_Entity):
     _attr_translation_key = "timeline"
     _unrecorded_attributes = frozenset({"days", "scales", "events", "entry_id"})
 
-    def __init__(self, coordinator: HeatpumpAuditCoordinator) -> None:
+    def __init__(self, coordinator: AirWaterAuditCoordinator) -> None:
         super().__init__(coordinator, "timeline")
-        self.entity_id = "sensor.heatpump_audit_timeline"
+        self.entity_id = "sensor.air_water_heatpump_audit_timeline"
 
     @property
     def native_value(self) -> int:

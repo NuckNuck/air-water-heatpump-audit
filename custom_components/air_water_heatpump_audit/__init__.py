@@ -1,4 +1,4 @@
-"""WP-Audit: prüft mit belegten Schwellen, ob eine Wärmepumpe sauber läuft (Spezifikation docs/heatpump_audit_spec.md).
+"""Luft-Wasser-Wärmepumpen-Audit: prüft mit belegten Schwellen, ob eine Wärmepumpe sauber läuft (Spezifikation docs/heatpump_audit_spec.md).
 
 Liest nur aus InfluxDB oder dem Recorder und schreibt nur eigene Ergebnis-Sensoren; an Geräten wird nichts geändert.
 """
@@ -16,7 +16,7 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import CARD_URL, DOMAIN, migrate_roles
 from .profiles import INTERFACE_PROFILES
-from .coordinator import HeatpumpAuditConfigEntry, HeatpumpAuditCoordinator, timeline_store
+from .coordinator import AirWaterAuditConfigEntry, AirWaterAuditCoordinator, timeline_store
 
 PLATFORMS = [Platform.SENSOR]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -28,12 +28,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     Eingebunden wird sie als Lovelace-Ressource (Modul). add_extra_js_url geht nicht: Das Skript liefe vor dem
     Scoped-Registry-Polyfill des Frontends, die Karte landete in der alten Registry und Lovelace fände sie nicht.
     """
-    card = Path(__file__).parent / "frontend" / "heatpump-audit-card.js"
+    card = Path(__file__).parent / "frontend" / "air-water-air-water-heatpump-audit-card.js"
     await hass.http.async_register_static_paths([StaticPathConfig(CARD_URL, str(card), False)])
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: HeatpumpAuditConfigEntry) -> bool:
+async def async_migrate_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry) -> bool:
     """Version 1 → 2: Rollen der Steuerung herstellerneutral benannt (F146)."""
     if entry.version > 2:
         return False  # neuere Fassung, die diese nicht kennt
@@ -47,8 +47,8 @@ async def async_migrate_entry(hass: HomeAssistant, entry: HeatpumpAuditConfigEnt
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: HeatpumpAuditConfigEntry) -> bool:
-    coordinator = HeatpumpAuditCoordinator(hass, entry)
+async def async_setup_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry) -> bool:
+    coordinator = AirWaterAuditCoordinator(hass, entry)
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -62,14 +62,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: HeatpumpAuditConfigEntry
     return True
 
 
-async def _async_entry_updated(hass: HomeAssistant, entry: HeatpumpAuditConfigEntry) -> None:
+async def _async_entry_updated(hass: HomeAssistant, entry: AirWaterAuditConfigEntry) -> None:
     hass.config_entries.async_schedule_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: HeatpumpAuditConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry) -> bool:
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: HeatpumpAuditConfigEntry) -> None:
+async def async_remove_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry) -> None:
     """Gespeicherte Tageswerte des Zeitstrahls mit dem Eintrag entfernen."""
     await timeline_store(hass, entry.entry_id).async_remove()

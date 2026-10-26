@@ -1,7 +1,7 @@
-// WP-Audit-Karte: Ampel eines Audits und Tabelle seiner Prüfungen. Keine Fremdbibliotheken.
-// Konfiguration:  type: custom:heatpump-audit-card
-//                 entity: sensor.heatpump_audit_data_basis      (ein Audit)
-//                 entities: [sensor.heatpump_audit_efficiency, …] (mehrere Audits in einer Tabelle)
+// Audit-Karte: Ampel eines Audits und Tabelle seiner Prüfungen. Keine Fremdbibliotheken.
+// Konfiguration:  type: custom:air-water-heatpump-audit-card
+//                 entity: sensor.air_water_heatpump_audit_data_basis      (ein Audit)
+//                 entities: [sensor.air_water_heatpump_audit_efficiency, …] (mehrere Audits in einer Tabelle)
 
 const COLORS = {
   ok: "var(--success-color, #43a047)",
@@ -121,12 +121,12 @@ function formatValue(value, unit, locale) {
   return unit ? `${text} ${unit}` : String(text);
 }
 
-class HeatpumpAuditCard extends HTMLElement {
+class AirWaterAuditCard extends HTMLElement {
   // `entities`: mehrere Audits in einer gemeinsamen Tabelle (gleiche Spaltenbreiten, Audit-Titel als Zwischenzeile).
   // `entity`: ein einzelnes Audit, wie bisher.
   setConfig(config) {
     const entities = config.entities ?? (config.entity ? [config.entity] : []);
-    if (!entities.length) throw new Error("entity oder entities fehlt (z. B. sensor.heatpump_audit_data_basis)");
+    if (!entities.length) throw new Error("entity oder entities fehlt (z. B. sensor.air_water_heatpump_audit_data_basis)");
     this._config = config;
     this._entities = entities;
     this._signature = null;
@@ -201,7 +201,7 @@ class HeatpumpAuditCard extends HTMLElement {
     const at = st?.attributes ?? {};
     const verdict = st?.state ?? c.verdict;
     const action = at.action ? this._action(c, at.action, t) : "";
-    const name = (at.friendly_name || c.key).replace(/^WP-Audit\s+/, "").replace(new RegExp(`^${c.check_id}\\s+`), "");
+    const name = (at.friendly_name || c.key).replace(/^(WP-Audit|Luft-Wasser-Wärmepumpen-Audit|Air-to-water heat pump audit)\s+/, "").replace(new RegExp(`^${c.check_id}\\s+`), "");
     const rows = c.check_id === "E1" ? at.details?.days ?? [] : [];
     const open = rows.length && this._open.has(c.check_id);
     const toggle = rows.length ? `<div><span class="toggle" role="button" tabindex="0" data-days="${esc(c.check_id)}">${open ? t.days.hide : t.days.show(rows.length)}</span></div>` : "";
@@ -318,8 +318,8 @@ class HeatpumpAuditCard extends HTMLElement {
       const st = hass.states[e];
       const rd = st?.attributes?.readiness;
       if (!rd) return null;
-      const key = e.replace(/^sensor\.heatpump_audit_/, "");
-      return { key, rd, eta: ms(rd.eta), name: (st.attributes.friendly_name || key).replace(/^WP-Audit\s+/, "") };
+      const key = e.replace(/^sensor\.air_water_heatpump_audit_/, "");
+      return { key, rd, eta: ms(rd.eta), name: (st.attributes.friendly_name || key).replace(/^(WP-Audit|Luft-Wasser-Wärmepumpen-Audit|Air-to-water heat pump audit)\s+/, "") };
     }).filter((x) => x);
     if (!items.length) return "";
     const now = Date.now();
@@ -366,7 +366,7 @@ class HeatpumpAuditCard extends HTMLElement {
     const span = t.columns.length;
     if (!audit) return `<tr><td colspan="${span}" class="msg">${t.missing}: ${esc(entityId)}</td></tr>`;
     const a = audit.attributes;
-    const title = (single && this._config.title) || (a.friendly_name || "").replace(/^WP-Audit\s+/, "");
+    const title = (single && this._config.title) || (a.friendly_name || "").replace(/^(WP-Audit|Luft-Wasser-Wärmepumpen-Audit|Air-to-water heat pump audit)\s+/, "");
     const head = `<tr class="audit"><td colspan="${span}"><div class="head">
         <div class="light" style="background:${COLORS[audit.state] ?? COLORS.not_assessable}"></div>
         <div class="title">${esc(title)}</div>
@@ -485,24 +485,24 @@ class HeatpumpAuditCard extends HTMLElement {
   }
 
   static getStubConfig() {
-    return { entity: "sensor.heatpump_audit_data_basis" };
+    return { entity: "sensor.air_water_heatpump_audit_data_basis" };
   }
 }
 
-if (!customElements.get("heatpump-audit-card")) {
-  customElements.define("heatpump-audit-card", HeatpumpAuditCard);
+if (!customElements.get("air-water-heatpump-audit-card")) {
+  customElements.define("air-water-heatpump-audit-card", AirWaterAuditCard);
   window.customCards = window.customCards || [];
   window.customCards.push({
-    type: "heatpump-audit-card",
-    name: "WP-Audit",
-    description: "Ampel und Prüfungen eines WP-Audits",
+    type: "air-water-heatpump-audit-card",
+    name: "Luft-Wasser-Wärmepumpen-Audit",
+    description: "Ampel und Prüfungen eines Wärmepumpen-Audits",
   });
 }
 
 // ---------------------------------------------------------------------------------------------------------------
 // Zeitstrahl-Karte: je Audit ein Tageswert als Linie vor den Ampel-Bändern, Ereignisse als senkrechte Linien.
-// Konfiguration:  type: custom:heatpump-audit-timeline-card
-//                 entity: sensor.heatpump_audit_timeline   (Vorgabe)
+// Konfiguration:  type: custom:air-water-heatpump-audit-timeline-card
+//                 entity: sensor.air_water_heatpump_audit_timeline   (Vorgabe)
 // Admins können Ereignisse direkt hier eintragen (Subentry-Flow der Integration, REST-API nur für Admins).
 
 const TL_AUDITS = ["efficiency", "flow_temperature", "capacity", "data_basis"];
@@ -580,9 +580,9 @@ const TL_TEXT = {
 
 const pad = (n) => String(n).padStart(2, "0");
 
-class HeatpumpAuditTimelineCard extends HTMLElement {
+class AirWaterAuditTimelineCard extends HTMLElement {
   setConfig(config) {
-    this._config = { entity: "sensor.heatpump_audit_timeline", ...config };
+    this._config = { entity: "sensor.air_water_heatpump_audit_timeline", ...config };
     this._signature = null;
     this._selected = null;
     if (!this.shadowRoot) this._build();
@@ -884,7 +884,7 @@ class HeatpumpAuditTimelineCard extends HTMLElement {
     this._admin.innerHTML = `
       <div class="row">
         <button type="button" id="open">${t.add}</button>
-        <a href="/config/integrations/integration/heatpump_audit">${t.manage}</a>
+        <a href="/config/integrations/integration/air_water_heatpump_audit">${t.manage}</a>
       </div>
       <form id="form">
         <label>${t.time}<input type="datetime-local" name="time" required></label>
@@ -929,16 +929,16 @@ class HeatpumpAuditTimelineCard extends HTMLElement {
   }
 
   static getStubConfig() {
-    return { entity: "sensor.heatpump_audit_timeline" };
+    return { entity: "sensor.air_water_heatpump_audit_timeline" };
   }
 }
 
-if (!customElements.get("heatpump-audit-timeline-card")) {
-  customElements.define("heatpump-audit-timeline-card", HeatpumpAuditTimelineCard);
+if (!customElements.get("air-water-heatpump-audit-timeline-card")) {
+  customElements.define("air-water-heatpump-audit-timeline-card", AirWaterAuditTimelineCard);
   window.customCards = window.customCards || [];
   window.customCards.push({
-    type: "heatpump-audit-timeline-card",
-    name: "WP-Audit Zeitstrahl",
+    type: "air-water-heatpump-audit-timeline-card",
+    name: "Luft-Wasser-Wärmepumpen-Audit Zeitstrahl",
     description: "Tageswerte je Audit mit Ampel-Bändern und Ereignissen",
   });
 }

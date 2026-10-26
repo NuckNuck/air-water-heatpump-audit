@@ -39,7 +39,7 @@ def _kw() -> selector.NumberSelector:
                                                                  mode=selector.NumberSelectorMode.BOX))
 
 
-class HeatpumpAuditConfigFlow(ConfigFlow, domain=DOMAIN):
+class AirWaterAuditConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 2
 
     def __init__(self) -> None:
@@ -76,7 +76,7 @@ class HeatpumpAuditConfigFlow(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(self._data.get("compressor_running") or DOMAIN)
         self._abort_if_unique_id_configured()
         model = MODEL_PROFILES.get(self._data.get(CONF_MODEL_PROFILE, NO_PROFILE), {})
-        return self.async_create_entry(title="WP-Audit", data=self._data, options=DEFAULT_OPTIONS | model)
+        return self.async_create_entry(title="Luft-Wasser-Wärmepumpen-Audit", data=self._data, options=DEFAULT_OPTIONS | model)
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Profile: Vorschläge für die Rollen (Schnittstelle) und für die Stammdaten (Modell). „Keins“ ist erlaubt."""
@@ -113,8 +113,8 @@ class HeatpumpAuditConfigFlow(ConfigFlow, domain=DOMAIN):
         return await self._role_step("signals", None)
 
     @staticmethod
-    def async_get_options_flow(config_entry) -> HeatpumpAuditOptionsFlow:
-        return HeatpumpAuditOptionsFlow()
+    def async_get_options_flow(config_entry) -> AirWaterAuditOptionsFlow:
+        return AirWaterAuditOptionsFlow()
 
     @classmethod
     @callback
@@ -147,7 +147,7 @@ def _option_selectors() -> dict[str, Any]:
     }
 
 
-class HeatpumpAuditOptionsFlow(OptionsFlow):
+class AirWaterAuditOptionsFlow(OptionsFlow):
     """Stammdaten (Spezifikation 1.4) in drei Abschnitten: Anlage, Standort und Komfort, Auswertung.
 
     Kein OptionsFlowWithReload: Das Neuladen übernimmt der Update-Listener, der auch auf Ereignisse reagiert.
