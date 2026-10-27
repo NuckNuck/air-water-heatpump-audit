@@ -367,12 +367,19 @@ class FlowTemperatureTest(unittest.TestCase):
 
     def test_robust_zero_offset_counts_as_matched_sensors(self):
         # T2 belastbar mit ±0,00 K: nichts abzuziehen, aber die Fühler sind abgeglichen → rot erlaubt, kein „vorläufig“
-        matched = CheckResult("T2", "circuit_sensor_offset", INFO, 0.0, "K", details={"robust": True})
+        matched = CheckResult("T2", "circuit_sensor_offset", OK, 0.0, "K", details={"robust": True})
         r = self.t2.check_buffer_flow_loss([(0, 38.0)], [(0, 33.0)], "parallel_buffer", self.heating, self.used,
                                            matched, 0, self.end)
         self.assertEqual(r.verdict, WARN)
         self.assertIn("abgeglichen", r.text)
         self.assertNotIn("vorläufig", r.text)
+
+    def test_sensor_offset_within_tolerance_is_green(self):
+        small = self.offset([(0, 34.15)], [(0, 34.0)])
+        self.assertEqual(small.verdict, OK)
+        self.assertIn("stimmen überein", small.text)
+        self.assertIn("+0,1 K", small.text)
+        self.assertEqual(self.offset([(0, 35.5)], [(0, 34.0)]).verdict, HINT)
 
     def test_buffer_loss_not_applicable_or_missing(self):
         r = self.t2.check_buffer_flow_loss([(0, 38.0)], [], "none", self.heating, self.used,
@@ -394,7 +401,7 @@ class FlowTemperatureTest(unittest.TestCase):
         flow = [(0, 30.5), (20 * M, 38.0), (140 * M, 30.5), (160 * M, 38.0), (280 * M, 30.5), (300 * M, 38.0)]
         r = self.offset(flow, [(0, 30.0), (20 * M, 33.0), (140 * M, 30.0), (160 * M, 33.0), (280 * M, 30.0),
                                (300 * M, 33.0)])
-        self.assertEqual((r.verdict, r.value), (INFO, 0.5))
+        self.assertEqual((r.verdict, r.value), (OK, 0.5))
         self.assertFalse(r.details["robust"])
 
     def test_flow_ratio_from_mixing(self):

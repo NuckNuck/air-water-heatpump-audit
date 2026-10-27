@@ -7,6 +7,13 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
+## [0.11.1] – 2026-10-27
+
+### Geändert
+- T2 (Fühlerabgleich): Ein Unterschied bis 1 K liegt innerhalb der Fühlertoleranz und gilt jetzt als grün („Die beiden
+  Vorlauffühler stimmen überein“) statt als blaue Info. Der Mittelwert wird in T2 und T1 nur noch auf 0,1 K genau
+  angezeigt – die Fühler melden in 0,5-K-Schritten.
+
 ## [0.11.0] – 2026-10-27
 
 ### Neu

@@ -119,11 +119,16 @@ def check_circuit_sensor_offset(flow: Series, circuit_flow: Series, pauses: list
                            text=f"{count(len(pauses), 'Pause', 'Pausen')} mit laufender Pumpe, nötig {MIN_PAUSE_WINDOWS}.",
                            origin=PHYSICAL, details=details, progress=prog)
     offset = time_mean(diff, pauses)  # Zeitmittel statt Median, wie D4 (0,5-K-Schritte)
-    text = f"In {len(pauses)} Verdichterpausen zeigen beide Vorlauffühler im Mittel {num(offset, '+.2f')} K Unterschied."
-    verdict = INFO
+    # Fühler melden in 0,5-K-Schritten und haben je ±0,5–1 K Toleranz → Unterschiede bis 1 K sind „gleich“
+    shown = f"{num(offset, '+.1f')} K"
     if abs(offset) > OFFSET_HINT_K:
         verdict = HINT
-        text += " Das ist mehr als die Fühlertoleranz: Fühler prüfen, der Pufferverlust (T1) ist unsicher."
+        text = (f"In {len(pauses)} Verdichterpausen unterscheiden sich die beiden Vorlauffühler im Mittel um {shown}. "
+                "Das ist mehr als die Fühlertoleranz: Fühler prüfen, der Pufferverlust (T1) ist unsicher.")
+    else:
+        verdict = OK
+        text = (f"Die beiden Vorlauffühler stimmen überein (im Mittel {shown} in {len(pauses)} Verdichterpausen, "
+                f"innerhalb der Fühlertoleranz).")
     if not details["robust"]:
         text += f" Vorläufig, belastbar ab {ROBUST_PAUSE_WINDOWS} Pausen."
     return CheckResult("T2", "circuit_sensor_offset", verdict, round(offset, 2), "K", text, PHYSICAL, details,
@@ -158,7 +163,7 @@ def check_buffer_flow_loss(flow: Series, circuit_flow: Series, separation: str |
     if verdict != OK:
         text += " Häufige Ursache: Die Heizkreispumpe fördert mehr Wasser als die Wärmepumpe (siehe T3)."
     if robust:
-        text += f" Fühlerunterschied aus T2 ({num(correction, '+.2f')} K) abgezogen, die Fühler sind abgeglichen."
+        text += f" Fühlerunterschied aus T2 ({num(correction, '+.1f')} K) abgezogen, die Fühler sind abgeglichen."
     elif sensor_offset.verdict != NOT_ASSESSABLE:
         text += " Fühlerunterschied (T2) noch vorläufig, nicht abgezogen."
     if capped:

@@ -78,7 +78,7 @@ CHECK_HELP: dict[str, dict[str, str]] = {
            "source": "Abgeleitet aus der Fühlertoleranz und Messungen des Fraunhofer ISE an Pufferspeichern."},
     "T2": {"what": "Vorlauffühler der Wärmepumpe und des Heizkreises im Vergleich, wenn der Verdichter steht und "
                    "Wasser umläuft – dann sollten beide gleich viel zeigen.",
-           "rating": f"Info; Gelb bei mehr als {_k(t2.OFFSET_HINT_K)} K Unterschied (dann ist T1 unsicher). "
+           "rating": f"Grün bis {_k(t2.OFFSET_HINT_K)} K Unterschied (Fühlertoleranz), Gelb darüber (dann ist T1 unsicher). "
                      f"Belastbar ab {t2.ROBUST_PAUSE_WINDOWS} Pausen.",
            "source": "Physikalisch."},
     "T3": {"what": "Wie viel mehr Wasser die Heizkreispumpe bewegt als die Wärmepumpe, berechnet aus den "
