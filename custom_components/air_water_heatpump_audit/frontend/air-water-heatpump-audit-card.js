@@ -144,16 +144,24 @@ class AirWaterAuditCard extends HTMLElement {
     }
   }
 
-  // „?“ je Prüfung: Hilfe beim Überfahren oder Fokussieren; ein Klick hält sie offen, damit man sie markieren kann.
+  // „?“ je Prüfung und Datenreife-Block (data-tip): Hilfe beim Überfahren oder Fokussieren; ein Klick hält sie offen,
+  // damit man sie markieren kann.
   _wireHelp() {
+    const TIP = ".q, [data-tip]";
     const root = this.shadowRoot;
     const show = (q, pin) => {
       const tip = root.getElementById("tip");
-      const h = this._hass?.states[q.dataset.entity]?.attributes?.help;
-      if (!tip || !h) return;
-      const t = TEXT[(this._hass.language || "en").startsWith("de") ? "de" : "en"].help;
-      tip.innerHTML = `<div><b>${t.what}:</b> ${esc(h.what)}</div><div><b>${t.rating}:</b> ${esc(h.rating)}</div>`
-        + `<div class="src"><b>${t.source}:</b> ${esc(h.source)}</div>`;
+      if (!tip) return;
+      if (q.dataset.tip === "ready") {
+        if (!this._readyTip) return;
+        tip.innerHTML = this._readyTip;
+      } else {
+        const h = this._hass?.states[q.dataset.entity]?.attributes?.help;
+        if (!h) return;
+        const t = TEXT[(this._hass.language || "en").startsWith("de") ? "de" : "en"].help;
+        tip.innerHTML = `<div><b>${t.what}:</b> ${esc(h.what)}</div><div><b>${t.rating}:</b> ${esc(h.rating)}</div>`
+          + `<div class="src"><b>${t.source}:</b> ${esc(h.source)}</div>`;
+      }
       tip.hidden = false;
       const r = q.getBoundingClientRect();
       const w = Math.min(360, window.innerWidth - 16);
@@ -164,10 +172,10 @@ class AirWaterAuditCard extends HTMLElement {
       this._tipPinned = pin ? q : null;
     };
     const hide = () => { const tip = root.getElementById("tip"); if (tip && !this._tipPinned) tip.hidden = true; };
-    root.addEventListener("mouseover", (ev) => { const q = ev.target.closest?.(".q"); if (q && !this._tipPinned) show(q, false); });
-    root.addEventListener("mouseout", (ev) => { if (ev.target.closest?.(".q")) hide(); });
-    root.addEventListener("focusin", (ev) => { const q = ev.target.closest?.(".q"); if (q && !this._tipPinned) show(q, false); });
-    root.addEventListener("focusout", (ev) => { if (ev.target.closest?.(".q")) hide(); });
+    root.addEventListener("mouseover", (ev) => { const q = ev.target.closest?.(TIP); if (q && !this._tipPinned) show(q, false); });
+    root.addEventListener("mouseout", (ev) => { if (ev.target.closest?.(TIP)) hide(); });
+    root.addEventListener("focusin", (ev) => { const q = ev.target.closest?.(TIP); if (q && !this._tipPinned) show(q, false); });
+    root.addEventListener("focusout", (ev) => { if (ev.target.closest?.(TIP)) hide(); });
     root.addEventListener("click", (ev) => {
       const toggle = ev.target.closest?.("[data-days]");
       if (toggle) {
@@ -178,7 +186,7 @@ class AirWaterAuditCard extends HTMLElement {
       }
       const ctl = ev.target.closest?.("[data-ctl]");
       if (ctl) { this._applyControl(ctl.dataset.ctl); return; }
-      const q = ev.target.closest?.(".q");
+      const q = ev.target.closest?.(TIP);
       if (q) { ev.stopPropagation(); if (this._tipPinned === q) { this._tipPinned = null; hide(); } else show(q, true); return; }
       if (!ev.target.closest?.("#tip")) { this._tipPinned = null; hide(); }
     });
@@ -353,17 +361,16 @@ class AirWaterAuditCard extends HTMLElement {
         + r.of(num(g[0].have), num(g[0].need), r.units[g[0].unit] ?? g[0].unit)).join(" · ");
     };
     const order = [...items].sort((a, b) => (a.eta ?? Infinity) - (b.eta ?? Infinity));
-    const markers = known.map((x) => `<div class="mk${x.rd.reached ? " done" : ""}" style="left:${pos(x.eta)}%;`
-      + `--c:${x.color ?? "var(--primary-color)"}" title="${esc(x.name)}: `
-      + `${esc(x.rd.reached ? r.reached : r.from(date(x.eta)))}"></div>`).join("");
-    const legend = order.map((x) => `<li><span class="dot${x.rd.reached ? " done" : ""}" `
+    // Stand je Audit und Hinweis zur Hochrechnung stehen im Tooltip, damit der Block nur Titelzeile und Balken braucht.
+    this._readyTip = order.map((x) => `<div><span class="dot${x.rd.reached ? " done" : ""}" `
       + `style="--c:${x.color ?? "var(--primary-color)"}"></span><b>${esc(x.name)}</b> – `
-      + (x.rd.reached ? r.reached : `${x.eta !== null ? r.from(date(x.eta)) : r.open} · ${esc(missing(x))}`) + `</li>`).join("");
-    return `<div class="ready">
-        <div class="rhead"><span class="rtitle">${r.title}</span>${left ? `<b>${left}</b>` : ""}<span class="muted">${esc(summary)}</span></div>
+      + (x.rd.reached ? r.reached : `${x.eta !== null ? r.from(date(x.eta)) : r.open} · ${esc(missing(x))}`) + `</div>`).join("")
+      + `<div class="src">${r.note}</div>`;
+    const markers = known.map((x) => `<div class="mk${x.rd.reached ? " done" : ""}" style="left:${pos(x.eta)}%;`
+      + `--c:${x.color ?? "var(--primary-color)"}"></div>`).join("");
+    return `<div class="ready" data-tip="ready">
+        <div class="rhead"><span class="rtitle">${r.title}</span>${left ? `<b>${left}</b>` : ""}<span class="muted">${esc(summary)}</span><span class="q" tabindex="0" role="button" aria-label="${esc(r.title)}" data-tip="ready">?</span></div>
         <div class="bar"><div class="fill" style="width:${pos(now)}%"></div>${markers}</div>
-        <ul class="legend">${legend}</ul>
-        <div class="msg small">${r.note}</div>
       </div>`;
   }
 
@@ -454,7 +461,7 @@ class AirWaterAuditCard extends HTMLElement {
         table.days th, table.days td { padding: 3px 10px 3px 0; border-bottom: 1px solid var(--divider-color); white-space: nowrap; text-align: right; }
         table.days th:first-child, table.days td:first-child { text-align: left; }
         table.days tr.total td { border-top: 2px solid var(--divider-color); }
-        .ready { margin: 8px 0 14px; }
+        .ready { margin: 6px 0 10px; }
         .rhead { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin-bottom: 6px; }
         .rtitle { font-weight: 500; }
         .bar { position: relative; height: 10px; border-radius: 5px; background: var(--divider-color); }
@@ -463,12 +470,10 @@ class AirWaterAuditCard extends HTMLElement {
         .mk { position: absolute; top: -4px; width: 4px; height: 18px; margin-left: -2px; border-radius: 2px;
           background: var(--ha-card-background, var(--card-background-color, #fff)); box-shadow: inset 0 0 0 2px var(--c); }
         .mk.done { background: var(--c); }
-        ul.legend { list-style: none; margin: 8px 0 0; padding: 0; font-size: .9em; }
-        ul.legend li { margin: 2px 0; }
+        .ready { cursor: help; }
         .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px;
           box-shadow: inset 0 0 0 2px var(--c); }
         .dot.done { background: var(--c); }
-        .msg.small { font-size: .85em; margin-top: 4px; }
       </style>
       <ha-card>
         ${meta}

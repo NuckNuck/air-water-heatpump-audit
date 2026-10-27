@@ -104,8 +104,9 @@ Lebensdauer.
 ### Wann gibt es ein Ergebnis?
 
 Viele Prüfungen brauchen Zeit: eine Woche für die Effizienz, 14 Tage für die Starts pro Jahr, 20 Messfenster für
-einen belastbaren Fühlervergleich. Oben in der Karte zeigt ein Balken je Audit, **wie viele Daten schon da sind und an
-welchem Tag das Audit voraussichtlich fertig ist**.
+einen belastbaren Fühlervergleich. Oben in der Karte zeigt ein Balken, **wie viele Daten schon da sind und an welchem Tag
+jedes Audit voraussichtlich fertig ist** (ein farbiger Strich je Audit). Was jedem Audit noch fehlt, erscheint, wenn
+man mit der Maus über den Balken fährt oder auf das **?** daneben tippt.
 
 ### Ereignisse: „Ich habe etwas verstellt“
 
