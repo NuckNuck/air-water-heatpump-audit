@@ -1,0 +1,38 @@
+# Legt beim Push eines Tags vX.Y.Z das GitHub-Release an. Die Release-Notes kommen aus CHANGELOG.md,
+# HACS bietet das Release danach als Update an.
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version prüfen und Release-Notes aus dem Changelog lesen
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          manifest=$(jq -r .version custom_components/air_water_heatpump_audit/manifest.json)
+          if [ "$manifest" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME passt nicht zur Version $manifest im manifest.json"
+            exit 1
+          fi
+          awk -v v="$version" '
+            /^## \[/ { if (found) exit; if (index($0, "## [" v "]") == 1) { found = 1; next } }
+            found && !/^\[[^]]+\]: / { print }
+          ' CHANGELOG.md > release_notes.md
+          if ! grep -q '[^[:space:]]' release_notes.md; then
+            echo "::error::CHANGELOG.md hat keinen Abschnitt für $version"
+            exit 1
+          fi
+
+      - name: Release anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file release_notes.md --verify-tag

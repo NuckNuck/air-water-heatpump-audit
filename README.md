@@ -178,6 +178,11 @@ HACS ist ein „App-Store“ für Erweiterungen von Home Assistant. Falls noch n
 
 Weiter mit [Einrichten](#einrichten).
 
+**Updates:** Jede neue Version erscheint als [Release](https://github.com/NuckNuck/air-water-heatpump-audit/releases)
+mit Änderungsliste ([CHANGELOG.md](CHANGELOG.md)). HACS meldet sie unter **Einstellungen** als Update → **Installieren**
+→ Home Assistant neu starten. Über HACS → Luft-Wasser-Wärmepumpen-Audit → ⋮ → **Erneut herunterladen** lässt sich
+auch eine ältere Version wählen.
+
 ### Weg B: Dateien von Hand kopieren
 
 1. Auf dieser Seite oben auf den grünen Knopf **Code** → **Download ZIP**. Die ZIP-Datei auf dem Computer entpacken.
@@ -331,6 +336,10 @@ entfernen.
 - Texte: Zahlen mit `audit_core.result.num()` (Dezimalkomma), Anzahlen mit `count(n, Einzahl, Mehrzahl)`. In
   `strings.json`/`translations/*.json` sind `{…}` Platzhalter – jede Sprache braucht genau die des englischen Texts
   (Test `test_translation_placeholders_match_english`), Beispiele mit Klammern also nicht in diese Dateien.
+- Release: Version in `manifest.json` erhöhen und den Abschnitt `## [Unveröffentlicht]` in `CHANGELOG.md` zur neuen
+  Version machen (Test `test_manifest_version_has_changelog_section` prüft, dass beides passt), auf `main` mergen,
+  dann `git tag vX.Y.Z && git push origin vX.Y.Z`. Der Workflow `.github/workflows/release.yml` prüft Tag und
+  Manifest und legt das GitHub-Release mit dem Changelog-Abschnitt als Text an; HACS bietet es danach als Update an.
 - Fachliche Grundlage (Rollen, Stammdaten, jede Prüfung mit Gate, Schwellen und Quellen):
   [`docs/specification.md`](docs/specification.md).
 - Aufbau und Entscheidungen: [`docs/audit_modules_design.md`](docs/audit_modules_design.md).

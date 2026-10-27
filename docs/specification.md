@@ -1,6 +1,6 @@
 # Luft-Wasser-Wärmepumpen-Audit – Spezifikation
 
-Stand: Version 0.9.3. Fachliche Grundlage der Integration: was jede Prüfung misst, wann sie urteilt und woher jede
+Stand: Version 0.10.1. Fachliche Grundlage der Integration: was jede Prüfung misst, wann sie urteilt und woher jede
 Schwelle stammt. Die Abschnittsnummern verwenden auch die Kommentare im Code (z. B. „Spezifikation 1.5“).
 Aufbau des Codes und Entscheidungen zum Umbau auf Audit-Module: [`audit_modules_design.md`](audit_modules_design.md).
 
