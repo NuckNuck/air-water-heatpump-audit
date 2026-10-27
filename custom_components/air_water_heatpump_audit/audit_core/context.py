@@ -26,7 +26,7 @@ ROLE_KEYS = (
     "electricity_meter", "compressor_running", "compressor_frequency", "flow_temp", "return_temp", "flow_rate",
     "outdoor_temp", "outdoor_temp_reference", "pump_running", "defrost", "dhw_active", "immersion_heater",
     "booster_heater", "booster_heater_2", "heartbeat", "controller_heating_consumed", "controller_dhw_consumed",
-    "controller_date", "flow_setpoint", "circuit_flow_temp", "circuit_return_temp", "circuit_pump_running",
+    "controller_date", "controller_heat_today", "flow_setpoint", "circuit_flow_temp", "circuit_return_temp", "circuit_pump_running",
     "room_temp",
 )
 HEATER_ROLES = ("immersion_heater", "booster_heater", "booster_heater_2")
@@ -142,7 +142,8 @@ class Context:
     def _daily_rows(self, since: float) -> list[dict]:
         s = self.s
         return e1.daily_rows(s["electricity_meter"], self.heat_raw, self.heat_corrected, self.carnot_ideal,
-                             s["outdoor_temp"], s["dhw_active"], s["heartbeat"], since, self.end, self.tz)
+                             s["outdoor_temp"], s["dhw_active"], s["heartbeat"], since, self.end, self.tz,
+                             heat_counter=s["controller_heat_today"], outdoor_load=s["outdoor_temp_reference"])
 
     @cached_property
     def daily_rows(self) -> list[dict]:

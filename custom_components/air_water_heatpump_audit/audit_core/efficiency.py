@@ -7,10 +7,12 @@ Herstellerneutral: nur Rollen und Stammdaten (Spezifikation 1.6).
 from __future__ import annotations
 
 from . import days
-from .data_basis import check_coverage
+from bisect import bisect_left
+
+from .data_basis import heartbeat_gaps
 from .heat import energy_kwh, time_mean
 from .result import DERIVED, DESCRIPTIVE, HINT, INFO, NOT_ASSESSABLE, OK, SOURCED, WARN, CheckResult, count, num
-from .series import Series, combine, intervals_where, value_at
+from .series import Interval, Series, combine, intervals_where, subtract, total, value_at
 
 KELVIN = 273.15
 MIN_DAY_KWH = 2.0  # darunter ist der Zählerschritt von 1 kWh größer als 50 %
@@ -22,6 +24,13 @@ FIELD_MONTHLY_COP = ((2.0, 2.7), (13.0, 3.8))
 # Warmwasser); rot erst unter 0,32 × 0,75, also auch mit ±15 % Wärmefehler klar unter dem Feldminimum.
 CARNOT_OK_MIN, CARNOT_WARN_BELOW, CARNOT_PLAUSIBLE_MAX = 0.30, 0.24, 0.50
 FIELD_DHW_SHARE = 19  # E4: TWE-Anteil an der Wärme, WP-QS S. 72
+# Lücken in einem Tag (Entscheid F175/F176): Ein Tag zählt, solange die geschätzte Wärme der Lücken höchstens 10 % der
+# Tageswärme ausmacht und die Lücken zusammen höchstens 6 h dauern (darüber wird jede Schätzung zu grob).
+MAX_GAP_HEAT_SHARE = 0.10
+MAX_GAP_S = 6 * 3600
+# Heizlast-Gewichtung ohne Wärmezähler: Gradtagzahl G20/15 (VDI 4710) – Last ∝ 20 °C − außen, unter 15 °C außen.
+ROOM_BASE_C, HEATING_LIMIT_C = 20.0, 15.0
+GAP_COUNTER, GAP_LOAD, GAP_TIME = "counter", "load", "time"
 
 
 def _on(v) -> bool:
@@ -39,12 +48,59 @@ def carnot_power(power: Series, flow: Series, ret: Series, outdoor: Series, star
     return combine(power, cop, lambda p, c: float(p) / c if c else 0.0, start, end)
 
 
+def _value_after(series: Series, t: float):
+    """Erster Wert ab t (nach einer Lücke), None wenn keiner folgt."""
+    i = bisect_left(series, t, key=lambda p: p[0])
+    return series[i][1] if i < len(series) else None
+
+
+def _counter_heat(counter: Series, gaps: list[Interval]) -> float | None:
+    """Wärme in den Lücken aus einem Wärmezähler der Steuerung, der während der Lücke weiterzählt.
+
+    None, wenn ein Wert fehlt oder der Zähler in der Lücke zurückgesetzt wurde (Tageszähler um Mitternacht)."""
+    heat = 0.0
+    for g0, g1 in gaps:
+        before, after = value_at(counter, g0), _value_after(counter, g1)
+        if before is None or after is None or float(after) < float(before):
+            return None
+        heat += float(after) - float(before)
+    return heat
+
+
+def _load(outdoor: Series, intervals: list[Interval]) -> float:
+    """Heizlast-Gewicht (Kelvin-Stunden nach G20/15) über die Intervalle; außen gilt der letzte Wert weiter."""
+    load = [(t, ROOM_BASE_C - float(v) if float(v) < HEATING_LIMIT_C else 0.0) for t, v in outdoor]
+    return energy_kwh(load, intervals)
+
+
+def gap_heat(heat_measured: float, gaps: list[Interval], measured: list[Interval], counter: Series,
+             outdoor: Series) -> tuple[float, str]:
+    """Geschätzte Rohwärme der Lücken und der Weg: Wärmezähler, sonst Heizlast, sonst Zeitanteil.
+
+    Ohne Zähler wird die gemessene Wärme im Verhältnis der Heizlast hochgerechnet: Eine Nachtstunde wiegt bei
+    kälterer Luft mehr als eine Stunde am Mittag."""
+    if counter and (heat := _counter_heat(counter, gaps)) is not None:
+        return heat, GAP_COUNTER
+    if outdoor:
+        load_gap, load_measured = _load(outdoor, gaps), _load(outdoor, measured)
+        if load_measured > 0:
+            return heat_measured * load_gap / load_measured, GAP_LOAD
+    return heat_measured * total(gaps) / total(measured), GAP_TIME
+
+
 def daily_rows(meter: Series, raw: Series, corrected: Series, ideal: Series, outdoor: Series, dhw: Series,
-               heartbeat: Series, start: float, end: float, tz: str = days.DEFAULT_TZ) -> list[dict]:
-    """Gültige Tage (Spezifikation 4.1): voller Tag, Heartbeat ≥ 98 %, Zählerstände bekannt, Strom ≥ 2 kWh."""
+               heartbeat: Series, start: float, end: float, tz: str = days.DEFAULT_TZ, *,
+               heat_counter: Series | None = None, outdoor_load: Series | None = None) -> list[dict]:
+    """Gültige Tage (Spezifikation 4.1): voller Tag, Zählerstände an beiden Mitternachten, Strom ≥ 2 kWh.
+
+    Lücken im Lebenszeichen werden nicht mit dem letzten Wert überbrückt, sondern geschätzt aufgefüllt (F175): Wärme
+    aus `heat_counter`, sonst nach Heizlast (`outdoor_load`, sonst `outdoor`). Der Tag zählt, solange die Lücken
+    höchstens MAX_GAP_HEAT_SHARE der Wärme und MAX_GAP_S Zeit ausmachen und nicht an Mitternacht grenzen (dort wäre
+    der Zählerstand unbekannt)."""
     rows = []
     for a, b in days.full_days(start, end, tz):
-        if check_coverage(heartbeat, a, b).verdict != OK:
+        gaps = heartbeat_gaps(heartbeat, a, b)
+        if total(gaps) > MAX_GAP_S or any(g0 <= a or g1 >= b for g0, g1 in gaps):
             continue
         m_a, m_b = value_at(meter, a), value_at(meter, b)
         if m_a is None or m_b is None:
@@ -52,16 +108,39 @@ def daily_rows(meter: Series, raw: Series, corrected: Series, ideal: Series, out
         electricity = float(m_b) - float(m_a)
         if electricity < MIN_DAY_KWH:
             continue
-        day = [(a, b)]
-        heat_raw, heat = energy_kwh(raw, day), energy_kwh(corrected, day)
-        dhw_heat = energy_kwh(corrected, intervals_where(dhw, _on, a, b))
-        outside = time_mean(outdoor, day)
+        measured = subtract([(a, b)], gaps)
+        heat_raw, heat = energy_kwh(raw, measured), energy_kwh(corrected, measured)
+        ideal_kwh = energy_kwh(ideal, measured)
+        row_gap = {}
+        if gaps:
+            filled, method = gap_heat(heat_raw, gaps, measured, heat_counter or [], outdoor_load or outdoor)
+            if heat_raw + filled <= 0 or filled / (heat_raw + filled) > MAX_GAP_HEAT_SHARE:
+                continue
+            # Offset-Korrektur und ideale Strommenge wie im gemessenen Teil des Tages
+            factor = 1 + filled / heat_raw if heat_raw > 0 else 1
+            heat_raw, heat, ideal_kwh = heat_raw + filled, heat * factor, ideal_kwh * factor
+            row_gap = {"gap_min": round(total(gaps) / 60), "gap_heat_kwh": round(filled, 2),
+                       "gap_share_pct": round(100 * filled / heat_raw, 1), "gap_method": method}
+        dhw_heat = energy_kwh(corrected, subtract(intervals_where(dhw, _on, a, b), gaps))
+        outside = time_mean(outdoor, measured)
         rows.append({"day": days.label(a, tz), "electricity_kwh": round(electricity, 2),
                      "heat_raw_kwh": round(heat_raw, 2), "heat_kwh": round(heat, 2),
-                     "dhw_heat_kwh": round(dhw_heat, 2), "ideal_kwh": round(energy_kwh(ideal, day), 3),
+                     "dhw_heat_kwh": round(dhw_heat, 2), "ideal_kwh": round(ideal_kwh, 3),
                      "cop_raw": round(heat_raw / electricity, 2), "cop": round(heat / electricity, 2),
-                     "outdoor_mean": None if outside is None else round(outside, 1)})
+                     "outdoor_mean": None if outside is None else round(outside, 1)} | row_gap)
     return rows
+
+
+GAP_SOURCES = {GAP_COUNTER: "Wärmezähler der Steuerung", GAP_LOAD: "nach Heizlast geschätzt",
+               GAP_TIME: "nach Zeitanteil geschätzt"}
+
+
+def gap_note(row: dict) -> str:
+    """„Lücke 52 min, 3 % der Wärme aufgefüllt (Wärmezähler der Steuerung)“ – leer ohne Lücke."""
+    if not row.get("gap_min"):
+        return ""
+    return (f"Lücke {num(row['gap_min'], '.0f')} min, {num(row['gap_share_pct'], '.0f')} % der Wärme aufgefüllt "
+            f"({GAP_SOURCES[row['gap_method']]}).")
 
 
 def _sum(rows: list[dict], key: str) -> float:
@@ -88,6 +167,8 @@ def check_daily_cop(rows: list[dict], offset_robust: bool, meter_step: float | N
     if r["outdoor_mean"] is not None:
         text += f" bei {num(r['outdoor_mean'], '.1f')} °C außen"
     text += "."
+    if note := gap_note(r):
+        text += " " + note
     notes = _provisional(offset_robust, meter_step)
     if notes:
         text += " Vorläufig: " + ", ".join(notes) + "."

@@ -34,6 +34,8 @@ def _scale(master: dict) -> dict:
 AUDIT = AuditSpec(
     audit_id="efficiency", order=1, color="#8e24aa", section=SECTION,
     roles=("electricity_meter", "flow_temp", "return_temp", "flow_rate", "outdoor_temp", "dhw_active", "heartbeat",
+           # Lücken auffüllen (F175): Wärmezähler der Steuerung, sonst Heizlast nach Wetterdienst
+           "controller_heat_today", "outdoor_temp_reference",
            # Grundgrößen Fühler-Offset (D4) und Datenqualität (D2, D8)
            "compressor_running", "pump_running", "defrost"),
     required_roles=("electricity_meter", "flow_temp", "return_temp", "flow_rate", "outdoor_temp"),

@@ -17,7 +17,7 @@ ROLE_STEPS: dict[str, tuple[str, ...]] = {
              "booster_heater", "booster_heater_2", "heartbeat"),
     "measurements": ("electricity_meter", "flow_temp", "return_temp", "flow_rate", "outdoor_temp",
                      "outdoor_temp_reference"),
-    "controller": ("controller_heating_consumed", "controller_dhw_consumed", "controller_date"),
+    "controller": ("controller_heating_consumed", "controller_dhw_consumed", "controller_date", "controller_heat_today"),
     # Heizkreis hinter Puffer oder Weiche und Raum (Audit 2); bei Anlagen ohne Trennung leer lassen
     "circuit": ("flow_setpoint", "circuit_flow_temp", "circuit_return_temp", "circuit_pump_running", "room_temp"),
     # Stellgrößen (Spezifikation 1.8): Was die Schnittstelle zur Wärmepumpe schreiben kann. Nur zugeordnete Rollen

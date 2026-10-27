@@ -130,6 +130,7 @@ Er erkennt drei Schreibweisen und nimmt jeweils die, die es gibt:
 | `controller_heating_consumed` | `sensor.ecodan_heatpump_heating_consumed` | `sensor.ecodan_heatpump_heizung_verbraucht` |
 | `controller_dhw_consumed` | `sensor.ecodan_heatpump_dhw_consumed` | `sensor.ecodan_heatpump_tww_verbraucht` |
 | `controller_date` | `sensor.ecodan_heatpump_controller_date` | `sensor.ecodan_heatpump_controller_datum` |
+| `controller_heat_today` | `sensor.ecodan_heatpump_estimated_total_daily_energy_produced` | `sensor.ecodan_heatpump_geschatzte_tagliche_energieproduktion` |
 | `flow_setpoint` | `sensor.ecodan_heatpump_zone_1_setpoint_value` | `sensor.ecodan_heatpump_zone_1_sollwert` |
 | `circuit_flow_temp` / `circuit_return_temp` | `sensor.ecodan_heatpump_z1_feed_temp` / `…_z1_return_temp` | `sensor.ecodan_heatpump_z1_vorlauftemperatur` / `…_z1_rucklauftemperatur` |
 

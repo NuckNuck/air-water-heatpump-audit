@@ -27,7 +27,7 @@ CHECK_HELP: dict[str, dict[str, str]] = {
     "D2": {"what": "Anteil der Zeit, in der lückenlos Messwerte kamen (Lücke = mehr als 3 Minuten ohne Lebenszeichen "
                    "des Datensammlers).",
            "rating": "Grün ab 98 %, Gelb ab 90 %, Rot darunter.",
-           "source": "Abgeleitet: Ein Tag zählt für die Auswertung nur mit mindestens 98 %."},
+           "source": "Abgeleitet. Kleinere Lücken in einem Tag werden für die Tageswerte geschätzt aufgefüllt (Audit Effizienz)."},
     "D3": {"what": "In welchen Schritten Temperaturen und Durchfluss gemeldet werden, und wie stark das die "
                    "berechnete Wärme schwanken lässt.",
            "rating": "Grün; die Schwankung einzelner Werte steht als Anmerkung im Text.",

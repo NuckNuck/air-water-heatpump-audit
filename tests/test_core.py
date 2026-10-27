@@ -522,6 +522,55 @@ class EfficiencyTest(unittest.TestCase):
         self.assertEqual(e1.check_carnot_efficiency(rows, "high", True).verdict, WARN)
         self.assertEqual(e1.check_carnot_efficiency(rows, "high", False).verdict, HINT)
 
+    def drop_heartbeat(self, a, b):
+        self.hb = [p for p in self.hb if not a <= p[0] < b]
+
+    def test_gap_filled_from_counter(self):
+        # Sicherung aus: 52 min ohne Daten am Mittag; der Wärmezähler der Steuerung zählt weiter (F175)
+        g0, g1 = local(2026, 11, 2, 12), local(2026, 11, 2, 12, 52)
+        self.drop_heartbeat(g0, g1)
+        power = heat.heat_power([(self.start, 15.0)], self.flow, self.ret, self.start, self.end)
+        kw = power[0][1]
+        counter = [(t, kw * ((t - self.start) % (24 * H)) / H) for t, _ in self.hb]
+        ideal = e1.carnot_power(power, self.flow, self.ret, self.out, self.start, self.end)
+        rows = e1.daily_rows(self.meter, power, power, ideal, self.out, self.dhw, self.hb, self.start, self.end,
+                             heat_counter=counter)
+        day = rows[0]
+        self.assertEqual((day["gap_min"], day["gap_method"]), (53, e1.GAP_COUNTER))
+        self.assertAlmostEqual(day["heat_kwh"], kw * 24, delta=0.05)  # nicht mit dem letzten Wert überbrückt
+        self.assertIn("Lücke 53 min", e1.check_daily_cop(rows[:1], True, 0.1).text)
+
+    def test_gap_filled_by_heating_load(self):
+        self.drop_heartbeat(local(2026, 11, 2, 12), local(2026, 11, 2, 12, 52))
+        day = self.rows()[0]
+        self.assertEqual(day["gap_method"], e1.GAP_LOAD)
+        self.assertAlmostEqual(day["heat_kwh"], 49.84, delta=0.05)  # konstante Last: wie der Zeitanteil
+
+    def test_night_gap_weighs_more_than_noon_gap(self):
+        day = (local(2026, 11, 2), local(2026, 11, 3))
+        out = [(day[0], 0.0), (local(2026, 11, 2, 8), 12.0), (local(2026, 11, 2, 20), 0.0)]  # nachts kalt
+        def share(g0, g1):
+            gaps = [(g0, g1)]
+            heat_gap, method = e1.gap_heat(100.0, gaps, subtract([day], gaps), [], out)
+            return heat_gap
+        self.assertGreater(share(local(2026, 11, 2, 2), local(2026, 11, 2, 3)),
+                           2 * share(local(2026, 11, 2, 12), local(2026, 11, 2, 13)))
+
+    def test_gap_too_large_or_at_midnight_drops_day(self):
+        self.drop_heartbeat(local(2026, 11, 2, 8), local(2026, 11, 2, 12))  # 4 h ≈ 17 % der Wärme
+        self.drop_heartbeat(local(2026, 11, 3, 23, 50), local(2026, 11, 4, 0, 10))  # Zählerstand um Mitternacht fehlt
+        days = [r["day"] for r in self.rows()]
+        self.assertNotIn("2026-11-02", days)
+        self.assertNotIn("2026-11-03", days)
+        self.assertNotIn("2026-11-04", days)
+        self.assertIn("2026-11-05", days)
+
+    def test_counter_reset_in_gap_falls_back_to_load(self):
+        gaps = [(local(2026, 11, 2, 12), local(2026, 11, 2, 13))]
+        counter = [(gaps[0][0] - 60, 30.0), (gaps[0][1], 0.5)]
+        _, method = e1.gap_heat(50.0, gaps, subtract([(self.start, self.start + 24 * H)], gaps), counter, self.out)
+        self.assertEqual(method, e1.GAP_LOAD)
+
     def test_too_few_days(self):
         rows = self.rows()[:3]
         for check in (e1.check_weekly_cop, e1.check_dhw_share):

@@ -213,7 +213,7 @@ auch eine ältere Version wählen.
    lassen**.
    - **Betriebssignale:** Verdichter, Pumpe, Abtauen, Warmwasser, Heizstab, Lebenszeichen.
    - **Messwerte:** Stromzähler, Vor- und Rücklauf, Durchfluss, Außentemperatur, Wetterdienst.
-   - **Werte der Steuerung:** Stromverbrauch und Datum, wie die Wärmepumpe sie selbst meldet.
+   - **Werte der Steuerung:** Stromverbrauch und Datum, wie die Wärmepumpe sie selbst meldet, dazu ihr Wärmezähler für heute. Er zählt weiter, auch wenn Home Assistant kurz aus ist, und füllt solche Lücken in den Tageswerten auf.
    - **Heizkreis und Raum:** nur ausfüllen, wenn zwischen Wärmepumpe und Heizkörpern ein Pufferspeicher oder eine
      hydraulische Weiche sitzt, und für den Raumthermometer.
    - **Stellgrößen:** nur, wenn Ihre Schnittstelle diese Werte verstellen kann. Das Audit ändert **nie** selbst etwas.

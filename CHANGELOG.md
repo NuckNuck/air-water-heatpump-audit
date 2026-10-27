@@ -7,6 +7,22 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
+## [0.14.0] – 2026-10-27
+
+### Neu
+- Datenlücken in einem Tag (z. B. Home Assistant oder Sicherung kurz aus) kosten nicht mehr den ganzen Tag. Die Wärme
+  der Lücke wird aufgefüllt – aus dem Wärmezähler der Steuerung, wenn er zugeordnet ist, sonst nach Heizlast
+  (kalte Stunden wiegen mehr). Der Tag zählt, solange die aufgefüllte Wärme höchstens 10 % ausmacht und die Lücken
+  zusammen höchstens 6 h dauern. Bisher fiel ein Tag schon ab 30 min Lücke weg.
+- Neue optionale Rolle „Steuerung: Wärme heute (Tageszähler)“ im Schritt „Werte der Steuerung“; das Profil
+  `esphome_ecodan` schlägt die geschätzte tägliche Energieproduktion vor. Bestehende Einträge: über
+  „Neu konfigurieren“ ergänzen.
+- Tagestabelle unter E1: Tage mit aufgefüllter Lücke tragen ein *, beim Überfahren steht Dauer, Anteil und Weg.
+
+### Geändert
+- Lücken werden nicht mehr mit dem letzten Messwert überbrückt; grenzt eine Lücke an Mitternacht, zählt der Tag
+  nicht (Zählerstand unbekannt).
+
 ## [0.13.0] – 2026-10-27
 
 ### Neu
