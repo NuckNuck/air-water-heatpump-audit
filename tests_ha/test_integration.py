@@ -312,6 +312,26 @@ async def test_reconfigure_adds_new_roles_and_keeps_cleared(hass: HomeAssistant)
     assert entry.data["circuit_flow_temp"] == "sensor.heatpump_z1_feed_temp"
 
 
+async def test_reconfigure_leaves_reload_to_update_listener(hass: HomeAssistant, caplog):
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=dict(MAHTANAR), options=DEFAULT_OPTIONS,
+                            unique_id="binary_sensor.heatpump_compressor")
+    entry.add_to_hass(hass)
+    updated = []
+
+    async def listener(hass, entry):
+        updated.append(entry.data.get("controller_heat_today"))
+
+    entry.add_update_listener(listener)
+    result = await entry.start_reconfigure_flow(hass)
+    while result["type"] is FlowResultType.FORM:
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"controller_heat_today": "sensor.heat_today"} if result["step_id"] == "controller" else {})
+    await hass.async_block_till_done()
+    assert result["reason"] == "reconfigure_successful"
+    assert updated == ["sensor.heat_today"]
+    assert "update listener" not in caplog.text
+
+
 def _sections(values: dict) -> dict:
     """Optionen flach → Eingabe des Options-Formulars mit Abschnitten."""
     return {name: {k: values[k] for k in keys if values.get(k) is not None} for name, keys in OPTION_SECTIONS.items()}

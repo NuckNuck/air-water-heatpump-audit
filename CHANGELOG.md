@@ -7,6 +7,12 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
+## [0.14.1] – 2026-10-27
+
+### Behoben
+- „Neu konfigurieren“ löste eine Warnung im Log aus (doppeltes Neuladen, ab Home Assistant 2026.12 ein Fehler).
+  Neu geladen wird jetzt nur noch über den Update-Listener.
+
 ## [0.14.0] – 2026-10-27
 
 ### Neu

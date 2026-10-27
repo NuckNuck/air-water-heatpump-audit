@@ -91,7 +91,8 @@ class AirWaterAuditConfigFlow(ConfigFlow, domain=DOMAIN):
         if following:
             return await getattr(self, f"async_step_{following[0]}")()
         if self._reconfigure:
-            return self.async_update_reload_and_abort(self._get_reconfigure_entry(), data=self._data)
+            # Neu laden plant der Update-Listener (__init__.py); ein zweites Neuladen hier warnt HA ab 2026.10
+            return self.async_update_and_abort(self._get_reconfigure_entry(), data=self._data)
         await self.async_set_unique_id(self._data.get("compressor_running") or DOMAIN)
         self._abort_if_unique_id_configured()
         model = MODEL_PROFILES.get(self._data.get(CONF_MODEL_PROFILE, NO_PROFILE), {})
