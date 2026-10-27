@@ -444,7 +444,7 @@ class AirWaterAuditCard extends HTMLElement {
         /* Feste Spaltenbreiten: alle Audits nutzen dieselben Spalten, nichts springt beim Aktualisieren. */
         table { width: 100%; min-width: 960px; table-layout: fixed; border-collapse: collapse; font-size: .92em; }
         col.id { width: 44px; } col.name { width: 13%; } col.verdict { width: 115px; } col.action { width: 21%; }
-        col.num { width: 85px; } col.origin { width: 95px; }
+        col.num { width: 85px; } col.origin { width: 112px; }
         th { text-align: left; color: var(--secondary-text-color); font-weight: 500; padding: 4px 6px; border-bottom: 1px solid var(--divider-color); }
         td { padding: 6px; border-bottom: 1px solid var(--divider-color); vertical-align: top; overflow-wrap: anywhere; }
         /* Audit-Zwischenzeile hervorgehoben: Primärfarbe als Tönung über dem Kartenhintergrund, damit sie im dunklen
@@ -465,7 +465,7 @@ class AirWaterAuditCard extends HTMLElement {
           border: 1px solid var(--primary-color); background: var(--primary-color); color: var(--text-primary-color, #fff); }
         .done { color: var(--success-color, #43a047); white-space: nowrap; }
         .muted { color: var(--secondary-text-color); }
-        td.origin { color: var(--secondary-text-color); }
+        td.origin { color: var(--secondary-text-color); overflow-wrap: normal; white-space: nowrap; }
         .pill { color: #fff; border-radius: 10px; padding: 1px 8px; white-space: nowrap; font-size: .9em; }
         .msg { color: var(--secondary-text-color); }
         .q { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; margin-left: 3px;
