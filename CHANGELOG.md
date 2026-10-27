@@ -7,6 +7,12 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
+## [0.11.0] – 2026-10-27
+
+### Neu
+- Eigenes Icon: Außengerät einer Luft-Wasser-Wärmepumpe mit Lupe und Haken. Home Assistant ab 2026.3 zeigt es unter
+  „Geräte & Dienste“ (Ordner `brand/` in der Integration); Vorlage `docs/brand/icon.svg`, MIT-Lizenz wie das Repo.
+
 ## [0.10.2] – 2026-10-27
 
 ### Geändert
@@ -67,6 +73,7 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 - Erster öffentlicher Stand (damals „WP-Audit“, Entwicklungsversion).
 
-[Unveröffentlicht]: https://github.com/NuckNuck/air-water-heatpump-audit/compare/v0.10.2...HEAD
+[Unveröffentlicht]: https://github.com/NuckNuck/air-water-heatpump-audit/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/NuckNuck/air-water-heatpump-audit/releases/tag/v0.11.0
 [0.10.2]: https://github.com/NuckNuck/air-water-heatpump-audit/releases/tag/v0.10.2
 [0.10.1]: https://github.com/NuckNuck/air-water-heatpump-audit/releases/tag/v0.10.1
