@@ -166,6 +166,10 @@ Jede Prüfung meldet, wie viel ihr noch fehlt (`progress`: vorhanden, nötig, Ei
 sind (Hochrechnung, Audit 0 ab Fensterbeginn, Audits 1–3 ab dem letzten Ereignis). Fällt ein Tag durch, rückt der
 Termin nach hinten.
 
+In der Tabelle füllt sich der Marker einer `not_assessable`-Prüfung mit `progress` von links in der Farbe von
+`ok` (Anteil vorhanden ÷ nötig, abgerundet); ohne `progress` (Eingang fehlt) bleibt er grau. Sobald die Prüfung
+bewertbar ist, zeigt der Marker ihr Urteil.
+
 ---
 
 ## 2. Audit 0 – Datenbasis
