@@ -1,5 +1,7 @@
 # Luft-Wasser-Wärmepumpen-Audit für Home Assistant
 
+<img src="https://raw.githubusercontent.com/NuckNuck/air-water-heatpump-audit/main/custom_components/air_water_heatpump_audit/brand/icon.png" alt="" width="96" align="right">
+
 > ## ⚠️ Entwicklungsversion
 >
 > **Diese Integration ist noch in Entwicklung. Sie läuft bisher an genau einer Anlage, Namen, Entitäten und
@@ -323,6 +325,8 @@ entfernen.
   - `frontend/air-water-heatpump-audit-card.js` – `custom:air-water-heatpump-audit-card` (Ampel, Datenreife,
     Tabelle) und `custom:air-water-heatpump-audit-timeline-card` (Zeitstrahl); die Integration trägt die Datei selbst
     als Lovelace-Ressource ein.
+  - `brand/` – Icon für Home Assistant ab 2026.3 (`icon.png` 256 px, `icon@2x.png` 512 px), erzeugt aus
+    `docs/brand/icon.svg`.
 - Einträge: Haupteintrag = Anlage (Rollen, Stammdaten), Untereinträge `audit` (je zugeschaltetem Audit, mit eigenem
   Gerät) und `event` (Änderungen an der Anlage).
 - Sensoren: `sensor.air_water_heatpump_audit_<audit>` (Gesamturteil, Attribute `dq`, `checks`, `readiness`,
