@@ -7,6 +7,12 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
+## [0.10.2] – 2026-10-27
+
+### Geändert
+- Karte: Die Datenreife braucht nur noch Titelzeile und Balken. Welches Audit ab wann bereitsteht und was ihm noch
+  fehlt, steht im Tooltip beim Überfahren des Balkens oder des **?** (Klick hält ihn offen).
+
 ## [0.10.1] – 2026-10-26
 
 ### Neu
@@ -61,5 +67,6 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 - Erster öffentlicher Stand (damals „WP-Audit“, Entwicklungsversion).
 
-[Unveröffentlicht]: https://github.com/NuckNuck/air-water-heatpump-audit/compare/v0.10.1...HEAD
+[Unveröffentlicht]: https://github.com/NuckNuck/air-water-heatpump-audit/compare/v0.10.2...HEAD
+[0.10.2]: https://github.com/NuckNuck/air-water-heatpump-audit/releases/tag/v0.10.2
 [0.10.1]: https://github.com/NuckNuck/air-water-heatpump-audit/releases/tag/v0.10.1
