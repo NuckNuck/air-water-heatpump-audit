@@ -224,12 +224,27 @@ class AirWaterAuditCard extends HTMLElement {
     return `<tr>
       <td class="id">${esc(c.check_id)}</td>
       <td>${esc(name)}${help}</td>
-      <td><span class="pill" style="background:${COLORS[verdict] ?? COLORS.not_assessable}">${esc(st ? hass.formatEntityState(st) : verdict)}</span></td>
+      <td>${this._pill(verdict, st, at.progress, t)}</td>
       <td class="action">${action}</td>
       <td class="num">${esc(formatValue(at.value, at.unit, hass.language))}</td>
       <td class="text">${esc(at.text)}${toggle}</td>
       <td class="origin">${esc(t.origin[at.origin] ?? at.origin)}</td>
     </tr>${days}`;
+  }
+
+  // Urteils-Marker; „nicht bewertbar“ füllt sich mit dem Datenstand grün, bis die Prüfung ihr Urteil hat.
+  _pill(verdict, st, prog, t) {
+    const hass = this._hass;
+    const label = esc(st ? hass.formatEntityState(st) : verdict);
+    if (verdict !== "not_assessable" || !prog?.need) {
+      return `<span class="pill" style="background:${COLORS[verdict] ?? COLORS.not_assessable}">${label}</span>`;
+    }
+    const pct = Math.max(0, Math.min(100, Math.floor((100 * prog.have) / prog.need)));
+    const loc = hass.locale?.language || hass.language;
+    const num = (v) => Number(v).toLocaleString(loc, { maximumFractionDigits: 1 });
+    const tip = `${pct} % – ${t.ready.of(num(prog.have), num(prog.need), t.ready.units[prog.unit] ?? prog.unit)}`;
+    return `<span class="pill" title="${esc(tip)}" style="background:linear-gradient(to right, ${COLORS.ok} ${pct}%, `
+      + `${COLORS.not_assessable} ${pct}%)">${label}</span>`;
   }
 
   // Aktion: wer und was, Zielwert, aufklappbare Schritte, Vorschläge für Stellgrößen der Schnittstelle.

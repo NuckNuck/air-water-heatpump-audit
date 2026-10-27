@@ -32,7 +32,8 @@ Jede Prüfung bekommt eine Ampel:
 - 🟡 **Gelb** – Hinweis: lohnt sich anzuschauen, kein Eilfall.
 - 🔴 **Rot** – deutliche Abweichung, sollte geklärt werden.
 - 🔵 **Blau** – nur zur Information, kein Urteil.
-- ⚪ **Grau** – noch nicht bewertbar (zu wenig Daten oder ein Messwert fehlt).
+- ⚪ **Grau** – noch nicht bewertbar (zu wenig Daten oder ein Messwert fehlt). Fehlen nur Daten, füllt sich der
+  Marker mit dem Datenstand von links grün; beim Überfahren steht, wie viel schon da ist.
 
 Zu jeder gelben oder roten Prüfung zeigt die Karte, **wer** etwas tun kann (Sie selbst oder der Fachbetrieb), **was**
 zu tun ist und **welcher Wert** am Gerät eingestellt werden sollte. Hinter jeder Prüfung steht ein **„?“** mit einer

@@ -7,6 +7,13 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
+## [0.13.0] – 2026-10-27
+
+### Neu
+- Karte: Der graue Marker „nicht bewertbar“ füllt sich mit dem Datenstand von links grün (z. B. 2 von 3 Tagen =
+  zwei Drittel grün); beim Überfahren steht „67 % – 2 von 3 vollen Tagen“. Sind die Daten vollständig, zeigt der
+  Marker das Urteil der Prüfung. Prüfungen, denen ein Messwert fehlt, bleiben grau.
+
 ## [0.12.0] – 2026-10-27
 
 ### Geändert
