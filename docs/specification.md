@@ -43,6 +43,11 @@ Quellen stehen als Kurzschlüssel in Klammern, das Verzeichnis folgt in Abschnit
 Gesamturteil eines Audits = schlechtestes Urteil seiner bewerteten Prüfungen; `info` zählt nicht mit. Sind alle
 Prüfungen `not_assessable`, ist auch das Audit `not_assessable`.
 
+**Grün im Zweifel (seit 0.12.0):** Liegt eine Abweichung unterhalb der Fühler- oder Messtoleranz oder ist sie
+minimal, und ist keine nennenswerte Effizienzeinbuße zu erwarten, ist das Urteil `ok`. Das Bemerkenswerte steht als
+Anmerkung im Text, nichts wird weggelassen. `info` bleibt Kennzahlen vorbehalten, die eine gelbe oder rote Prüfung
+erklären (T3, T5), und unplausibel guten Werten. Ziel: wenige Anmerkungen, die zählen, statt vieler blauer Zeilen.
+
 Zu jedem Urteil gehört eine Datenqualität `dq` (`high`, `medium`, `low`), siehe Audit 0.
 
 ### 1.3 Eingänge (Rollen)
@@ -172,12 +177,12 @@ an die anderen Audits.
 |---|---|---|---|---|---|
 | D1 | `history_depth` | Verfügbare Rohdaten (Recorder-Aufbewahrung, InfluxDB angebunden) | – | `ok` InfluxDB oder Recorder ≥ 30 d · `hint` Recorder 7–30 d (Hinweis Datenträger) · `warn` < 7 d | `derived`: Wochen- und Monatsvergleiche brauchen 7 bzw. 30 Tage |
 | D2 | `coverage` | Anteil der Zeit mit lückenlosem Heartbeat (Lücke = > 180 s ohne Wechsel) | – | `ok` ≥ 98 % · `hint` 90–98 % · `warn` < 90 % | `derived`: 98 % ≈ 30 min Ausfall pro Tag (emoncms bildet „Quality“ ebenso, ohne Schwelle) |
-| D3 | `resolution` | Tatsächliche Auflösung je Eingang; daraus die Unsicherheit der Wärme | genug gespeicherte Werte | `info` | `physical`: Quantisierung ± halbe Schrittweite je Fühler |
+| D3 | `resolution` | Tatsächliche Auflösung je Eingang; daraus die Unsicherheit der Wärme | genug gespeicherte Werte | `ok`; Unsicherheit je Einzelwert als Anmerkung (mittelt sich über Tage aus) | `physical`: Quantisierung ± halbe Schrittweite je Fühler |
 | D4 | `sensor_offset` | Zeitmittel Vorlauf − Rücklauf bei laufender Pumpe, Verdichter seit ≥ 5 min aus, keine Abtauung, kein Warmwasser. Zeitmittel statt Median, weil gestufte Fühler den Median auf eine Stufe einrasten lassen | ≥ 3 Fenster à ≥ 3 min; belastbar ab 20 | `ok` \|Offset\| ≤ 0,5 K · `hint` ≤ 1,0 K · `warn` > 1,0 K | `derived`: 0,5 K = typische Auflösungsgrenze; 1 K verfälscht bei Spreizung < 4 K die Wärme deutlich (ETI-2011) |
 | D5 | `meter_vs_controller` | Strom laut Steuerung ÷ Zählerstrom über volle Tage mit lückenlosem Heartbeat | 7 Tage | `ok` 0,95–1,20 · `hint` außerhalb · `warn` < 0,80 oder > 1,50 | `derived` aus Community-Berichten (OEM): Schätzungen der Steuerung liegen meist 5–14 % über dem Zähler. Bestätigt zugleich, dass der Zähler die ganze Anlage misst |
 | D6 | `controller_day_boundary` | Uhrzeit, zu der das Datum der Steuerung wechselt, gegen lokale Mitternacht | 1 Wechsel | `ok` Versatz ≤ 15 min · `hint` darüber (Uhr falsch, z. B. Sommerzeit nicht umgestellt) | `derived`: Tageswerte der Steuerung folgen ihrer eigenen Uhr |
 | D8 | `meter_resolution` | Schrittweite der Zählerstände | genug Zählerstände | `ok` ≤ 0,1 kWh · `hint` gröber (viele Zähler liefern ohne Freischaltung per PIN nur ganze kWh) | `physical`: Tageswerte sind auf ± einen Schritt unsicher |
-| D9 | `restart_artifacts` | Neustarts der Schnittstelle (Heartbeat fällt) und Lücken; Zustandswechsel ±30 s darum werden für alle Audits verworfen | – | `info` · `hint` > 3 Neustarts pro Tag, erst ab 1 Tag Zeitraum | `derived` |
+| D9 | `restart_artifacts` | Neustarts der Schnittstelle (Heartbeat fällt) und Lücken; Zustandswechsel ±30 s darum werden für alle Audits verworfen | – | `ok` · `hint` > 3 Neustarts pro Tag, erst ab 1 Tag Zeitraum | `derived` |
 | D10 | `outdoor_sensor` | Tagesmittel Außenfühler gegen Wetterdienst, nur Tage mit ≤ 10 % Abtauzeit | 3 Tage | `ok` \|Δ\| ≤ 1,5 K · `hint` ≤ 3 K · `warn` > 3 K | `sourced`: Plausibilisierung gegen Wetterdaten (WPS S. 25); Außenfühler werden durch Abtauen verfälscht (OEM). Schwellen `derived` |
 
 D7 (Energie-Methode der Steuerung) ist entfallen: Die Einstellung ist herstellerspezifisch, und D5 deckt die Frage
@@ -213,11 +218,11 @@ Takten ist ein Symptom, keine Ursache.
 |---|---|---|---|---|---|
 | C1 | `starts_per_year` | Starts pro Jahr; vor Ablauf eines Jahres Hochrechnung Starts pro Heizstunde × `heating_hours` | 14 Tage; Stammdatum `heating_hours` | `ok` ≤ 2.000 · `hint` darüber. Weil es bisher immer eine Hochrechnung ist („Obergrenze“), nie `warn`; > 5.500 wäre `warn`, sobald ein ganzes Jahr gemessen ist (noch nicht gebaut) | `sourced`: WPQS S. 99–102 (ein Drittel ≤ 2.000, 90 % < 5.500). Hochrechnung `derived` und eine Obergrenze, weil bei Kälte weniger getaktet wird |
 | C2 | `max_starts_per_hour` | höchste Startzahl in einem gleitenden 60-min-Fenster | 1 Tag | `ok` ≤ 6 · `hint` 7–12 · `warn` > 12 | `sourced`: Verdichterhersteller 6–12/h laut WPQS S. 98; Danfoss max. 12/h (DF-VZH S. 32) |
-| C3 | `short_cycles` | Anteil und Anzahl der Heizzyklen < 10 min, zusätzlich < 3 min | 20 Heizzyklen | `info` · `hint`: Heizzyklen < 3 min (ohne Abtauung/Neustart) an ≥ 2 verschiedenen Tagen; ein einzelner schlechter Tag (z. B. Wartung) reicht nicht | `sourced`: WPQS-Laufzeitklassen (< 10 min); 3 min = Mindestlaufzeit laut Danfoss (DF-VZH S. 47), übertragen |
+| C3 | `short_cycles` | Anteil und Anzahl der Heizzyklen < 10 min, zusätzlich < 3 min | 20 Heizzyklen | `ok` · `hint`: Heizzyklen < 3 min (ohne Abtauung/Neustart) an ≥ 2 verschiedenen Tagen; ein einzelner schlechter Tag (z. B. Wartung) reicht nicht | `sourced`: WPQS-Laufzeitklassen (< 10 min); 3 min = Mindestlaufzeit laut Danfoss (DF-VZH S. 47), übertragen |
 | C4 | `load_vs_min_capacity` | mittlere Heizleistung eines vollen Tages gegen die kleinste Leistung bei Tagesmittel außen und mittlerem Vorlauf | 1 voller Tag ohne Lücken; Stammdatum `capacity_min_table` | `info` mit Klartext: unter der kleinsten Stufe → Takten physikalisch unvermeidbar; darüber bei vielen Starts → Regelung/Hydraulik prüfen | `physical` + Datenblatt der Anlage. Erklärt C1–C3, kein eigenes Urteil |
 | C5 | `backup_heater_share` | Heizstab-Strom (Einschaltdauer × Nennleistung) ÷ Zählerstrom | 7 Tage; Stammdaten Heizstab-kW | `ok` ≤ 2 % · `hint` 2–4 % · `warn` > 4 % | `derived` aus WPQS S. 96–97 (Hälfte < 0,2 %, oberes Feld 2–4 %); Mittel 1,3 % (WPQS-PI) bzw. 1,9 % (WPS) |
-| C6 | `defrost` | Abtauungen pro Verdichter-Laufstunde, zusätzlich nur für Laufzeit über +5 °C außen (Außentemperatur vom Wetterdienst, sonst Außenfühler) | Band über +5 °C: ≥ 5 h Lauf | `info` · `hint`: über +5 °C mehr als 2 Abtauungen je Laufstunde | `derived`: Abtaubereich −2…+5 °C (BFE-AT), darüber sollte kaum Reif entstehen; 2/h und 5 h eigene Festlegung. Wetterdienst bevorzugt, weil Abtauen den Außenfühler verfälscht (D10) |
-| C7 | `modulation` | Laufzeitanteil ≤ 20 Hz und Verteilung in 10-Hz-Klassen | Laufzeit mit Frequenzwerten | `info` | `descriptive`: keine Schwelle in der Literatur |
+| C6 | `defrost` | Abtauungen pro Verdichter-Laufstunde, zusätzlich nur für Laufzeit über +5 °C außen (Außentemperatur vom Wetterdienst, sonst Außenfühler) | Band über +5 °C: ≥ 5 h Lauf | `ok` (`info` ohne Außentemperatur) · `hint`: über +5 °C mehr als 2 Abtauungen je Laufstunde | `derived`: Abtaubereich −2…+5 °C (BFE-AT), darüber sollte kaum Reif entstehen; 2/h und 5 h eigene Festlegung. Wetterdienst bevorzugt, weil Abtauen den Außenfühler verfälscht (D10) |
+| C7 | `modulation` | Laufzeitanteil ≤ 20 Hz und Verteilung in 10-Hz-Klassen | Laufzeit mit Frequenzwerten | `ok` | `descriptive`: keine Schwelle in der Literatur |
 
 Geplant, noch nicht gebaut: **C8** Heizlast-Regression (Wochenmittel Wärme über Außentemperatur, ≥ 4 Wochen) gegen
 die Nennleistung (Verfahren WPQS Kap. 6.1).

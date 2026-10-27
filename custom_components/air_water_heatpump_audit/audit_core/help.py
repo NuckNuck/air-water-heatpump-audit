@@ -30,7 +30,7 @@ CHECK_HELP: dict[str, dict[str, str]] = {
            "source": "Abgeleitet: Ein Tag zählt für die Auswertung nur mit mindestens 98 %."},
     "D3": {"what": "In welchen Schritten Temperaturen und Durchfluss gemeldet werden, und wie stark das die "
                    "berechnete Wärme schwanken lässt.",
-           "rating": INFO_ONLY,
+           "rating": "Grün; die Schwankung einzelner Werte steht als Anmerkung im Text.",
            "source": "Physikalisch: grobe Schritte bei kleiner Spreizung machen einzelne Werte ungenau."},
     "D4": {"what": "Vor- und Rücklauffühler im Vergleich, während die Pumpe läuft und der Verdichter steht – dann "
                    "müssten beide dasselbe zeigen. Ein Unterschied verfälscht die berechnete Wärme.",
@@ -48,7 +48,7 @@ CHECK_HELP: dict[str, dict[str, str]] = {
            "rating": "Grün bei 0,1 kWh oder feiner, sonst Gelb: Tageswerte werden dann ungenau.",
            "source": "Physikalisch: 1 kWh Schritt ist bei 10–20 kWh am Tag bis zu 10 % Fehler."},
     "D9": {"what": "Wie oft der Datensammler neu gestartet ist. Messwerte rund um einen Neustart werden verworfen.",
-           "rating": "Gelb bei mehr als 3 Neustarts pro Tag, sonst nur Info.",
+           "rating": "Gelb bei mehr als 3 Neustarts pro Tag, sonst grün.",
            "source": "Abgeleitet."},
     "D10": {"what": "Außenfühler der Wärmepumpe im Vergleich zum Wetterdienst (ohne Tage mit viel Abtauen).",
             "rating": "Grün bis 1,5 K Abweichung, Gelb bis 3 K, Rot darüber.",
@@ -111,7 +111,7 @@ CHECK_HELP: dict[str, dict[str, str]] = {
            "rating": "Grün bis 6, Gelb bis 12, Rot darüber.",
            "source": "Übliche Herstellergrenzen (WP-QS, Danfoss)."},
     "C3": {"what": "Anteil der Heizläufe, die kürzer als 10 Minuten sind.",
-           "rating": "Info; Gelb, wenn an mindestens 2 Tagen Läufe kürzer als 3 Minuten vorkommen. Ab 20 Heizläufen.",
+           "rating": "Grün; Gelb, wenn an mindestens 2 Tagen Läufe kürzer als 3 Minuten vorkommen. Ab 20 Heizläufen.",
            "source": "Beschreibend."},
     "C4": {"what": "Wärmebedarf des Tages im Vergleich zur kleinsten Leistung der Wärmepumpe laut Datenblatt.",
            "rating": INFO_ONLY + " Liegt der Bedarf darunter, ist Takten physikalisch unvermeidbar.",
@@ -120,10 +120,10 @@ CHECK_HELP: dict[str, dict[str, str]] = {
            "rating": "Grün bis 2 %, Gelb bis 4 %, Rot darüber (Feldtest im Mittel 1,3–1,9 %). Ab 7 Tagen.",
            "source": "Abgeleitet aus dem Feldtest Fraunhofer ISE."},
     "C6": {"what": "Wie oft die Wärmepumpe pro Stunde Laufzeit abtaut.",
-           "rating": "Info; Gelb, wenn sie über +5 °C außen mehr als 2-mal pro Laufstunde abtaut (ab 5 h Lauf über "
+           "rating": "Grün; Gelb, wenn sie über +5 °C außen mehr als 2-mal pro Laufstunde abtaut (ab 5 h Lauf über "
                      "+5 °C).",
            "source": "Abgeleitet; Abtaubereich −2 bis +5 °C laut EnergieSchweiz (BFE)."},
     "C7": {"what": "Wie viel ihrer Laufzeit die Wärmepumpe mit kleiner Leistung (niedrige Drehzahl) arbeitet.",
-           "rating": INFO_ONLY + " Viel kleine Leistung ist effizient, solange sie nicht oft taktet.",
+           "rating": "Grün. Viel kleine Leistung ist effizient, solange sie nicht oft taktet (siehe C3).",
            "source": "Beschreibend."},
 }

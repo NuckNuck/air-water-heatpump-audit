@@ -7,6 +7,15 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
+## [0.12.0] – 2026-10-27
+
+### Geändert
+- Grün im Zweifel: Prüfungen ohne Grenzüberschreitung und ohne nennenswerte Effizienzeinbuße sind jetzt grün statt
+  blau. Was bemerkenswert ist, steht weiter als Anmerkung im Text. Betroffen: D3 Auflösung, D9 Neustarts,
+  C3 kurze Heizläufe, C6 Abtauungen (blau nur ohne Außentemperatur), C7 Modulation. Blau bleibt für Kennzahlen, die
+  eine gelbe Prüfung erklären (T3, T5), und für unplausibel gute Werte.
+- Das Gesamturteil eines Audits kann dadurch grün werden, wo es bisher nur „Info“ zeigte.
+
 ## [0.11.1] – 2026-10-27
 
 ### Geändert

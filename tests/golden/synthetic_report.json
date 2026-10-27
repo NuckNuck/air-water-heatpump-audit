@@ -139,7 +139,7 @@
      "text": "0 von 83 Heizzyklen kürzer als 10 min, 0 kürzer als 3 min.",
      "unit": "%",
      "value": 0.0,
-     "verdict": "info"
+     "verdict": "ok"
     },
     {
      "action": null,
@@ -349,7 +349,7 @@
      "text": "29 Abtauungen in 72,5 h Verdichterlauf. Über 5 °C außen: 4 Abtauungen in 16,7 h Lauf (0,2/h).",
      "unit": "1/h Lauf",
      "value": 0.4,
-     "verdict": "info"
+     "verdict": "ok"
     },
     {
      "action": null,
@@ -366,7 +366,7 @@
      "text": "0 % der Laufzeit bei ≤ 20 Hz.",
      "unit": "%",
      "value": 0.0,
-     "verdict": "info"
+     "verdict": "ok"
     }
    ],
    "dq": "high",
@@ -432,7 +432,7 @@
      "key": "resolution",
      "origin": "physical",
      "progress": null,
-     "text": "Auflösung Vorlauf 0,5 K, Rücklauf 0,5 K, Durchfluss 1 l/min, Außentemperatur 0,1 K. Mittlere Spreizung bei laufendem Verdichter 4,9 K → Wärme je Einzelwert bis ±10 %.",
+     "text": "Auflösung Vorlauf 0,5 K, Rücklauf 0,5 K, Durchfluss 1 l/min, Außentemperatur 0,1 K. Mittlere Spreizung bei laufendem Verdichter 4,9 K → Wärme je Einzelwert bis ±10 %; über Tage gemittelt gleicht sich das aus.",
      "unit": "",
      "value": {
       "flow_rate": 1.0,
@@ -440,7 +440,7 @@
       "outdoor_temp": 0.1,
       "return_temp": 0.5
      },
-     "verdict": "info"
+     "verdict": "ok"
     },
     {
      "action": null,
@@ -1752,7 +1752,7 @@
      "text": "1 Neustart im Zeitraum; Zustandswechsel ±30 s darum werden verworfen.",
      "unit": "1/d",
      "value": 0.1,
-     "verdict": "info"
+     "verdict": "ok"
     },
     {
      "action": null,

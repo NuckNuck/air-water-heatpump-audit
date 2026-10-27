@@ -123,9 +123,9 @@ class ShortCycleAndDefrostTest(unittest.TestCase):
         normal = [c3.Cycle(i * day / 20, i * day / 20 + 30 * 60) for i in range(20)]
         return normal + [c3.Cycle(t, t + 120) for t in very_short_starts]
 
-    def test_very_short_cycles_on_one_day_are_info(self):
+    def test_very_short_cycles_on_one_day_are_green(self):
         r = c3.check_short_cycles(self.heating_cycles([2 * H, 5 * H]), tz="UTC")
-        self.assertEqual(r.verdict, INFO)
+        self.assertEqual(r.verdict, OK)
         self.assertEqual(r.details["very_short_days"], ["1970-01-01"])
         self.assertIn("an 1 Tag", r.text)
 
@@ -142,9 +142,9 @@ class ShortCycleAndDefrostTest(unittest.TestCase):
         self.assertEqual(warm.verdict, HINT)
         self.assertEqual(warm.details["warm_events"], 18)
         cold = c3.check_defrost([(0, 0)] + defrost, runs, 0, 6 * H, outdoor=[(0, 1.0)])
-        self.assertEqual(cold.verdict, INFO)  # unter +5 °C ist häufiges Abtauen normal
+        self.assertEqual(cold.verdict, OK)  # unter +5 °C ist häufiges Abtauen normal
         short = c3.check_defrost([(0, 0)] + defrost, [c3.Cycle(0, 2 * H)], 0, 6 * H, outdoor=[(0, 8.0)])
-        self.assertEqual(short.verdict, INFO)  # unter 5 h Lauf über +5 °C noch kein Urteil
+        self.assertEqual(short.verdict, OK)  # unter 5 h Lauf über +5 °C gibt es noch keinen Grund für Gelb
 
 
 class DataBasisTest(unittest.TestCase):
@@ -158,9 +158,9 @@ class DataBasisTest(unittest.TestCase):
         hb = [(0, 500.0), (60, 560.0), (120, 5.0), (180, 65.0)]
         self.assertEqual(d0.restarts(hb), [(115.0, 120)])
 
-    def test_single_restart_in_short_period_is_info(self):
+    def test_single_restart_in_short_period_is_green(self):
         hb = [(0, 500.0), (60, 5.0)]
-        self.assertEqual(d0.check_restarts(hb, 0, 4 * H).verdict, INFO)
+        self.assertEqual(d0.check_restarts(hb, 0, 4 * H).verdict, OK)
 
     def test_resolution(self):
         s = [(i, 30 + 0.5 * (i % 7)) for i in range(100)]
