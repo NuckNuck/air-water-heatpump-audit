@@ -7,6 +7,12 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
+## [0.14.2] – 2026-10-27
+
+### Behoben
+- Karte: Die Spalte „Herkunft“ brach Wörter wie „beschreibend“ mitten im Wort um. Sie ist jetzt etwas breiter und
+  bricht nicht mehr.
+
 ## [0.14.1] – 2026-10-27
 
 ### Behoben
