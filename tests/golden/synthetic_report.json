@@ -1983,7 +1983,7 @@
       "since": 1768118400.0,
       "unit": "heating_hours"
      },
-     "text": "Im Heizbetrieb liegt der Vorlauf der Wärmepumpe im Mittel 1,5 K über dem Vorlauf im Heizkreis. Die Wärmepumpe arbeitet damit wärmer als nötig, das kostet grob 3–4 % Effizienz. Fühlerunterschied aus T2 (+0,50 K) abgezogen, die Fühler sind abgeglichen.",
+     "text": "Im Heizbetrieb liegt der Vorlauf der Wärmepumpe im Mittel 1,5 K über dem Vorlauf im Heizkreis. Die Wärmepumpe arbeitet damit wärmer als nötig, das kostet grob 3–4 % Effizienz. Fühlerunterschied aus T2 (+0,5 K) abgezogen, die Fühler sind abgeglichen.",
      "unit": "K",
      "value": 1.5,
      "verdict": "ok"
@@ -2005,10 +2005,10 @@
       "since": 1767567600.0,
       "unit": "windows"
      },
-     "text": "In 233 Verdichterpausen zeigen beide Vorlauffühler im Mittel +0,50 K Unterschied.",
+     "text": "Die beiden Vorlauffühler stimmen überein (im Mittel +0,5 K in 233 Verdichterpausen, innerhalb der Fühlertoleranz).",
      "unit": "K",
      "value": 0.5,
-     "verdict": "info"
+     "verdict": "ok"
     },
     {
      "action": null,
