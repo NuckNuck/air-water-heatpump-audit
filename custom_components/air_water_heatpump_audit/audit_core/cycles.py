@@ -119,7 +119,7 @@ def check_short_cycles(cycles: list[Cycle], min_cycles: int = 20, since: float =
     details["very_short_days"] = very_short_days
     share = 100 * short / len(heating)
     # Spezifikation 3.2: Läufe < 3 min an ≥ 2 Tagen → hint; ein einzelner schlechter Tag (z. B. Wartung) reicht nicht.
-    verdict = HINT if len(very_short_days) >= VERY_SHORT_MIN_DAYS else INFO
+    verdict = HINT if len(very_short_days) >= VERY_SHORT_MIN_DAYS else OK
     text = f"{short} von {len(heating)} Heizzyklen kürzer als 10 min, {very_short} kürzer als 3 min"
     if very_short:
         text += f" (an {count(len(very_short_days), 'Tag', 'Tagen')})"
@@ -193,6 +193,7 @@ def check_defrost(defrost: Series, cycles: list[Cycle], start: float, end: float
     text = f"{count(len(events), 'Abtauung', 'Abtauungen')} in {num(run_h, '.1f')} h Verdichterlauf."
     verdict = INFO
     if outdoor:
+        verdict = OK  # Abtauen unter +5 °C ist normal; gelb nur bei häufigem Abtauen im warmen Bereich
         warm = intersect(runs, intervals_where(outdoor, lambda v: float(v) > DEFROST_WARM_C, start, end))
         warm_h = total(warm) / 3600
         warm_events = sum(1 for a, _ in events if overlaps((a, a + 1), warm))
@@ -223,7 +224,7 @@ def check_modulation(frequency: Series, cycles: list[Cycle], low_hz: float = LOW
         key = f"{lo}-{lo + 9}"
         bins[key] = bins.get(key, 0) + w
     hist = {k: round(100 * w / run, 1) for k, w in sorted(bins.items(), key=lambda kv: int(kv[0].split('-')[0]))}
-    return CheckResult("C7", "modulation", INFO, round(100 * low / run, 1), "%",
+    return CheckResult("C7", "modulation", OK, round(100 * low / run, 1), "%",
                        f"{num(100 * low / run, '.0f')} % der Laufzeit bei ≤ {num(low_hz, 'g')} Hz.", DESCRIPTIVE,
                        {"histogram_pct": hist})
 

@@ -86,8 +86,10 @@ def check_resolution(inputs: dict[str, Series], flow: Series, ret: Series, runni
             details["mean_delta_t_running"] = round(mean_dt, 2)
             details["heat_uncertainty_pct"] = round(100 * step_t / mean_dt, 1)
             text += (f". Mittlere Spreizung bei laufendem Verdichter {num(mean_dt, '.1f')} K → "
-                     f"Wärme je Einzelwert bis ±{num(details['heat_uncertainty_pct'], '.0f')} %.")
-    return CheckResult("D3", "resolution", INFO, steps, "", text, PHYSICAL, details)
+                     f"Wärme je Einzelwert bis ±{num(details['heat_uncertainty_pct'], '.0f')} %; über Tage "
+                     "gemittelt gleicht sich das aus.")
+    # Grün mit Anmerkung: grobe Schritte sind eine Eigenschaft der Messung, kein Mangel der Anlage
+    return CheckResult("D3", "resolution", OK, steps, "", text, PHYSICAL, details)
 
 
 def check_sensor_offset(flow: Series, ret: Series, compressor: Series, pump: Series, defrost: Series,
@@ -137,7 +139,7 @@ def check_restarts(uptime: Series, start: float, end: float) -> CheckResult:
     days = (end - start) / 86400
     per_day = len(found) / days
     # Unter einem Tag wird nicht hochgerechnet: ein einzelner Neustart ergäbe sonst eine hohe Tagesrate.
-    verdict = HINT if days >= 1 and per_day > 3 else INFO
+    verdict = HINT if days >= 1 and per_day > 3 else OK
     return CheckResult("D9", "restart_artifacts", verdict, round(per_day, 2), "1/d",
                        f"{count(len(found), 'Neustart', 'Neustarts')} im Zeitraum; Zustandswechsel ±{ARTIFACT_MARGIN_S} s darum werden verworfen.",
                        DERIVED, {"restarts": found})

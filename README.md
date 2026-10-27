@@ -28,7 +28,7 @@ kann:
 
 Jede Prüfung bekommt eine Ampel:
 
-- 🟢 **Grün** – in Ordnung.
+- 🟢 **Grün** – in Ordnung. Kleine Abweichungen innerhalb der Messgenauigkeit stehen als Anmerkung im Text.
 - 🟡 **Gelb** – Hinweis: lohnt sich anzuschauen, kein Eilfall.
 - 🔴 **Rot** – deutliche Abweichung, sollte geklärt werden.
 - 🔵 **Blau** – nur zur Information, kein Urteil.
@@ -54,7 +54,7 @@ allen anderen Audits mit angezeigt wird.
 |---|---|
 | D1 Rohdatentiefe | Wie viele Tage Messwerte vorliegen. Grün ab 30 Tagen oder mit Langzeitspeicher (InfluxDB). |
 | D2 Abdeckung | Ob die Messwerte lückenlos kamen. Grün ab 98 % der Zeit. |
-| D3 Auflösung | In welchen Schritten Temperaturen und Durchfluss gemeldet werden (nur Info). |
+| D3 Auflösung | In welchen Schritten Temperaturen und Durchfluss gemeldet werden; die Schwankung einzelner Werte steht als Anmerkung dabei. |
 | D4 Fühler-Offset | Vor- und Rücklauffühler im Vergleich, wenn nur die Pumpe läuft – dann müssten beide gleich viel zeigen. |
 | D5 Zähler gegen Steuerung | Stromverbrauch laut Wärmepumpen-Steuerung im Vergleich zum echten Stromzähler. |
 | D6 Tageswechsel der Steuerung | Ob die Uhr der Wärmepumpe richtig geht (häufig nach der Zeitumstellung nicht). |
@@ -101,7 +101,7 @@ Lebensdauer.
 | C4 Last gegen Mindestleistung | Ob der Wärmebedarf unter der kleinsten Leistung der Wärmepumpe liegt – dann ist Takten unvermeidbar (nur Info). |
 | C5 Heizstab-Anteil | Wie viel Strom der elektrische Heizstab verbraucht. Grün bis 2 %. |
 | C6 Abtauung | Wie oft das Außengerät abtaut; gelb, wenn es auch bei über +5 °C außen mehr als zweimal pro Laufstunde abtaut. |
-| C7 Modulation | Wie viel der Laufzeit die Wärmepumpe mit kleiner Leistung arbeitet (nur Info). |
+| C7 Modulation | Wie viel der Laufzeit die Wärmepumpe mit kleiner Leistung arbeitet (viel kleine Leistung ist gut). |
 
 ### Wann gibt es ein Ergebnis?
 
