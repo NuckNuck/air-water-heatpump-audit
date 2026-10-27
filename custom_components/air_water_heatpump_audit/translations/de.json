@@ -51,11 +51,12 @@
       },
       "controller": {
         "title": "Wärmepumpen-Audit: Werte der Steuerung",
-        "description": "Nur zur Plausibilisierung in Audit 0.",
+        "description": "Zur Plausibilisierung in Audit 0. Ein Wärmezähler der Steuerung, der auch ohne Home Assistant weiterzählt, füllt Datenlücken in den Tageswerten auf.",
         "data": {
           "controller_heating_consumed": "Steuerung: Strom Heizen, Vortag",
           "controller_dhw_consumed": "Steuerung: Strom Warmwasser, Vortag",
-          "controller_date": "Datum der Steuerung"
+          "controller_date": "Datum der Steuerung",
+          "controller_heat_today": "Steuerung: Wärme heute (Tageszähler)"
         }
       },
       "circuit": {

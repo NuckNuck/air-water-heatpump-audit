@@ -3295,12 +3295,12 @@
     },
     "day": "2026-01-09",
     "efficiency": {
-     "cop": 3.57,
-     "cop_raw": 4.08,
+     "cop": 3.61,
+     "cop_raw": 4.13,
      "electricity_kwh": 21.4,
-     "heat_kwh": 76.42,
-     "outdoor_mean": 2.8,
-     "value": 0.37,
+     "heat_kwh": 77.34,
+     "outdoor_mean": 2.7,
+     "value": 0.374,
      "verdict": "ok"
     },
     "end": 1767999600.0,

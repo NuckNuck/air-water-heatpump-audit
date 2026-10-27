@@ -51,11 +51,12 @@
       },
       "controller": {
         "title": "Heat pump audit: controller values",
-        "description": "Only used for plausibility checks in audit 0.",
+        "description": "Used for plausibility checks in audit 0. A heat counter of the controller that keeps counting without Home Assistant fills data gaps in the daily values.",
         "data": {
           "controller_heating_consumed": "Controller: electricity heating, previous day",
           "controller_dhw_consumed": "Controller: electricity hot water, previous day",
-          "controller_date": "Controller date"
+          "controller_date": "Controller date",
+          "controller_heat_today": "Controller: heat today (daily counter)"
         }
       },
       "circuit": {

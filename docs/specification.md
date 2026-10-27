@@ -73,6 +73,7 @@ es in der Instanz gibt. Beispiel einer vollständigen Anlage: [`examples/mitsubi
 | `heartbeat` | regelmäßig wechselnder Wert der Schnittstelle (z. B. Laufzeit) | D2, D9, gültige Tage |
 | `controller_heating_consumed`, `controller_dhw_consumed` | Tageswerte Strom laut Steuerung | D5 |
 | `controller_date` | Datum der Steuerung | D6 |
+| `controller_heat_today` | Wärmezähler der Steuerung, Tageswert (zählt ohne Home Assistant weiter) | E1–E4: Lücken auffüllen |
 | `flow_setpoint` | Soll-Vorlauf aus der Heizkurve | T5 |
 | `circuit_flow_temp`, `circuit_return_temp` | Vor- und Rücklauf im Heizkreis hinter Puffer oder Weiche (optional) | T1–T3 |
 | `circuit_pump_running` | Heizkreispumpe läuft (optional) | T1 |
@@ -243,8 +244,16 @@ normal ist.
 - **Systemgrenze:** Strom = alles, was der Zähler misst (Verdichter, Ventilator, Steuerung, Pumpen im Gerät,
   Heizstab, Standby). Wärme am Erzeuger vor Puffer oder Weiche, inkl. Warmwasser, Abtauwärme abgezogen (WPQS S. 68).
   Das liegt wegen Pumpen und Standby einige Prozent unter einer reinen Erzeuger-Arbeitszahl.
-- **Gültiger Tag:** voller Kalendertag in Ortszeit, Heartbeat-Abdeckung ≥ 98 %, Zählerstand an beiden Mitternächten
-  bekannt, Strom ≥ 2 kWh (darunter ist ein Zählerschritt von 1 kWh mehr als 50 %).
+- **Gültiger Tag:** voller Kalendertag in Ortszeit, Zählerstand an beiden Mitternächten bekannt (keine Lücke grenzt an
+  Mitternacht), Strom ≥ 2 kWh (darunter ist ein Zählerschritt von 1 kWh mehr als 50 %).
+- **Lücken im Tag (F175/F176):** Zeiten ohne Heartbeat (> 180 s) werden nicht mit dem letzten Wert überbrückt, sondern
+  geschätzt aufgefüllt: (a) Rolle `controller_heat_today` (Wärmezähler der Steuerung, zählt ohne Home Assistant
+  weiter) → Zählerdifferenz über die Lücke; ohne Zähler oder bei Rücksetzung in der Lücke (b) nach Heizlast:
+  gemessene Wärme × Σ(20 °C − außen) in der Lücke ÷ Σ im übrigen Tag, nur Stunden unter 15 °C (Gradtagzahl G20/15,
+  VDI 4710; Außentemperatur bevorzugt vom Wetterdienst); ohne Heizlast (c) nach Zeitanteil. Offset-Korrektur und
+  ideale Strommenge folgen im Verhältnis des gemessenen Teils, Warmwasser wird nicht aufgefüllt. Der Tag zählt, wenn
+  die aufgefüllte Wärme ≤ 10 % der Tageswärme und die Lücken zusammen ≤ 6 h sind; er trägt `gap_min`,
+  `gap_heat_kwh`, `gap_share_pct`, `gap_method`, E1 nennt die Lücke im Text.
 - **Woche:** die letzten 7 gültigen Tage seit dem letzten Ereignis (nicht zwingend zusammenhängend).
 - **Gütegrad** (Konvention WPQS Kap. 6.7 S. 122–125): Carnot-COP = T_Senke ÷ (T_Senke − T_Quelle), T_Senke = Mittel
   aus Vor- und Rücklauf am Erzeuger, T_Quelle = Außentemperatur, beide in Kelvin. Ideale Strommenge =

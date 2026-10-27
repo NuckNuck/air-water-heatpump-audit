@@ -54,7 +54,10 @@ const TEXT = {
     days: { show: (n) => `▸ Tageswerte (${n})`, hide: "▾ Tageswerte ausblenden", total: "Summe",
       cols: { day: "Tag", outdoor: "Außen Ø", electricity: "Strom (Zähler)", heat: "Wärme", heat_raw: "Wärme roh",
         cop: "Arbeitszahl", cop_raw: "AZ roh", carnot: "Gütegrad", dhw: "Warmwasser" },
-      note: "Wärme mit Fühler-Offset korrigiert, „roh“ ohne. Strom vom Zähler, bei manchen Zählern nur ganze kWh." },
+      note: "Wärme mit Fühler-Offset korrigiert, „roh“ ohne. Strom vom Zähler, bei manchen Zählern nur ganze kWh.",
+      gap: (min, pct, how) => `Datenlücke ${min} min, ${pct} % der Wärme aufgefüllt (${how})`,
+      gapNote: "* Tag mit aufgefüllter Datenlücke (Überfahren zeigt Details).",
+      gapHow: { counter: "Wärmezähler der Steuerung", load: "nach Heizlast geschätzt", time: "nach Zeitanteil geschätzt" } },
     ready: {
       title: "Datenreife",
       left: (n, unit) => `noch ${n} ${unit === "d" ? (n === 1 ? "Tag" : "Tage") : "h"}`,
@@ -101,7 +104,10 @@ const TEXT = {
     days: { show: (n) => `▸ Daily values (${n})`, hide: "▾ Hide daily values", total: "Total",
       cols: { day: "Day", outdoor: "Outdoor avg", electricity: "Electricity (meter)", heat: "Heat", heat_raw: "Heat raw",
         cop: "COP", cop_raw: "COP raw", carnot: "Carnot eff.", dhw: "Hot water" },
-      note: "Heat corrected by the sensor offset, “raw” without. Electricity from the meter." },
+      note: "Heat corrected by the sensor offset, “raw” without. Electricity from the meter.",
+      gap: (min, pct, how) => `Data gap ${min} min, ${pct} % of the heat filled in (${how})`,
+      gapNote: "* Day with a filled data gap (hover for details).",
+      gapHow: { counter: "controller heat counter", load: "estimated from heating load", time: "estimated from time share" } },
     ready: {
       title: "Data readiness",
       left: (n, unit) => `${n} ${unit === "d" ? (n === 1 ? "day" : "days") : "h"} to go`,
@@ -330,9 +336,10 @@ class AirWaterAuditCard extends HTMLElement {
       outdoor_mean: temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : null };
     return `<table class="days"><thead><tr>${["day", "outdoor", "electricity", "heat", "heat_raw", "cop", "cop_raw", "carnot", "dhw"]
       .map((k) => `<th>${c[k]}</th>`).join("")}</tr></thead><tbody>
-      ${[...rows].reverse().map((r) => line(day(r.day), r)).join("")}
+      ${[...rows].reverse().map((r) => line(day(r.day) + (r.gap_min ? ` <span class="gap" title="${esc(t.days.gap(r.gap_min,
+        f(r.gap_share_pct, 0), t.days.gapHow[r.gap_method] ?? r.gap_method))}">*</span>` : ""), r)).join("")}
       ${rows.length > 1 ? line(`<b>${t.days.total}</b>`, total).replace("<tr>", '<tr class="total">') : ""}
-      </tbody></table><div class="msg">${t.days.note}</div>`;
+      </tbody></table><div class="msg">${t.days.note}${rows.some((r) => r.gap_min) ? ` ${t.days.gapNote}` : ""}</div>`;
   }
 
   // Datenreife: ein Balken vom frühesten Zählbeginn bis zum spätesten Termin, je Audit ein Marker (Hochrechnung).
@@ -475,6 +482,7 @@ class AirWaterAuditCard extends HTMLElement {
         table.days { min-width: 0; width: auto; table-layout: auto; font-size: .95em; }
         table.days th, table.days td { padding: 3px 10px 3px 0; border-bottom: 1px solid var(--divider-color); white-space: nowrap; text-align: right; }
         table.days th:first-child, table.days td:first-child { text-align: left; }
+        table.days .gap { cursor: help; color: var(--secondary-text-color); }
         table.days tr.total td { border-top: 2px solid var(--divider-color); }
         .ready { margin: 6px 0 10px; }
         .rhead { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin-bottom: 6px; }
