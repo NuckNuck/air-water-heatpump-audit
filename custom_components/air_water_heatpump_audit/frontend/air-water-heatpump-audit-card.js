@@ -14,7 +14,8 @@ const COLORS = {
 // Datenreife-Balken: feste Farbe je Audit (bewusst keine Ampelfarben, die stehen für Urteile). Die Farbe liefert
 // der Audit-Sensor (Attribut `color`, aus der Registry der Integration); hier nur der Rückfall.
 const AUDIT_COLORS = {
-  efficiency: "#8e24aa", flow_temperature: "#00897b", capacity: "#d81b60", data_basis: "#6d4c41",
+  efficiency: "#8e24aa", flow_temperature: "#00897b", capacity: "#d81b60", data_basis: "#6d4c41", dhw: "#3949ab",
+  cost: "#546e7a",
 };
 // Zeitstrahl-Sensor: kennt die zugeschalteten Audits (Attribut `audits`), daraus entsteht die Karte ohne `entities`.
 const TIMELINE_ENTITY = "sensor.air_water_heatpump_audit_timeline";
@@ -69,9 +70,9 @@ const TEXT = {
       open: "noch nicht absehbar",
       of: (h, n, u) => `${h} von ${n} ${u}`,
       units: { days: "vollen Tagen", heating_days: "Heiztagen", hours: "Stunden", heating_hours: "h Heizbetrieb",
-        cycles: "Zyklen", windows: "Messfenstern" },
+        cycles: "Zyklen", windows: "Messfenstern", charges: "Ladungen", nights: "ruhigen Nächten" },
       note: "Hochrechnung: Fällt ein Tag durch (Datenlücke, zu wenig Strom), rückt der Termin nach hinten. "
-        + "Ein neues Ereignis startet Effizienz, Vorlauf und Leistung neu.",
+        + "Ein neues Ereignis startet alle Audits außer der Datenbasis neu.",
     },
   },
   en: {
@@ -119,9 +120,9 @@ const TEXT = {
       open: "not yet foreseeable",
       of: (h, n, u) => `${h} of ${n} ${u}`,
       units: { days: "full days", heating_days: "heating days", hours: "hours", heating_hours: "h of heating",
-        cycles: "cycles", windows: "measuring windows" },
+        cycles: "cycles", windows: "measuring windows", charges: "charges", nights: "quiet nights" },
       note: "Projection: if a day drops out (data gap, too little electricity), the date moves back. "
-        + "A new event restarts efficiency, flow temperature and capacity.",
+        + "A new event restarts all audits except the data basis.",
     },
   },
 };
@@ -561,10 +562,13 @@ const TL_TEXT = {
     notes: {
       efficiency: "Tageswert; das Urteil in der Tabelle gilt erst für eine Woche. Blau oben: unplausibel hoch, eher ein Messfehler.",
       capacity: "Grenze aus Prüfung C1 (2.000 Starts pro Jahr, umgerechnet auf die Heizstunden des Standorts).",
+      dhw: "Aus den Warmwasserladungen des Tages; dieselbe Ampel wie beim Heizen.",
+      cost: "Ohne Grundpreis. Grenze: früherer Brennstoff plus 10 % Messtoleranz (Prüfung K1).",
     },
     units: { "1/d": "/Tag" },
     verdicts: { ok: "grün", hint: "gelb", warn: "rot", info: "Info", not_assessable: "nicht bewertbar" },
     cop: "Arbeitszahl",
+    cost: "Stromkosten",
     none: "Noch kein voller Tag ausgewertet. Der erste Tageswert erscheint nach Mitternacht.",
     events: "Ereignisse",
     noEvents: "Noch keine Ereignisse eingetragen.",
@@ -595,10 +599,13 @@ const TL_TEXT = {
     notes: {
       efficiency: "Daily value; the verdict in the table needs a full week. Blue at the top: implausibly high, more likely a measurement error.",
       capacity: "Limit from check C1 (2,000 starts per year, scaled to the site's heating hours).",
+      dhw: "From the day's hot water charges; same colours as for space heating.",
+      cost: "Without standing charge. Limit: previous fuel plus 10 % measurement tolerance (check K1).",
     },
     units: { "1/d": "/day" },
     verdicts: { ok: "green", hint: "yellow", warn: "red", info: "info", not_assessable: "not assessable" },
     cop: "COP",
+    cost: "electricity cost",
     none: "No full day evaluated yet. The first daily value appears after midnight.",
     events: "Events",
     noEvents: "No events recorded yet.",
@@ -862,7 +869,7 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     }
     const latest = [...days].reverse().find((d) => d[audit]?.value !== null && d[audit]?.value !== undefined);
     const now = latest ? `${this._fmt(latest[audit].value, strip ? 1 : scale.decimals)}${this._unit(scale.unit, t)} (${esc(latest.day.slice(8, 10) + "." + latest.day.slice(5, 7) + ".")})` : "–";
-    const note = t.notes[audit] && (audit !== "capacity" || (scale.bands ?? []).length) ? `<div class="muted">${t.notes[audit]}</div>` : "";
+    const note = t.notes[audit] && (!["capacity", "cost"].includes(audit) || (scale.bands ?? []).length) ? `<div class="muted">${t.notes[audit]}</div>` : "";
     return `<div class="chart">
       <div class="label"><b>${esc(name)}</b><span class="muted">${esc(metric)} · ${t.latest} ${esc(now)}</span></div>${note}
       <svg viewBox="0 0 ${geo.width} ${h}" height="${h}" preserveAspectRatio="none">${svg}</svg></div>`;
@@ -910,6 +917,8 @@ class AirWaterAuditTimelineCard extends HTMLElement {
       const [name, metric] = this._names(audit, t);
       let text = `${metric} ${this._fmt(p.value, sc.strip ? 1 : sc.decimals)}${p.value == null ? "" : this._unit(sc.unit, t)}`
         + ` (${t.verdicts[p.verdict] ?? p.verdict ?? "–"})`;
+      if (audit === "dhw" && p.cop != null) text += `, ${t.cop} ${this._fmt(p.cop, 1)}`;
+      if (audit === "cost" && p.cost_eur != null) text += `, ${t.cost} ${this._fmt(p.cost_eur, 2)} €`;
       if (audit === "efficiency" && p.cop != null) {
         text += `, ${t.cop} ${this._fmt(p.cop, 1)} = ${this._fmt(p.heat_kwh, 1)} kWh ÷ ${this._fmt(p.electricity_kwh, 0)} kWh`;
         if (p.outdoor_mean != null) text += `, ${this._fmt(p.outdoor_mean, 1)} °C`;

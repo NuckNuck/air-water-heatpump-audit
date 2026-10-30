@@ -33,7 +33,8 @@ class CheckResult:
 def progress(have: float, need: float, unit: str, basis: str, since: float, lag_h: float = 0.0) -> dict:
     """Wie viel Daten eine Prüfung hat und braucht.
 
-    unit: days, heating_days, hours, heating_hours, cycles, windows; bei ELAPSED sind have/need Stunden.
+    unit: days, heating_days, hours, heating_hours, cycles, windows, charges, nights; bei ELAPSED sind have/need
+    Stunden.
     since: ab wann gezählt wird; lag_h: um so viele Stunden später wird ein voller Tag erst zählbar (D5).
     """
     return {"have": round(have, 2), "need": need, "unit": unit, "basis": basis, "since": since, "lag_h": lag_h}

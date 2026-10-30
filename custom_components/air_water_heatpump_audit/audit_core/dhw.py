@@ -262,7 +262,7 @@ def check_standby_loss(windows: list[tuple[float, float, float, float]], volume_
     """W4: Bereitschaftsverlust des Speichers aus dem Abkühlen in ruhigen Nachtstunden."""
     key = ("W4", "standby_loss")
     hours = sum(b - a for a, b, _, _ in windows) / 3600
-    prog = progress(len(windows), MIN_QUIET_WINDOWS, "windows", RATE, since)
+    prog = progress(len(windows), MIN_QUIET_WINDOWS, "nights", RATE, since)
     if not volume_l:
         return CheckResult(*key, NOT_ASSESSABLE, text="Stammdaten fehlen: Inhalt des Warmwasserspeichers.",
                            origin=PHYSICAL)
