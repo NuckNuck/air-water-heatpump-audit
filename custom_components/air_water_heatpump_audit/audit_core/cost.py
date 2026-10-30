@@ -20,10 +20,8 @@ PROJECTION_MIN_DAYS = 14  # K2: zwei Wochen, damit kalte und milde Tage dabei si
 PROJECTION_MIN_SPREAD_K = 4.0  # K2: Spannweite der Tages-Gradtage für die Ausgleichsgerade
 REFERENCE_TOLERANCE = 1.10  # K1: Wärme ist auf etwa ±10 % genau; erst darüber ist die WP sicher teurer
 PRICE_TIMING_TOLERANCE = 1.03  # K4: gezahlter Mittelpreis bis 3 % über dem Zeitmittel ist Zufall der Woche
-# K5: Sperren. Herkömmliche Wärmepumpentarife: höchstens 3 Sperren am Tag, je höchstens 2 h; danach nachheizen mit
-# dem Heizstab ist teuer.
-LOCK_MAX_PER_DAY = 3
-LOCK_MAX_H = 2.0
+# K5: Sperren und Dimmen. Seit 2024 (§ 14a EnWG, BNetzA BK6-22-300) gibt es keine feste Höchstdauer mehr, nur eine
+# Mindestleistung von 4,2 kW; bewertet wird deshalb nur, ob danach der Heizstab nachheizt (teuer, derived).
 AFTER_LOCK_S = 2 * 3600
 
 
@@ -229,6 +227,7 @@ def check_price_timing(meter: Series, price: Series, since: float, end: float) -
     if not price:
         return CheckResult(*key, NOT_ASSESSABLE, text="Nur bei dynamischem Tarif (Rolle „dynamischer Strompreis“).",
                            origin=DERIVED)
+    since = max(since, price[0][0])  # erst ab dem ersten aufgezeichneten Preis
     prog = progress((end - since) / 3600, WEEK_DAYS * 24, "hours", ELAPSED, since)
     if end - since < WEEK_DAYS * 86400:
         return CheckResult(*key, NOT_ASSESSABLE, text=f"Bewertet ab {WEEK_DAYS} Tagen.", origin=DERIVED, progress=prog)
@@ -252,31 +251,29 @@ def check_price_timing(meter: Series, price: Series, since: float, end: float) -
 
 
 def check_grid_lock(lock: Series, heaters: list[Interval], since: float, end: float) -> CheckResult:
-    """K5: Sperren oder Drosselung durch den Netzbetreiber: wie oft, wie lange, und springt danach der Heizstab ein?"""
+    """K5: Sperren oder Dimmen durch den Netzbetreiber: wie oft, wie lange, und heizt danach der Heizstab nach?"""
     key = ("K5", "grid_lock")
     if not lock:
-        return CheckResult(*key, NOT_ASSESSABLE, text="Eingang fehlt: Sperrsignal des Netzbetreibers.", origin=SOURCED)
+        return CheckResult(*key, NOT_ASSESSABLE, text="Eingang fehlt: Sperrsignal des Netzbetreibers.", origin=DERIVED)
     prog = progress((end - since) / 3600, WEEK_DAYS * 24, "hours", ELAPSED, since)
     if end - since < WEEK_DAYS * 86400:
-        return CheckResult(*key, NOT_ASSESSABLE, text=f"Bewertet ab {WEEK_DAYS} Tagen.", origin=SOURCED,
+        return CheckResult(*key, NOT_ASSESSABLE, text=f"Bewertet ab {WEEK_DAYS} Tagen.", origin=DERIVED,
                            progress=prog)
     locks = intervals_where(lock, _on, since, end)
     n_days = (end - since) / 86400
     longest = max((b - a for a, b in locks), default=0) / 3600
-    per_day = len(locks) / n_days
-    after = [(b, b + AFTER_LOCK_S) for _, b in locks]
-    heater_h = sum(total([(max(a, x), min(b, y)) for a, b in heaters if a < y and b > x]) for x, y in after) / 3600
+    windows = [(a, b + AFTER_LOCK_S) for a, b in locks]
+    heater_h = sum(total([(max(a, x), min(b, y)) for a, b in heaters if a < y and b > x]) for x, y in windows) / 3600
     text = (f"{count(len(locks), 'Sperre', 'Sperren')} in {num(n_days, '.0f')} Tagen, zusammen "
-            f"{num(total(locks) / 3600, '.1f')} h, längste {num(longest, '.1f')} h")
-    text += f"; Heizstab danach {num(heater_h, '.1f')} h. " if heater_h else ". "
-    if per_day > LOCK_MAX_PER_DAY or longest > LOCK_MAX_H or heater_h > 0:
+            f"{num(total(locks) / 3600, '.1f')} h, längste {num(longest, '.1f')} h. ")
+    if heater_h > 0:
         verdict = HINT
-        text += ("Mehr oder längere Sperren als bei Wärmepumpentarifen üblich, oder der Heizstab heizt nach. "
-                 "Sperrzeiten beim Netzbetreiber erfragen und den Heizstab während und nach Sperren blockieren lassen.")
+        text += (f"Der Heizstab lief während oder bis 2 h nach einer Sperre {num(heater_h, '.1f')} h – teurer "
+                 "Ersatz für die Wärmepumpe.")
     else:
         verdict = OK
-        text += "Im üblichen Rahmen." if locks else "Keine Sperre."
-    return CheckResult(*key, verdict, round(per_day, 2), "1/d", text, SOURCED,
+        text += "Der Heizstab springt dabei nicht ein." if locks else "Keine Sperre."
+    return CheckResult(*key, verdict, round(len(locks) / n_days, 2), "1/d", text, DERIVED,
                        {"count": len(locks), "hours": round(total(locks) / 3600, 2), "longest_h": round(longest, 2),
                         "heater_after_h": round(heater_h, 2)}, progress=prog)
 

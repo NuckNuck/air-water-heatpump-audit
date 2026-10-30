@@ -135,17 +135,22 @@ CHECK_HELP: dict[str, dict[str, str]] = {
                      f"Rot unter {_k(e1.CARNOT_WARN_BELOW)} nur mit belastbarem Fühler-Offset. Ab {w1.MIN_CHARGES} "
                      "Ladungen; braucht einen Stromzähler mit 0,1 kWh oder feiner.",
            "source": "Abgeleitet aus dem Feldtest Fraunhofer ISE (Gütegrad); der Gütegrad rechnet die höhere "
-                     "Temperatur beim Warmwasser heraus."},
-    "W2": {"what": "Wie warm der Speicher nach dem Laden ist (Median der normalen Ladungen).",
-           "rating": f"Gelb über {_k(w1.EFFICIENCY_MAX_C)} °C (kostet Effizienz). Gelb unter {_k(w1.HYGIENE_MIN_C)} °C, "
-                     f"wenn nicht mindestens alle {w1.DISINFECTION_MAX_GAP_DAYS} Tage auf "
-                     f"{_k(w1.DISINFECTION_C)} °C aufgeheizt wird. Je 1 K Fühlertoleranz.",
-           "source": "DVGW-Arbeitsblatt W 551 (Trinkwasserhygiene), Effizienzgrenze abgeleitet."},
+                     f"Temperatur beim Warmwasser heraus. Arbeitszahl nur Warmwasser im Feldtest: Mittel "
+                     f"{_k(w1.FIELD_DHW_COP)}."},
+    "W2": {"what": "Wie warm der Speicher nach dem Laden ist (Median der normalen Ladungen, ohne Aufheizen auf "
+                   "60 °C).",
+           "rating": f"Gelb unter {_k(w1.HYGIENE_MIN_C)} °C (Hygiene; eine Legionellenschaltung gleicht das nicht "
+                     f"sicher aus) und über {_k(w1.EFFICIENCY_MAX_C)} °C (kostet Strom ohne Hygienegewinn). Je 1 K "
+                     "Fühlertoleranz. Gilt für Ein- und Zweifamilienhäuser ohne Zirkulation; mit Zirkulation "
+                     "verlangen die Regeln 60 °C.",
+           "source": "DVGW-Information Warmwasser 2023 (S. 11), Umweltbundesamt 2024; Effizienz: Fraunhofer ISE "
+                     "WP-QS."},
     "W3": {"what": "Wie oft der Speicher auf 60 °C aufgeheizt wird (Legionellenschutz) und wie viel Strom der "
                    "Heizstab dabei braucht.",
            "rating": f"Gelb bei mehr als {w1.DISINFECTION_MAX_PER_WEEK}-mal pro Woche: kostet Strom ohne weiteren "
-                     "Hygienegewinn. Ab 14 Tagen.",
-           "source": "Abgeleitet."},
+                     "Hygienegewinn. Keine Aufheizung ist kein Mangel – im Einfamilienhaus ist sie nicht "
+                     "vorgeschrieben. Ab 14 Tagen.",
+           "source": "Abgeleitet; DVGW und Umweltbundesamt schreiben keine Legionellenschaltung vor."},
     "W4": {"what": "Wie viel Wärme der Speicher nachts verliert, ohne dass Wasser gezapft wird, umgerechnet auf die "
                    "Prüfbedingung des Energielabels (65 °C im Speicher, 20 °C Raum).",
            "rating": f"Grün bis Klasse {w1.ERP_OK_CLASS}, der Mindestanforderung für neue Speicher, und wegen der "
@@ -177,9 +182,9 @@ CHECK_HELP: dict[str, dict[str, str]] = {
            "rating": "Gelb, wenn die Wärmepumpe mehr als 3 % über dem Mittel zahlt, also bevorzugt in teuren Stunden "
                      "läuft. Ab 7 Tagen.",
            "source": "Abgeleitet."},
-    "K5": {"what": "Wie oft und wie lange der Netzbetreiber die Wärmepumpe sperrt oder drosselt, und ob danach der "
-                   "Heizstab nachheizt.",
-           "rating": f"Gelb bei mehr als {k1.LOCK_MAX_PER_DAY} Sperren am Tag, einer Sperre über "
-                     f"{_k(k1.LOCK_MAX_H)} h oder Heizstab nach einer Sperre. Ab 7 Tagen.",
-           "source": "Übliche Bedingungen von Wärmepumpentarifen."},
+    "K5": {"what": "Wie oft und wie lange der Netzbetreiber die Wärmepumpe sperrt oder drosselt, und ob währenddessen "
+                   "oder danach der Heizstab nachheizt.",
+           "rating": "Gelb, wenn der Heizstab während oder bis 2 h nach einer Sperre läuft. Anzahl und Dauer nur als "
+                     "Information: Seit 2024 (§ 14a EnWG) gibt es dafür keine feste Obergrenze. Ab 7 Tagen.",
+           "source": "Abgeleitet; Bundesnetzagentur BK6-22-300."},
 }

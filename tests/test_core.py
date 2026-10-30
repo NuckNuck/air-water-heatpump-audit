@@ -880,27 +880,29 @@ class DhwTest(unittest.TestCase):
         from audit_core import dhw as w1
         end = 10 * 24 * H
         cool = [self.charge(d, 45.0) for d in range(9)]
-        r = w1.check_dhw_temperature(cool, 0, end, [])
+        r = w1.check_dhw_temperature(cool, 0, end, [(0, 45.0)])
         self.assertEqual(r.verdict, HINT)
-        self.assertIn("Legionellen", r.text)
-        with_disinfection = cool + [self.charge(8, 60.0, hour=16)]
-        self.assertEqual(w1.check_dhw_temperature(with_disinfection, 0, end, [(0, 45.0)]).verdict, OK)
-        hot = [self.charge(d, 58.0) for d in range(9)]
-        r = w1.check_dhw_temperature(hot, 0, end, [])
-        self.assertEqual(r.verdict, HINT)
+        self.assertIn("Umweltbundesamt", r.text)
+        # Aufheizen auf 60 °C ersetzt die Betriebstemperatur nicht und zählt nicht in den Median
+        r = w1.check_dhw_temperature(cool + [self.charge(8, 60.0, hour=16)], 0, end, [])
+        self.assertEqual((r.verdict, r.value), (HINT, 45.0))
+        self.assertEqual(w1.check_dhw_temperature([self.charge(d, 49.5) for d in range(9)], 0, end, []).verdict, OK)
+        self.assertEqual(w1.check_dhw_temperature([self.charge(d, 55.0) for d in range(9)], 0, end, []).verdict, OK)
+        r = w1.check_dhw_temperature([self.charge(d, 62.0) for d in range(9)], 0, end, [])
+        self.assertEqual(r.verdict, HINT)  # immer auf 62 °C: zu warm, auch wenn jede Ladung über 60 °C liegt
         self.assertIn("Heizstab", r.text)
-        self.assertEqual(w1.check_dhw_temperature([self.charge(d, 52.0) for d in range(9)], 0, end, []).verdict, OK)
-        # unter 50 °C, aber noch keine Woche beobachtet: offen
-        self.assertEqual(w1.check_dhw_temperature(cool, 0, 5 * 24 * H, []).verdict, NOT_ASSESSABLE)
+        always = w1.check_disinfection([self.charge(d, 61.0) for d in range(14)], [], 3.0, 0, 14 * 24 * H)
+        self.assertEqual((always.verdict, always.value), (OK, None))
 
     def test_disinfection_frequency_and_heater(self):
         from audit_core import dhw as w1
         end = 14 * 24 * H
+        daily = [self.charge(d, 46.0, hour=7.0) for d in range(14)]
         found = [self.charge(d, 60.0) for d in (1, 3, 5, 8, 10, 12)]
         heater = [(c.start, c.start + 20 * M) for c in found]
-        r = w1.check_disinfection(found, heater, 3.0, 0, end)
+        r = w1.check_disinfection(daily + found, heater, 3.0, 0, end)
         self.assertEqual((r.verdict, r.value, r.details["heater_kwh"]), (HINT, 3.0, 6.0))
-        r = w1.check_disinfection(found[:2], heater, 3.0, 0, end)
+        r = w1.check_disinfection(daily + found[:2], heater, 3.0, 0, end)
         self.assertEqual(r.verdict, OK)
         self.assertEqual(w1.check_disinfection(found, heater, 3.0, 0, 10 * 24 * H).verdict, NOT_ASSESSABLE)
 
@@ -1007,10 +1009,13 @@ class CostTest(unittest.TestCase):
         r = k1.check_price_timing(meter, price, 0, week)
         self.assertEqual(r.verdict, HINT)
         self.assertEqual(k1.check_price_timing(meter, [], 0, week).verdict, NOT_ASSESSABLE)
+        late = k1.check_price_timing(meter, price[2:], 0, week + 2 * H)  # Preis erst ab 2 Uhr aufgezeichnet
+        self.assertEqual(late.verdict, HINT)
         locks = onoff(*[t for d in range(7) for t in (d * 24 * H + 12 * H, d * 24 * H + 13 * H)])
         self.assertEqual(k1.check_grid_lock(locks, [], 0, week).verdict, OK)
         heater = [(12 * H + 3600, 12 * H + 2 * 3600)]
         r = k1.check_grid_lock(locks, heater, 0, week)
         self.assertEqual((r.verdict, r.details["heater_after_h"]), (HINT, 1.0))
-        long = onoff(12 * H, 15 * H)
-        self.assertEqual(k1.check_grid_lock(long, [], 0, week).verdict, HINT)
+        long = onoff(12 * H, 15 * H)  # Dauer allein ist seit § 14a kein Befund
+        r = k1.check_grid_lock(long, [], 0, week)
+        self.assertEqual((r.verdict, r.details["longest_h"]), (OK, 3.0))

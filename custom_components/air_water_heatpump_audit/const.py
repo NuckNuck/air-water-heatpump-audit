@@ -107,7 +107,9 @@ DEFAULT_OPTIONS = {
     CONF_TARIFF_BASE_FEE: None,  # zusätzlicher Grundpreis €/Jahr für den Wärmepumpenzähler
     CONF_HOUSEHOLD_PRICE: None,
     CONF_REFERENCE_FUEL_PRICE: None,  # früherer Brennstoff, €/kWh inklusive Grundpreis-Anteil
-    CONF_REFERENCE_EFFICIENCY: None,  # Jahresnutzungsgrad der früheren Heizung
+    # Jahresnutzungsgrad der früheren Heizung, bezogen auf den abgerechneten Brennwert: Feldmittel Gas-Brennwertkessel
+    # 0,86 (DBU-Feldtest, 60 Anlagen); nur wirksam, wenn auch ein Brennstoffpreis eingetragen ist
+    CONF_REFERENCE_EFFICIENCY: 0.86,
 }
 MASTER_KEYS = (CONF_HYDRAULIC_SEPARATION, CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_ROOM_TEMP_TARGET, CONF_CAPACITY_MIN_TABLE,
                CONF_HEATING_HOURS, CONF_DHW_TANK_VOLUME_L, CONF_HEATING_DEGREE_DAYS, CONF_TARIFF_PRICE,

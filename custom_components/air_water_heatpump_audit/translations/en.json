@@ -160,7 +160,7 @@
               "tariff_base_fee": "Only the additional standing charge per year for a separate heat pump meter; leave empty without one.",
               "household_price": "For comparison: is the separate heat pump tariff worth it (K3)?",
               "reference_fuel_price": "For comparison, e.g. gas: cost per kWh including the share of the standing charge (K1, K2).",
-              "reference_efficiency": "Share of the fuel that arrives as heat (annual efficiency)."
+              "reference_efficiency": "Share of the billed fuel that arrives as heat. Gas condensing boilers reach 0.86 on average in field tests, based on the gross calorific value that gas is billed by."
             }
           },
           "evaluation": {

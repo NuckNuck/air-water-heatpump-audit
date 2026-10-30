@@ -21,15 +21,18 @@ CHARGE_MIN_S = 60  # kürzere Phasen sind Umschalten des Ventils, keine Ladung (
 AFTER_CHARGE_S = 30 * 60  # Speichertemperatur nach der Ladung: höchster Wert in dieser Zeit
 MIN_CHARGES = 7  # W1, W2, W5: etwa eine Woche mit einer Ladung pro Tag
 MIN_CHARGE_KWH = 0.2  # Ladungen mit weniger Strom: ein Zählerschritt wäre zu viel Anteil
-# W2/W3: Desinfektion = Speicher erreicht 60 °C (DVGW W 551). 1 K Fühlertoleranz, grün im Zweifel.
+# W2/W3: Aufheizen auf 60 °C (Legionellenschaltung). 1 K Fühlertoleranz, grün im Zweifel.
 DISINFECTION_C = 60.0
 SENSOR_TOLERANCE_K = 1.0
-# W2: Speichertemperatur. Unter 50 °C ohne regelmäßige Desinfektion → Hygiene-Hinweis (DVGW W 551: Betriebs-
-# temperaturen unter 50 °C vermeiden); über 55 °C → Effizienz-Hinweis.
+# W2: Speichertemperatur nach dem Laden. Untere Betriebstemperatur für Ein- und Zweifamilienhäuser ohne Zirkulation
+# 50 °C (DVGW-Information 2023, S. 11); eine Legionellenschaltung ersetzt sie nicht sicher (UBA 2024, S. 5). Über
+# 60 °C verlangt keine Regel mehr; jedes Kelvin kostet beim Warmwasser ≈ 1,4 % (WP-QS S. 171).
 HYGIENE_MIN_C = 50.0
-EFFICIENCY_MAX_C = 55.0
-DISINFECTION_MAX_GAP_DAYS = 7  # „regelmäßig“: mindestens eine Desinfektion je Woche
+EFFICIENCY_MAX_C = 60.0
+DHW_PENALTY_PCT_PER_K = 1.4
 DISINFECTION_MAX_PER_WEEK = 2  # W3: öfter kostet Strom ohne Hygienegewinn
+# W1: Arbeitszahl nur Warmwasser, Luft/Wasser im Bestand: Mittel 2,8, Spanne 2,1–3,5 (WP-QS S. 79)
+FIELD_DHW_COP, FIELD_DHW_COP_RANGE = 2.8, (2.1, 3.5)
 # W4: Bereitschaftsverlust aus dem Abkühlen in ruhigen Nachtstunden, auf die Prüfbedingung der EU-Kennzeichnung
 # umgerechnet (Speicher 65 °C, Umgebung 20 °C, VO (EU) 812/2013).
 NIGHT_HOURS = (0, 5)  # Ortszeit; nachts wird kaum gezapft
@@ -130,8 +133,10 @@ def check_dhw_efficiency(charges: list[Charge], dq: str, offset_robust: bool, me
     eta, cop = efficiency_of(metered)
     electricity = sum(c.electricity_kwh for c in metered)
     verdict = carnot_verdict(eta, offset_robust)
+    lo, hi = FIELD_DHW_COP_RANGE
     text = (f"Gütegrad {num(eta, '.2f')}, Arbeitszahl {num(cop, '.1f')} aus {count(len(metered), 'Ladung', 'Ladungen')} "
-            f"mit {num(electricity, '.1f')} kWh Strom. ")
+            f"mit {num(electricity, '.1f')} kWh Strom (Feldtest nur Warmwasser: Mittel {num(FIELD_DHW_COP, '.1f')}, "
+            f"{num(lo, '.1f')}–{num(hi, '.1f')}). ")
     if verdict == INFO:
         text += "Besser als jede Anlage im Feldtest – eher ein Messfehler (Durchfluss, Fühler)."
     elif verdict == OK:
@@ -157,41 +162,34 @@ def disinfections(charges: list[Charge]) -> list[Charge]:
 
 
 def check_dhw_temperature(charges: list[Charge], since: float, end: float, setpoint: Series) -> CheckResult:
-    """W2: Speichertemperatur nach normalen Ladungen (Median), gegen Hygiene (50 °C ohne Desinfektion) und
-    Effizienz (55 °C)."""
+    """W2: Speichertemperatur nach dem Laden (Median aller Ladungen) gegen die untere Betriebstemperatur (Hygiene)
+    und die Grenze, ab der nur noch Strom verloren geht. Seltene Aufheizungen auf 60 °C verschieben den Median kaum;
+    ist der Speicher immer auf 60 °C eingestellt, zeigt der Median genau das."""
     key = ("W2", "dhw_temperature")
-    normal = [c.tank_after for c in charges if c.tank_after is not None and not c.disinfection]
+    normal = [c.tank_after for c in charges if c.tank_after is not None]
     prog = progress(len(normal), MIN_CHARGES, "charges", RATE, since)
     if len(normal) < MIN_CHARGES:
         return CheckResult(*key, NOT_ASSESSABLE, text=f"{count(len(normal), 'Ladung', 'Ladungen')} mit "
                            f"Speichertemperatur, nötig {MIN_CHARGES}.", origin=SOURCED, progress=prog)
     temp = _median(normal)
-    last_disinfection = max((c.end for c in disinfections(charges)), default=None)
-    gap_days = (end - (last_disinfection or since)) / 86400
-    regular = last_disinfection is not None and gap_days <= DISINFECTION_MAX_GAP_DAYS
     target = time_mean(setpoint, [(since, end)]) if setpoint else None
     text = f"Speicher nach dem Laden {num(temp, '.1f')} °C (Median)"
     text += f", eingestellt {num(target, '.0f')} °C. " if target is not None else ". "
-    details = {"tank_after_median": round(temp, 1), "setpoint_mean": None if target is None else round(target, 1),
-               "last_disinfection": last_disinfection, "regular_disinfection": regular}
-    if temp > EFFICIENCY_MAX_C + SENSOR_TOLERANCE_K:
+    details = {"tank_after_median": round(temp, 1), "setpoint_mean": None if target is None else round(target, 1)}
+    if temp < HYGIENE_MIN_C - SENSOR_TOLERANCE_K:
         verdict = HINT
-        text += (f"Wärmer als nötig: Über {num(EFFICIENCY_MAX_C, 'g')} °C sinkt die Effizienz deutlich, und viele "
-                 "Wärmepumpen schaffen das nur mit dem Heizstab.")
-    elif temp < HYGIENE_MIN_C - SENSOR_TOLERANCE_K and not regular:
-        if (end - since) / 86400 < DISINFECTION_MAX_GAP_DAYS:
-            return CheckResult(*key, NOT_ASSESSABLE, round(temp, 1), "°C", text + "Unter 50 °C; ob regelmäßig "
-                               f"desinfiziert wird, zeigt sich nach {DISINFECTION_MAX_GAP_DAYS} Tagen.", SOURCED,
-                               details, progress=progress((end - since) / 3600, DISINFECTION_MAX_GAP_DAYS * 24,
-                                                          "hours", ELAPSED, since))
+        text += (f"Unter {num(HYGIENE_MIN_C, 'g')} °C: Für Ein- und Zweifamilienhäuser ohne Zirkulation sehen die "
+                 f"technischen Regeln mindestens {num(HYGIENE_MIN_C, 'g')} °C vor, mit Zirkulation 60 °C. Eine "
+                 "Legionellenschaltung ersetzt das laut Umweltbundesamt nicht sicher.")
+    elif temp > EFFICIENCY_MAX_C + SENSOR_TOLERANCE_K:
         verdict = HINT
-        text += (f"Unter {num(HYGIENE_MIN_C, 'g')} °C und seit {num(gap_days, '.0f')} Tagen keine Aufheizung auf "
-                 f"{num(DISINFECTION_C, 'g')} °C. Die Trinkwasser-Regeln raten davon ab (Legionellen).")
+        text += (f"Wärmer als die Hygiene verlangt: Jedes Kelvin kostet beim Warmwasser ≈ "
+                 f"{num(DHW_PENALTY_PCT_PER_K, 'g')} % Effizienz, und oft hilft dafür der Heizstab.")
     else:
         verdict = OK
-        text += "Passt: effizient genug"
-        text += (", und regelmäßig auf 60 °C aufgeheizt." if temp < HYGIENE_MIN_C - SENSOR_TOLERANCE_K
-                 else " und warm genug.")
+        text += "Warm genug für die Hygiene"
+        text += (" (knapp an der Untergrenze von 50 °C)." if temp < HYGIENE_MIN_C else
+                 ", ohne unnötig Strom zu kosten.")
     return CheckResult(*key, verdict, round(temp, 1), "°C", text, SOURCED, details, progress=prog)
 
 
@@ -210,6 +208,10 @@ def check_disinfection(charges: list[Charge], heater: list[Interval], heater_kw:
     if weeks < 2:
         return CheckResult(*key, NOT_ASSESSABLE, len(found), "", f"{count(len(found), 'Aufheizung', 'Aufheizungen')} "
                            "auf 60 °C bisher; bewertet ab 14 Tagen.", DERIVED, details, progress=prog)
+    temps = [c.tank_after for c in charges if c.tank_after is not None]
+    if temps and _median(temps) >= DISINFECTION_C - SENSOR_TOLERANCE_K:
+        return CheckResult(*key, OK, None, "", "Der Speicher wird bei jeder Ladung auf 60 °C geladen; ob das zu warm "
+                           "ist, bewertet W2.", DERIVED, details, progress=prog)
     per_week = len(found) / weeks
     text = f"{count(len(found), 'Aufheizung', 'Aufheizungen')} auf 60 °C in {num(weeks * 7, '.0f')} Tagen"
     if heater_kwh:
@@ -220,7 +222,8 @@ def check_disinfection(charges: list[Charge], heater: list[Interval], heater_kw:
         text += "Öfter als zweimal pro Woche kostet Strom, ohne die Hygiene weiter zu verbessern."
     else:
         verdict = OK
-        text += "Häufigkeit unauffällig." if found else "Keine – ob das reicht, beurteilt W2 mit der Speichertemperatur."
+        text += ("Häufigkeit unauffällig." if found else
+                 "Keine – vorgeschrieben ist sie im Einfamilienhaus nicht; die Hygiene beurteilt W2.")
     return CheckResult(*key, verdict, round(per_week, 2), "1/Woche", text, DERIVED, details, progress=prog)
 
 
@@ -340,7 +343,7 @@ def check_dhw_timing(charges: list[Charge], outdoor: Series, since: float, tz: s
         return CheckResult(*key, NOT_ASSESSABLE, text=f"{count(len(rows), 'Ladung', 'Ladungen')} mit Außentemperatur, "
                            f"nötig {MIN_CHARGES}.", origin=DERIVED, progress=prog)
     heat = sum(r[0] for r in rows)
-    loss = 100 * sum(r[0] * r[1] for r in rows) / heat
+    loss = round(100 * sum(r[0] * r[1] for r in rows) / heat, 1)  # Urteil mit dem angezeigten Wert
     colder = sum(r[0] * r[2] for r in rows) / heat
     text = (f"Geladen wird im Mittel {num(colder, '.1f')} K kälter als in den wärmsten drei Stunden des Tages; das "
             f"kostet beim Warmwasser ≈ {num(loss, '.0f')} % Effizienz (nach Carnot). ")
@@ -349,8 +352,9 @@ def check_dhw_timing(charges: list[Charge], outdoor: Series, since: float, tz: s
         text += "Ein Zeitfenster am Nachmittag würde Strom sparen."
     else:
         verdict = OK
-        text += "Kaum Spielraum."
-    return CheckResult(*key, verdict, round(loss, 1), "%", text, DERIVED,
+        text += ("Kaum Spielraum." if loss < TIMING_HINT_PCT / 2 else
+                 "Ein Ladefenster am Nachmittag brächte etwas, die Einbuße ist aber klein.")
+    return CheckResult(*key, verdict, loss, "%", text, DERIVED,
                        {"colder_k": round(colder, 1), "charges": len(rows)}, progress=prog)
 
 

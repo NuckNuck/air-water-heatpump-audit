@@ -16,7 +16,7 @@ hoch eingestellt, die Pumpen fördern zu viel Wasser, die Wärmepumpe schaltet s
 Temperaturfühler misst daneben. Von außen merkt man davon nichts, nur an der Stromrechnung.
 
 Das **Luft-Wasser-Wärmepumpen-Audit** schaut sich die Messwerte an, die Home Assistant ohnehin von der Wärmepumpe
-aufzeichnet, und beantwortet bis zu vier Fragen – jede ist ein eigenes **Audit**, das man einzeln zu- oder abschalten
+aufzeichnet, und beantwortet bis zu sechs Fragen – jede ist ein eigenes **Audit**, das man einzeln zu- oder abschalten
 kann:
 
 | Audit | Frage | Beispiel für einen Befund |
@@ -25,6 +25,8 @@ kann:
 | **Effizienz** | Wie gut arbeitet die Wärmepumpe? | „Gütegrad 0,38 – im Bereich guter Anlagen aus dem Fraunhofer-Feldtest.“ |
 | **Vorlauf** | Heizt sie wärmer als nötig? | „Hinter dem Pufferspeicher kommen 2,8 K weniger an, als die Wärmepumpe erzeugt.“ |
 | **Leistung** | Passt die Wärmepumpe zum Haus? | „Hochgerechnet 5.200 Verdichterstarts im Jahr – viele Anlagen kommen mit unter 2.000 aus.“ |
+| **Warmwasser** | Effizient, hygienisch und zur richtigen Zeit? | „Speicher 45 °C, aber seit 3 Wochen nicht auf 60 °C aufgeheizt.“ |
+| **Kosten** | Was kostet die Wärme, lohnt der Tarif? | „Wärme kostet 8,1 ct/kWh – mit Gas wären es 14,3 ct.“ |
 
 Jede Prüfung bekommt eine Ampel:
 
@@ -40,8 +42,8 @@ zu tun ist und **welcher Wert** am Gerät eingestellt werden sollte. Hinter jede
 Erklärung in einfachen Worten: was gemessen wird, ab wann es gelb oder rot wird und woher diese Grenze stammt.
 
 Die Grenzwerte stammen, wo immer möglich, aus veröffentlichten Messungen – vor allem aus dem Feldtest
-**WP-QS des Fraunhofer ISE** (Monatswerte von über 20 Luft-Wasser-Wärmepumpen in Bestandsgebäuden) und aus Normen
-und Herstellerangaben.
+**WP-QS des Fraunhofer ISE** (Monatswerte von über 20 Luft-Wasser-Wärmepumpen in Bestandsgebäuden) –, aus Normen,
+technischen Regeln (z. B. DVGW und Umweltbundesamt zur Trinkwasserhygiene) und Herstellerangaben.
 
 ## Was wird genau geprüft?
 
@@ -104,6 +106,32 @@ Lebensdauer.
 | C6 Abtauung | Wie oft das Außengerät abtaut; gelb, wenn es auch bei über +5 °C außen mehr als zweimal pro Laufstunde abtaut. |
 | C7 Modulation | Wie viel der Laufzeit die Wärmepumpe mit kleiner Leistung arbeitet (viel kleine Leistung ist gut). |
 
+### Audit 4 – Warmwasser: Effizient, hygienisch und zur richtigen Zeit?
+
+Warmwasser braucht höhere Temperaturen als die Heizung und macht im Jahr rund ein Fünftel der Wärme aus. Eine
+Ladung ist die Zeit, in der das Umschaltventil auf Warmwasser steht.
+
+| Prüfung | Was wird geprüft? |
+|---|---|
+| W1 Gütegrad Warmwasser | Wie effizient die Wärmepumpe beim Warmwasser arbeitet, mit denselben Grenzen wie beim Heizen; dazu die Arbeitszahl. Braucht einen Stromzähler mit Nachkommastellen. |
+| W2 Speichertemperatur | Wie warm der Speicher nach dem Laden ist. Gelb unter 50 °C – die Untergrenze der technischen Regeln für Ein- und Zweifamilienhäuser; eine Legionellenschaltung gleicht das laut Umweltbundesamt nicht sicher aus. Gelb auch über 60 °C, weil das nur Strom kostet. |
+| W3 Aufheizen auf 60 °C | Wie oft die Legionellenschaltung läuft und wie viel der Heizstab dabei braucht. Gelb bei mehr als zweimal pro Woche; keine Aufheizung ist in Ordnung, vorgeschrieben ist sie im Einfamilienhaus nicht. |
+| W4 Speicherverlust | Wie viel Wärme der Speicher nachts verliert, umgerechnet auf die Klassen des Energielabels. Grün bis Klasse D (die Schätzung ist etwa eine Klasse unsicher). Braucht den Speicherinhalt. |
+| W5 Ladezeitpunkt | Ob zu einer kalten Tageszeit geladen wird; gelb, wenn ein Ladefenster am Nachmittag mindestens 10 % des Warmwasserstroms sparen würde. |
+
+### Audit 5 – Kosten: Was kostet die Wärme, lohnt der Tarif?
+
+Rechnet den gemessenen Strom mit Ihren Preisen in Euro um. Die Preise tragen Sie in den Anlagendaten ein; steht der
+Stromzähler der Wärmepumpe im Energie-Dashboard, wird dessen Preis vorgeschlagen.
+
+| Prüfung | Was wird geprüft? |
+|---|---|
+| K1 Wärmepreis | Was eine Kilowattstunde Wärme in der letzten Woche gekostet hat, im Vergleich zum früheren Brennstoff (z. B. Gas). Grün bis 10 % teurer (Messgenauigkeit). |
+| K2 Kosten pro Jahr | Strom und Kosten aufs Jahr hochgerechnet, mit der Ersparnis gegenüber dem früheren Brennstoff (nur Info). Braucht die Gradtage des Wohnorts und 14 Tage. |
+| K3 Wärmepumpentarif | Ob sich ein eigener Wärmepumpentarif mit zweitem Zähler gegenüber Haushaltsstrom lohnt. |
+| K4 Strompreis dynamisch | Nur bei dynamischem Tarif: ob die Wärmepumpe bevorzugt in teuren Stunden läuft. |
+| K5 Sperrzeiten | Nur mit Sperrsignal des Netzbetreibers: wie oft und wie lange gesperrt oder gedimmt wird; gelb, wenn währenddessen oder danach der Heizstab nachheizt. |
+
 ### Wann gibt es ein Ergebnis?
 
 Viele Prüfungen brauchen Zeit: eine Woche für die Effizienz, 14 Tage für die Starts pro Jahr, 20 Messfenster für
@@ -114,12 +142,13 @@ man mit der Maus über den Balken fährt oder auf das **?** daneben tippt.
 ### Ereignisse: „Ich habe etwas verstellt“
 
 Wenn an der Anlage etwas geändert wird – Heizkurve, Pumpenstufe, Heizkörperventile, hydraulischer Abgleich –, trägt
-man das als **Ereignis** ein. Die Audits Effizienz, Vorlauf und Leistung rechnen dann ab diesem Zeitpunkt neu, damit
+man das als **Ereignis** ein. Alle Audits außer der Datenbasis rechnen dann ab diesem Zeitpunkt neu, damit
 nie „vorher“ und „nachher“ vermischt werden. So sieht man schwarz auf weiß, ob die Änderung etwas gebracht hat.
 
 ### Zeitstrahl
 
-Eine zweite Karte zeigt je Tag einen Wert pro Audit (Gütegrad, Pufferverlust, Starts pro Tag, Datenabdeckung) mit
+Eine zweite Karte zeigt je Tag einen Wert pro Audit (Gütegrad, Pufferverlust, Starts pro Tag, Gütegrad Warmwasser,
+Wärmepreis, Datenabdeckung) mit
 denselben Ampelgrenzen, dazu die Ereignisse als senkrechte Linien. Die Tageswerte speichert die Integration selbst,
 sie bleiben also auch erhalten, wenn Home Assistant die alten Rohdaten löscht.
 
@@ -137,7 +166,8 @@ sie bleiben also auch erhalten, wenn Home Assistant die alten Rohdaten löscht.
    einen Infrarot-Lesekopf am Zähler. Schätzungen der Wärmepumpe selbst reichen nicht für ein Urteil.
 4. Empfohlen: **InfluxDB** als Langzeitspeicher (Home-Assistant-Integration „InfluxDB“, Version 2). Ohne InfluxDB nutzt
    das Audit die normale Aufzeichnung von Home Assistant, die standardmäßig nur 10 Tage zurückreicht.
-5. Optional: **ein Raumthermometer** im wichtigsten Raum (für T6).
+5. Optional: **ein Raumthermometer** im wichtigsten Raum (für T6) und die **Speichertemperatur** des Warmwassers
+   (für das Audit Warmwasser).
 
 ### Welche Messwerte werden genutzt?
 
@@ -160,6 +190,8 @@ Wert, zeigen nur die Prüfungen, die ihn brauchen, „nicht bewertbar“ – all
 | Stromverbrauch und Datum laut Steuerung | Plausibilität D5, D6 | nützlich |
 | Soll-Vorlauf, Vor-/Rücklauf hinter Puffer, Heizkreispumpe | Audit Vorlauf (nur mit Puffer oder Weiche) | je nach Anlage |
 | Raumtemperatur | Reserve der Heizkurve T6 | nützlich |
+| Warmwasser-Speichertemperatur, Sollwert | Audit Warmwasser | für dieses Audit nötig |
+| Dynamischer Strompreis, Sperrsignal des Netzbetreibers | Audit Kosten K4, K5 | nur falls vorhanden |
 | Einstellbare Werte der Schnittstelle (Pumpenstufe, Heizkurve, Taktsperre) | konkrete Vorschläge in der Spalte „Aktion“ | optional |
 
 ## Installation – Schritt für Schritt
@@ -208,7 +240,7 @@ auch eine ältere Version wählen.
    - *Modell der Wärmepumpe:* liefert Werte aus dem Datenblatt. Steht Ihr Modell nicht drin: **Keins**.
    - *Audits:* Haken bei den Audits, die laufen sollen. **Datenbasis** ist empfohlen – sie zeigt, wie belastbar die
      anderen Urteile sind. Weitere Audits lassen sich später jederzeit zuschalten.
-4. Nun kommen fünf Seiten, auf denen Sie die Messwerte zuordnen (siehe Tabelle oben). In jedem Feld kann man tippen,
+4. Nun kommen sieben Seiten, auf denen Sie die Messwerte zuordnen (siehe Tabelle oben). In jedem Feld kann man tippen,
    um die passende Entität zu suchen, z. B. „vorlauf“ oder „flow“. Was es bei Ihrer Anlage nicht gibt, **leer
    lassen**.
    - **Betriebssignale:** Verdichter, Pumpe, Abtauen, Warmwasser, Heizstab, Lebenszeichen.
@@ -216,6 +248,9 @@ auch eine ältere Version wählen.
    - **Werte der Steuerung:** Stromverbrauch und Datum, wie die Wärmepumpe sie selbst meldet, dazu ihr Wärmezähler für heute. Er zählt weiter, auch wenn Home Assistant kurz aus ist, und füllt solche Lücken in den Tageswerten auf.
    - **Heizkreis und Raum:** nur ausfüllen, wenn zwischen Wärmepumpe und Heizkörpern ein Pufferspeicher oder eine
      hydraulische Weiche sitzt, und für den Raumthermometer.
+   - **Warmwasser:** Speichertemperatur und Sollwert.
+   - **Tarif:** nur bei dynamischem Strompreis oder wenn der Netzbetreiber die Wärmepumpe sperren darf und das
+     Signal in Home Assistant ankommt.
    - **Stellgrößen:** nur, wenn Ihre Schnittstelle diese Werte verstellen kann. Das Audit ändert **nie** selbst etwas.
 5. **Absenden.** Die Integration rechnet einmal pro Stunde und direkt nach jedem Neustart.
 
@@ -240,9 +275,13 @@ bewertbar – Stammdaten fehlen“.
 
 - **Anlage:** Art der Verbindung zwischen Wärmepumpe und Heizkreis (direkt, Pufferspeicher, Weiche), Mindestdurchfluss
   der Wärmepumpe, größter Förderstrom der Heizkreispumpe, kleinste Heizleistung laut Datenblatt, Leistung von
-  Heizstab und Zusatzheizung (alles aus Datenblatt oder Installationshandbuch – im Zweifel den Installateur fragen).
-- **Standort und Komfort:** Heizstunden pro Jahr am Wohnort (aus der Klimakarte des Bundesverbands Wärmepumpe) und die
-  gewünschte Raumtemperatur.
+  Heizstab und Zusatzheizung, Inhalt des Warmwasserspeichers (alles aus Datenblatt, Typenschild oder
+  Installationshandbuch – im Zweifel den Installateur fragen).
+- **Standort und Komfort:** Heizstunden pro Jahr am Wohnort (aus der Klimakarte des Bundesverbands Wärmepumpe),
+  Gradtage pro Jahr (z. B. aus dem Gradtagzahlen-Rechner des IWU) und die gewünschte Raumtemperatur.
+- **Kosten:** Arbeitspreis und zusätzlicher Grundpreis des Wärmepumpenstroms, Preis des Haushaltsstroms, Preis und
+  Nutzungsgrad der früheren Heizung zum Vergleich. Für Gas den Preis je abgerechneter kWh inklusive Grundpreis-Anteil
+  eintragen; der vorgeschlagene Nutzungsgrad 0,86 ist das Mittel von Gas-Brennwertkesseln im Feld.
 - **Auswertung:** wie viele Tage zurück gerechnet wird, ab wann Daten gelten (z. B. ab Einbau der Schnittstelle) und
   ob InfluxDB oder die normale Aufzeichnung genutzt wird („auto“ wählt selbst).
 

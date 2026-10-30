@@ -51,6 +51,8 @@ was die zugeschalteten Audits anfordern (transitiv), jede höchstens einmal.
 | `heating_windows` | `t2.heating_windows` | circuit_pump_running; `cycles` | Vorlauf |
 | `pause_windows`, `circuit_offset` | `t2.pause_windows`, T2 | circuit_flow_temp; `sensor_offset`-Rollen | T1, T2 |
 | `daily_rows` | `e1.daily_rows` | electricity_meter, outdoor_temp; `heat_*`, `carnot_ideal` | Effizienz, Zeitstrahl |
+| `dhw_charges` | `w1.detect_charges` | dhw_active, dhw_tank_temp, electricity_meter; `heat_corrected`, `carnot_ideal`, `artifacts` | Warmwasser |
+| `day_costs`, `outdoor_daily` | `k1.day_cost` | price_signal, outdoor_temp_reference; `daily_rows` | Kosten |
 
 Grundsatz: **Eine Prüfung, deren Ergebnis andere brauchen (D4, D8, T2), wird als Grundgröße gerechnet; die Prüfung
 selbst bewertet nur noch den fertigen Wert.** Damit rechnet z. B. das Effizienz-Audit mit dem Offset, auch wenn das
@@ -192,3 +194,17 @@ mit Hinweis „Empfohlen: zeigt, wie belastbar die anderen Urteile sind“ (F150
   Karte selbst als Lovelace-Ressource ein (Storage-Modus).
 - Abweichung vom Entwurf: Rollen-Schritte zeigen weiterhin alle Rollen (alle optional), nicht nur die der gewählten
   Audits.
+
+## Audits Warmwasser und Kosten (30.10.2026, Version 0.15.0)
+
+- Zwei neue Module nach dem Muster oben: `audits/dhw.py` (W1–W5, Fachlogik `audit_core/dhw.py`) und `audits/cost.py`
+  (K1–K5, `audit_core/cost.py`). Runner, Sensoren und Karte blieben unverändert; die Karte bekam nur Texte
+  (Zeitstrahl-Hinweise, Tagesdetails, Einheiten `charges` und `nights` der Datenreife).
+- Neue Rollen `dhw_tank_temp`, `dhw_setpoint` (Config-Flow-Schritt „Warmwasser“) und `price_signal`, `grid_lock`
+  (Schritt „Tarif“); neue Stammdaten im Abschnitt „Kosten“ und `dhw_tank_volume_l`, `heating_degree_days`.
+- Der Arbeitspreis wird im Options Flow aus dem Energie-Dashboard vorgeschlagen (`config_flow.energy_price`), wenn dort
+  der Zähler der Rolle `electricity_meter` als Netzbezug steht – HA-Wissen bleibt damit außerhalb des Kerns.
+- Ereignisse setzen auch diese Audits zurück (ein gemeinsamer `section_start`). Eine Auswahl je Ereignisart (z. B.
+  nur `dhw_setting` für Warmwasser) wäre fachlich genauer, bräuchte aber Abschnitte je Audit in `Context`.
+- Der Golden-Test vergleicht weiter nur die ersten vier Audits; „Audit allein“ und Registry-Test decken die neuen mit
+  ab. Schwellen und Quellen: Spezifikation Abschnitte 6 und 7.

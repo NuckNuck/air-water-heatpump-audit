@@ -135,16 +135,16 @@ def _curve_headroom(r: CheckResult, by_id: dict) -> Action:
 
 
 def _dhw_temperature(r: CheckResult, _: dict) -> Action:
-    if (r.value or 0) > 55:
-        return Action(OWNER, "Warmwasser-Solltemperatur senken.", f"Speicher höchstens 55 °C{_today(r, '.0f')}", [
-            "Am Bedienteil die Warmwasser-Solltemperatur suchen und um 5 K senken.",
-            "Ein paar Tage prüfen, ob das Wasser zum Duschen reicht.",
+    if (r.value or 0) > 60:
+        return Action(OWNER, "Warmwasser-Solltemperatur senken.", f"Speicher höchstens 60 °C{_today(r, '.0f')}", [
+            "Am Bedienteil die Warmwasser-Solltemperatur suchen und auf 55–60 °C stellen.",
             _EVENT_STEP])
-    return Action(OWNER, "Den Speicher regelmäßig auf 60 °C aufheizen oder wärmer einstellen.",
-                  f"mindestens einmal pro Woche 60 °C{_today(r, '.0f')}", [
-                      "Am Bedienteil die Legionellenschaltung einschalten (oft „Legionellen“ oder „Antilegionella“).",
-                      "Intervall 7 Tage, Uhrzeit am Nachmittag, Temperatur 60 °C.",
-                      "Alternativ die Solltemperatur auf mindestens 50 °C stellen.",
+    return Action(OWNER, "Warmwasser-Solltemperatur auf mindestens 50 °C stellen.",
+                  f"Speicher mindestens 50 °C{_today(r, '.0f')}", [
+                      "Am Bedienteil die Warmwasser-Solltemperatur suchen und so einstellen, dass der Speicher nach "
+                      "dem Laden mindestens 50 °C zeigt (manche Steuerungen hören 1–2 K unter dem Sollwert auf).",
+                      "Gibt es eine Zirkulationsleitung, verlangen die Regeln 60 °C; dann mit dem Fachbetrieb klären.",
+                      "Jedes Kelvin mehr kostet etwa 1,4 % Strom beim Warmwasser – Hygiene geht vor.",
                       _EVENT_STEP])
 
 
@@ -231,10 +231,10 @@ _ACTIONS: dict[str, Callable[[CheckResult, dict], Action]] = {
     "K4": _fixed(OWNER, "Die Wärmepumpe läuft oft in teuren Stunden.", steps=[
         "Warmwasser in die günstigen Stunden legen (Zeitprogramm).",
         "Wenn die Steuerung es kann: Heizen bei niedrigen Preisen etwas vorziehen (Puffer, Gebäudemasse)."]),
-    "K5": _fixed(OWNER, "Sperren dauern lang, oder danach heizt der Heizstab.", steps=[
-        "Beim Netzbetreiber die vereinbarten Sperrzeiten erfragen.",
-        "Den Heizstab während und kurz nach einer Sperre blockieren lassen (Fachbetrieb).",
-        "Puffer und Speicher vor den bekannten Sperrzeiten laden."]),
+    "K5": _fixed(INSTALLER, "Nach Sperren heizt der Heizstab nach.", steps=[
+        "Den Heizstab während und kurz nach einer Sperre blockieren lassen.",
+        "Bivalenzpunkt prüfen: Der Heizstab sollte nur bei großer Kälte helfen, nicht nach jeder Sperre.",
+        "Puffer und Speicher vor bekannten Sperrzeiten laden."]),
     "T1": _buffer_loss,
     "T2": _fixed(INSTALLER, "Die beiden Vorlauffühler zeigen unterschiedliche Werte.",
                  lambda r: f"Fühlerunterschied höchstens 1 K{_today(r, '+.1f')}",

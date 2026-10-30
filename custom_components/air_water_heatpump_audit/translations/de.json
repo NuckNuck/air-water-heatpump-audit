@@ -160,7 +160,7 @@
               "tariff_base_fee": "Nur der zusätzliche Grundpreis pro Jahr für einen eigenen Wärmepumpenzähler; ohne eigenen Zähler leer lassen.",
               "household_price": "Zum Vergleich: lohnt der eigene Wärmepumpentarif (K3)?",
               "reference_fuel_price": "Zum Vergleich, z. B. Gas: Kosten je kWh inklusive Grundpreis-Anteil (K1, K2).",
-              "reference_efficiency": "Anteil des Brennstoffs, der als Wärme ankommt (Jahresnutzungsgrad)."
+              "reference_efficiency": "Anteil des abgerechneten Brennstoffs, der als Wärme ankommt. Gas-Brennwertkessel erreichen im Feld im Mittel 0,86, bezogen auf den Brennwert, nach dem Gas abgerechnet wird."
             }
           },
           "evaluation": {
