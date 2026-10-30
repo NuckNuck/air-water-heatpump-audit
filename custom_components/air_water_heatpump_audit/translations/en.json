@@ -70,6 +70,22 @@
           "room_temp": "Room temperature (coldest room)"
         }
       },
+      "dhw": {
+        "title": "Heat pump audit: hot water",
+        "description": "For the hot water audit. The tank temperature is required, the setpoint optional.",
+        "data": {
+          "dhw_tank_temp": "Hot water tank temperature",
+          "dhw_setpoint": "Hot water setpoint"
+        }
+      },
+      "tariff": {
+        "title": "Heat pump audit: tariff",
+        "description": "Only for the cost audit and only if available: a sensor with the current electricity price (dynamic tariff, €/kWh) and a signal while the grid operator blocks or throttles the heat pump. Fixed prices are master data.",
+        "data": {
+          "price_signal": "Dynamic electricity price (€/kWh)",
+          "grid_lock": "Grid operator block/throttling"
+        }
+      },
       "controls": {
         "title": "Heat pump audit: controls",
         "description": "Values the heat pump interface can write. If a role is assigned, the action column proposes a value an admin can apply with one click; the audit never changes anything by itself. Leave empty what the interface cannot do.",
@@ -101,7 +117,8 @@
               "capacity_min_table": "Minimum capacity from data sheet",
               "immersion_heater_kw": "Immersion heater power",
               "booster_heater_kw": "Booster heater 1 power",
-              "booster_heater_2_kw": "Booster heater 2 power"
+              "booster_heater_2_kw": "Booster heater 2 power",
+              "dhw_tank_volume_l": "Hot water tank volume"
             },
             "data_description": {
               "hydraulic_separation": "How heat pump and heating circuit are connected. Decides whether the buffer loss (T1) is checked.",
@@ -110,7 +127,8 @@
               "capacity_min_table": "Smallest heating capacity in kW per flow temperature and outdoor temperature (C4). Format (YAML): one line per flow temperature, below it indented outdoor: kW, e.g. \"35:\" followed by \"-7: 3.9\", \"2: 3.5\", \"7: 3.5\". Values in between are interpolated linearly.",
               "immersion_heater_kw": "Electric immersion heater in the cylinder (C5).",
               "booster_heater_kw": "Electric booster heater in the heating circuit (C5).",
-              "booster_heater_2_kw": "Second booster stage, if present (C5)."
+              "booster_heater_2_kw": "Second booster stage, if present (C5).",
+              "dhw_tank_volume_l": "Nominal volume from the rating plate (W4)."
             },
             "description": "Manufacturer data from the data sheet or installation manual."
           },
@@ -118,11 +136,31 @@
             "name": "Site and comfort",
             "data": {
               "heating_hours": "Heating hours per year",
-              "room_temp_target": "Target room temperature"
+              "room_temp_target": "Target room temperature",
+              "heating_degree_days": "Heating degree days per year"
             },
             "data_description": {
               "heating_hours": "Hours with outdoor temperature below the heating limit (15 °C) at the site. Used to project starts per year (C1).",
-              "room_temp_target": "Desired temperature in the reference room (T6)."
+              "room_temp_target": "Desired temperature in the reference room (T6).",
+              "heating_degree_days": "Long-term average of heating degree days (base 20/15 °C) at the site. For the annual projection (K2)."
+            }
+          },
+          "cost": {
+            "name": "Cost",
+            "description": "Gross prices. The energy price is suggested from the energy dashboard if the heat pump meter is set up there.",
+            "data": {
+              "tariff_price": "Heat pump energy price",
+              "tariff_base_fee": "Heat pump meter standing charge",
+              "household_price": "Household energy price",
+              "reference_fuel_price": "Previous fuel price",
+              "reference_efficiency": "Previous heating efficiency"
+            },
+            "data_description": {
+              "tariff_price": "Price per kWh of heat pump electricity (K1, K2).",
+              "tariff_base_fee": "Only the additional standing charge per year for a separate heat pump meter; leave empty without one.",
+              "household_price": "For comparison: is the separate heat pump tariff worth it (K3)?",
+              "reference_fuel_price": "For comparison, e.g. gas: cost per kWh including the share of the standing charge (K1, K2).",
+              "reference_efficiency": "Share of the fuel that arrives as heat (annual efficiency)."
             }
           },
           "evaluation": {
@@ -449,6 +487,126 @@
       },
       "timeline": {
         "name": "Timeline"
+      },
+      "dhw": {
+        "name": "Audit 4 hot water",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "cost": {
+        "name": "Audit 5 cost",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "dhw_efficiency": {
+        "name": "W1 hot water Carnot efficiency",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "dhw_temperature": {
+        "name": "W2 tank temperature",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "disinfection": {
+        "name": "W3 heating to 60 °C",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "standby_loss": {
+        "name": "W4 tank standing loss",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "dhw_timing": {
+        "name": "W5 charging time",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "heat_price": {
+        "name": "K1 heat price",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "annual_cost": {
+        "name": "K2 cost per year",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "tariff_benefit": {
+        "name": "K3 heat pump tariff",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "price_timing": {
+        "name": "K4 dynamic electricity price",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
+      },
+      "grid_lock": {
+        "name": "K5 grid blocking",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
       }
     }
   },
@@ -497,7 +655,9 @@
         "data_basis": "Data basis – can the measurements be trusted? (recommended)",
         "efficiency": "Efficiency – how well does the heat pump work?",
         "flow_temperature": "Flow temperature – does it heat hotter than needed?",
-        "capacity": "Capacity – does the heat pump fit the house?"
+        "capacity": "Capacity – does the heat pump fit the house?",
+        "dhw": "Hot water – efficient, hygienic and at the right time?",
+        "cost": "Cost – what does the heat cost, is the tariff worth it?"
       }
     }
   },

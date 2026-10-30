@@ -134,6 +134,20 @@ def _curve_headroom(r: CheckResult, by_id: dict) -> Action:
         "Eine Woche beobachten. Ist es dann noch zu warm, noch einmal 1 K; wird es zu kühl, 1 K zurück."])
 
 
+def _dhw_temperature(r: CheckResult, _: dict) -> Action:
+    if (r.value or 0) > 55:
+        return Action(OWNER, "Warmwasser-Solltemperatur senken.", f"Speicher höchstens 55 °C{_today(r, '.0f')}", [
+            "Am Bedienteil die Warmwasser-Solltemperatur suchen und um 5 K senken.",
+            "Ein paar Tage prüfen, ob das Wasser zum Duschen reicht.",
+            _EVENT_STEP])
+    return Action(OWNER, "Den Speicher regelmäßig auf 60 °C aufheizen oder wärmer einstellen.",
+                  f"mindestens einmal pro Woche 60 °C{_today(r, '.0f')}", [
+                      "Am Bedienteil die Legionellenschaltung einschalten (oft „Legionellen“ oder „Antilegionella“).",
+                      "Intervall 7 Tage, Uhrzeit am Nachmittag, Temperatur 60 °C.",
+                      "Alternativ die Solltemperatur auf mindestens 50 °C stellen.",
+                      _EVENT_STEP])
+
+
 def _fixed(who: str, text: str, target: Callable[[CheckResult], str | None] | None = None,
            steps: list[str] | None = None):
     return lambda r, _: Action(who, text, target(r) if target else None, steps)
@@ -185,6 +199,42 @@ _ACTIONS: dict[str, Callable[[CheckResult, dict], Action]] = {
         "Verdampfer am Außengerät auf Laub, Schmutz oder Eis prüfen.",
         "Kann die kalte Luft frei abströmen (keine Wand oder Hecke direkt davor)?"]),
     "E3": _carnot,
+    "W1": _fixed(INSTALLER, "Warmwasserbereitung mit dem Fachbetrieb durchsehen.",
+                 lambda r: f"Gütegrad mindestens {num(0.30, '.2f')}{_today(r, '.2f')}", [
+                     "Springt beim Warmwasser der Heizstab ein? Dann Speichertemperatur senken (W2).",
+                     "Ist die Wärmeübertragerfläche im Speicher groß genug für die Wärmepumpe?",
+                     "Durchfluss beim Laden prüfen; zu wenig Durchfluss treibt den Vorlauf hoch."]),
+    "W2": _dhw_temperature,
+    "W3": _fixed(OWNER, "Die Aufheizung auf 60 °C seltener einstellen, einmal pro Woche reicht.",
+                 lambda r: f"höchstens einmal pro Woche{_today(r, '.1f')}", [
+                     "Am Bedienteil die Legionellenschaltung suchen (oft „Legionellen“ oder „Antilegionella“).",
+                     "Intervall auf 7 Tage stellen und die Uhrzeit auf den Nachmittag legen.",
+                     _EVENT_STEP]),
+    "W4": _fixed(OWNER, "Der Speicher verliert viel Wärme.", steps=[
+        "Sind Anschlüsse und Rohre am Speicher gedämmt? Unisolierte Rohre in den ersten Metern verlieren viel.",
+        "Läuft eine Zirkulationspumpe dauernd? Dann eine Zeitschaltung oder einen Taster vorsehen.",
+        "Kann warmes Wasser im Rohr nach oben steigen und abkühlen (Schwerkraftzirkulation)? Dann einen "
+        "Thermosiphon oder eine Rückschlagklappe einbauen lassen."]),
+    "W5": _fixed(OWNER, "Warmwasser zur wärmsten Tageszeit laden.",
+                 lambda r: f"Einbuße unter {num(10, 'g')} %{_today(r, '.0f')}", [
+                     "Am Bedienteil das Zeitprogramm für Warmwasser öffnen.",
+                     "Laden nur zwischen etwa 12 und 17 Uhr erlauben; vorher prüfen, ob der Speicher bis zum Abend "
+                     "und zum nächsten Morgen reicht.",
+                     _EVENT_STEP]),
+    "K1": _fixed(OWNER, "Die Wärme ist teurer als mit dem früheren Brennstoff.", steps=[
+        "Zuerst die gelben Punkte der Audits Effizienz, Vorlauf und Leistung angehen.",
+        "Strompreis vergleichen: Wärmepumpentarife sind oft günstiger als Haushaltsstrom.",
+        "Den Wert über mehrere Wochen ansehen; im Winter ist er höher als im Jahresmittel."]),
+    "K3": _fixed(OWNER, "Der eigene Wärmepumpentarif lohnt sich bei diesem Verbrauch nicht.", steps=[
+        "Angebote für Wärmepumpenstrom vergleichen.",
+        "Sonst mit dem Elektriker klären, ob die Wärmepumpe über den Haushaltszähler laufen kann."]),
+    "K4": _fixed(OWNER, "Die Wärmepumpe läuft oft in teuren Stunden.", steps=[
+        "Warmwasser in die günstigen Stunden legen (Zeitprogramm).",
+        "Wenn die Steuerung es kann: Heizen bei niedrigen Preisen etwas vorziehen (Puffer, Gebäudemasse)."]),
+    "K5": _fixed(OWNER, "Sperren dauern lang, oder danach heizt der Heizstab.", steps=[
+        "Beim Netzbetreiber die vereinbarten Sperrzeiten erfragen.",
+        "Den Heizstab während und kurz nach einer Sperre blockieren lassen (Fachbetrieb).",
+        "Puffer und Speicher vor den bekannten Sperrzeiten laden."]),
     "T1": _buffer_loss,
     "T2": _fixed(INSTALLER, "Die beiden Vorlauffühler zeigen unterschiedliche Werte.",
                  lambda r: f"Fühlerunterschied höchstens 1 K{_today(r, '+.1f')}",

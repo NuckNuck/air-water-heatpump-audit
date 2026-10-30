@@ -17,7 +17,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from audit_core.result import num
-from audit_core.runner import run_audits
+from audit_core.runner import BY_ID, run_audits
 
 from .influx_source import InfluxSource
 
@@ -83,11 +83,8 @@ def markdown(report: dict) -> str:
     h = report["heat"]
     lines += [f"Wärme im Zeitraum (Durchfluss × Spreizung): {h['raw_kwh']} kWh roh, {h['corrected_kwh']} kWh mit "
               f"Offset {h['offset_k']:+g} K. Zählerstrom: {h['electricity_kwh']} kWh (ganze kWh).", ""]
-    titles = {"data_basis": "Audit 0 – Datenbasis", "efficiency": "Audit 1 – Effizienz gesamt",
-              "flow_temperature": "Audit 2 – Vorlauf so niedrig wie möglich",
-              "capacity": "Audit 3 – Leistung passt zum Bedarf"}
     for key, audit in report["audits"].items():
-        lines += [f"## {titles[key]}: {LABEL[audit['verdict']]} (Datenqualität {audit['dq']})", "", "| ID | Prüfung | Urteil | Wert | Erläuterung | Herkunft |",
+        lines += [f"## Audit {BY_ID[key].order} – {BY_ID[key].names['de']}: {LABEL[audit['verdict']]} (Datenqualität {audit['dq']})", "", "| ID | Prüfung | Urteil | Wert | Erläuterung | Herkunft |",
                   "|---|---|---|---|---|---|"]
         for r in audit["checks"]:
             value = "" if r["value"] is None or isinstance(r["value"], dict) else f"{_value(r['value'])} {r['unit']}".strip()

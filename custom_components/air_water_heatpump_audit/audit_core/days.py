@@ -34,6 +34,19 @@ def label(t: float, tz: str = DEFAULT_TZ) -> str:
     return datetime.fromtimestamp(t, ZoneInfo(tz)).strftime("%Y-%m-%d")
 
 
+def parse(day: str, tz: str = DEFAULT_TZ) -> float:
+    """Tag aus label() → lokale Mitternacht als Unix-Zeit."""
+    y, m, d = (int(x) for x in day.split("-"))
+    return datetime(y, m, d, tzinfo=ZoneInfo(tz)).timestamp()
+
+
+def next_midnight(t: float, tz: str = DEFAULT_TZ) -> float:
+    """Die lokale Mitternacht nach t (Sommerzeit-fest)."""
+    zone = ZoneInfo(tz)
+    d = datetime.fromtimestamp(t, zone).date() + timedelta(days=1)
+    return datetime(d.year, d.month, d.day, tzinfo=zone).timestamp()
+
+
 def display(day: str) -> str:
     """Tag aus label() für Fließtexte: „2026-10-27“ → „27.10.2026“."""
     y, m, d = day.split("-")

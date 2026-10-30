@@ -797,7 +797,7 @@ class ReadinessTest(unittest.TestCase):
         rep = run_audits(s, 0, 8 * H, recorder_keep_days=10, long_term_days=None, heater_kw={},
                          master={"heating_hours": 6279}, events=[{"time": 2 * H, "kind": "heating_curve", "note": ""}])
         ready = rep["readiness"]
-        self.assertEqual(set(ready), {"data_basis", "efficiency", "flow_temperature", "capacity"})
+        self.assertEqual(set(ready), {"data_basis", "efficiency", "flow_temperature", "capacity", "dhw", "cost"})
         self.assertEqual(ready["data_basis"]["start"], 0)
         self.assertEqual(ready["capacity"]["start"], 2 * H)
         c1 = next(c for c in ready["capacity"]["checks"] if c["check_id"] == "C1")
@@ -825,7 +825,9 @@ class RegistryTest(unittest.TestCase):
     def test_golden_report_unchanged(self):
         """Vergleichsbericht der synthetischen Anlage, erzeugt vor dem Umbau (tests/golden)."""
         golden = __import__("pathlib").Path(__file__).with_name("golden") / "synthetic_report.json"
-        self.assertEqual(self.run_with(), __import__("json").loads(golden.read_text(encoding="utf-8")))
+        # Die Vergleichsdatei kennt nur die ersten vier Audits; Warmwasser und Kosten kamen später dazu.
+        self.assertEqual(self.run_with(["data_basis", "efficiency", "flow_temperature", "capacity"]),
+                         __import__("json").loads(golden.read_text(encoding="utf-8")))
 
     def test_each_audit_alone_with_only_its_roles(self):
         """Ein Audit allein, nur mit seinen angemeldeten Rollen, urteilt wie im Gesamtlauf."""
@@ -847,3 +849,168 @@ class RegistryTest(unittest.TestCase):
         dup = REGISTRY[0].__class__(**{**REGISTRY[0].__dict__, "audit_id": REGISTRY[1].audit_id})
         with self.assertRaises(ValueError):
             validate([dup, REGISTRY[1]], ROLE_KEYS)
+
+
+class DhwTest(unittest.TestCase):
+    """Audit 4 – Warmwasser (Spezifikation 6)."""
+
+    @staticmethod
+    def charge(day: int, tank_after: float = 46.0, electricity: float = 1.5, hour: float = 15.0, heat: float = 4.5,
+               ideal: float = 0.55, sink: float = 40.0, outdoor: float = 8.0):
+        from audit_core.dhw import Charge
+        t = day * 24 * H + hour * H
+        return Charge(t, t + 40 * M, electricity, heat, ideal, tank_after, sink, outdoor)
+
+    def test_disinfection_has_one_kelvin_tolerance(self):
+        self.assertTrue(self.charge(0, 59.0).disinfection)
+        self.assertFalse(self.charge(0, 58.5).disinfection)
+
+    def test_efficiency_needs_fine_meter_and_enough_charges(self):
+        from audit_core import dhw as w1
+        charges = [self.charge(d) for d in range(8)]
+        self.assertEqual(w1.check_dhw_efficiency(charges, "high", True, 1.0, 0).verdict, NOT_ASSESSABLE)
+        self.assertEqual(w1.check_dhw_efficiency(charges[:6], "high", True, 0.001, 0).verdict, NOT_ASSESSABLE)
+        r = w1.check_dhw_efficiency(charges, "high", True, 0.001, 0)
+        self.assertEqual((r.verdict, r.value, r.details["cop"]), (OK, 0.367, 3.0))
+        low = [self.charge(d, ideal=0.3) for d in range(8)]
+        self.assertEqual(w1.check_dhw_efficiency(low, "high", True, 0.001, 0).verdict, WARN)
+        self.assertEqual(w1.check_dhw_efficiency(low, "high", False, 0.001, 0).verdict, HINT)
+
+    def test_temperature_hygiene_and_efficiency(self):
+        from audit_core import dhw as w1
+        end = 10 * 24 * H
+        cool = [self.charge(d, 45.0) for d in range(9)]
+        r = w1.check_dhw_temperature(cool, 0, end, [])
+        self.assertEqual(r.verdict, HINT)
+        self.assertIn("Legionellen", r.text)
+        with_disinfection = cool + [self.charge(8, 60.0, hour=16)]
+        self.assertEqual(w1.check_dhw_temperature(with_disinfection, 0, end, [(0, 45.0)]).verdict, OK)
+        hot = [self.charge(d, 58.0) for d in range(9)]
+        r = w1.check_dhw_temperature(hot, 0, end, [])
+        self.assertEqual(r.verdict, HINT)
+        self.assertIn("Heizstab", r.text)
+        self.assertEqual(w1.check_dhw_temperature([self.charge(d, 52.0) for d in range(9)], 0, end, []).verdict, OK)
+        # unter 50 °C, aber noch keine Woche beobachtet: offen
+        self.assertEqual(w1.check_dhw_temperature(cool, 0, 5 * 24 * H, []).verdict, NOT_ASSESSABLE)
+
+    def test_disinfection_frequency_and_heater(self):
+        from audit_core import dhw as w1
+        end = 14 * 24 * H
+        found = [self.charge(d, 60.0) for d in (1, 3, 5, 8, 10, 12)]
+        heater = [(c.start, c.start + 20 * M) for c in found]
+        r = w1.check_disinfection(found, heater, 3.0, 0, end)
+        self.assertEqual((r.verdict, r.value, r.details["heater_kwh"]), (HINT, 3.0, 6.0))
+        r = w1.check_disinfection(found[:2], heater, 3.0, 0, end)
+        self.assertEqual(r.verdict, OK)
+        self.assertEqual(w1.check_disinfection(found, heater, 3.0, 0, 10 * 24 * H).verdict, NOT_ASSESSABLE)
+
+    def test_quiet_windows_skip_charges_and_draws(self):
+        from audit_core import dhw as w1
+        tz = "UTC"
+        tank = []
+        for d in range(4):
+            tank += [(d * 24 * H, 45.0), (d * 24 * H + 5 * H, 44.0)]
+        tank[-1] = (3 * 24 * H + 2 * H, 30.0)  # Zapfen in Nacht 3
+        dhw = onoff(1 * 24 * H + 1 * H, 1 * 24 * H + 2 * H)  # Ladung in Nacht 1
+        windows = w1.quiet_windows(tank, dhw, [], [], 0, 4 * 24 * H, tz)
+        self.assertEqual([round(a / H) for a, _, _, _ in windows], [0, 48])
+
+    def test_standby_loss_classes(self):
+        from audit_core import dhw as w1
+        windows = [(d * 24 * H, d * 24 * H + 5 * H, 44.0, 43.0) for d in range(5)]
+        r = w1.check_standby_loss(windows, 200, 0)
+        # 200 l × 4,153 kJ/(l·K) × 5 K ÷ 25 h = 46 W bei 43,5 °C → 88 W bei 45 K: Klasse D, noch grün
+        self.assertEqual((r.verdict, r.value, r.details["erp_class"]), (OK, 88, "D"))
+        self.assertIn("Schätzgenauigkeit", r.text)
+        leaky = [(a, b, t0, t0 - 2.0) for a, b, t0, _ in windows]
+        self.assertEqual(w1.check_standby_loss(leaky, 200, 0).verdict, HINT)
+        self.assertEqual(w1.check_standby_loss(windows, None, 0).verdict, NOT_ASSESSABLE)
+        self.assertEqual(w1.check_standby_loss(windows[:3], 200, 0).verdict, NOT_ASSESSABLE)
+        self.assertEqual(w1.erp_class(40.0, 200), "A")
+
+    def test_timing_against_warmest_hours(self):
+        from audit_core import dhw as w1
+        outdoor = []
+        for d in range(9):  # nachts 0 °C, 12–18 Uhr 10 °C
+            outdoor += [(d * 24 * H, 0.0), (d * 24 * H + 12 * H, 10.0), (d * 24 * H + 18 * H, 0.0)]
+        night = [self.charge(d, hour=6.0) for d in range(8)]
+        r = w1.check_dhw_timing(night, outdoor, 0, "UTC")
+        self.assertEqual(r.verdict, HINT)
+        self.assertEqual(r.details["colder_k"], 10.0)
+        noon = [self.charge(d, hour=13.0) for d in range(8)]
+        self.assertEqual(w1.check_dhw_timing(noon, outdoor, 0, "UTC").value, 0.0)
+
+
+class CostTest(unittest.TestCase):
+    """Audit 5 – Kosten (Spezifikation 7)."""
+
+    MASTER = {"tariff_price": 0.25, "tariff_base_fee": 73.0, "household_price": 0.32, "reference_fuel_price": 0.12,
+              "reference_efficiency": 0.9, "heating_degree_days": 3500}
+
+    @staticmethod
+    def rows(n: int, electricity: float = 10.0, heat: float = 35.0, start_day: int = 1):
+        from datetime import date, timedelta
+        d0 = date(2026, 1, 1)
+        return [{"day": (d0 + timedelta(days=start_day + i)).isoformat(), "electricity_kwh": electricity,
+                 "heat_kwh": heat} for i in range(n)]
+
+    def test_energy_cost_uses_price_at_each_step(self):
+        from audit_core.cost import energy_cost
+        meter = [(0, 100.0), (H, 101.0), (2 * H, 103.0)]
+        price = [(0, 0.20), (H, 0.40)]
+        self.assertAlmostEqual(energy_cost(meter, price, 0, 2 * H), 0.2 + 0.8)
+        self.assertIsNone(energy_cost(meter, [(H, 0.4)], 0, 2 * H))
+
+    def test_heat_price_against_reference(self):
+        from audit_core import cost as k1
+        rows = self.rows(7)
+        costs = {r["day"]: r["electricity_kwh"] * 0.25 for r in rows}
+        r = k1.check_heat_price(rows, costs, self.MASTER, 0)
+        # (7 × 2,50 € + 73 € × 7/365) ÷ 245 kWh = 7,7 ct; Gas 12 ct ÷ 0,9 = 13,3 ct
+        self.assertEqual((r.verdict, r.value, r.details["reference_ct"]), (OK, 7.7, 13.3))
+        expensive = {k: v * 2.5 for k, v in costs.items()}
+        self.assertEqual(k1.check_heat_price(rows, expensive, self.MASTER, 0).verdict, HINT)
+        self.assertEqual(k1.check_heat_price(rows, costs, {"tariff_price": 0.25}, 0).verdict, INFO)
+        self.assertEqual(k1.check_heat_price(rows[:6], costs, self.MASTER, 0).verdict, NOT_ASSESSABLE)
+        self.assertEqual(k1.check_heat_price(rows, {}, self.MASTER, 0).verdict, NOT_ASSESSABLE)
+
+    def test_projection_splits_base_load_and_degree_days(self):
+        from audit_core import cost as k1
+        from audit_core import days
+        tz = "Europe/Berlin"
+        rows, outdoor = [], []
+        for i in range(14):
+            mean = -2.0 + i  # Gradtage 22 … 9
+            r = self.rows(1, start_day=i)[0]
+            g = 20 - mean
+            r["electricity_kwh"], r["heat_kwh"] = 3.0 + 0.5 * g, 10.0 + 1.6 * g
+            rows.append(r)
+            outdoor.append((days.parse(r["day"], tz), mean))
+        year = k1.project_year(rows, outdoor, tz, 3500)
+        self.assertEqual(year["method"], "fit")
+        self.assertAlmostEqual(year["electricity_kwh"], 365 * 3 + 0.5 * 3500)
+        costs = {r["day"]: r["electricity_kwh"] * 0.25 for r in rows}
+        r = k1.check_annual_cost(rows, outdoor, costs, self.MASTER, tz, 0)
+        self.assertEqual((r.verdict, r.value), (INFO, round(2845 * 0.25 + 73)))
+        self.assertIn("Ersparnis", r.text)
+        t = k1.check_tariff(r, self.MASTER, False)
+        self.assertEqual((t.verdict, t.value), (OK, round(0.07 * 2845 - 73)))
+        self.assertEqual(k1.check_tariff(r, self.MASTER | {"tariff_base_fee": 300}, False).verdict, HINT)
+        self.assertEqual(k1.check_tariff(r, self.MASTER, True).verdict, NOT_ASSESSABLE)
+        self.assertEqual(k1.degree_days(16.0), 0.0)
+
+    def test_price_timing_and_grid_lock(self):
+        from audit_core import cost as k1
+        week = 7 * 24 * H
+        price = [(i * H, 0.40 if i % 2 else 0.20) for i in range(7 * 24 + 1)]
+        meter = [(i * H, 100.0 + i // 2) for i in range(7 * 24 + 1)]  # nur in teuren Stunden Strom
+        r = k1.check_price_timing(meter, price, 0, week)
+        self.assertEqual(r.verdict, HINT)
+        self.assertEqual(k1.check_price_timing(meter, [], 0, week).verdict, NOT_ASSESSABLE)
+        locks = onoff(*[t for d in range(7) for t in (d * 24 * H + 12 * H, d * 24 * H + 13 * H)])
+        self.assertEqual(k1.check_grid_lock(locks, [], 0, week).verdict, OK)
+        heater = [(12 * H + 3600, 12 * H + 2 * 3600)]
+        r = k1.check_grid_lock(locks, heater, 0, week)
+        self.assertEqual((r.verdict, r.details["heater_after_h"]), (HINT, 1.0))
+        long = onoff(12 * H, 15 * H)
+        self.assertEqual(k1.check_grid_lock(long, [], 0, week).verdict, HINT)

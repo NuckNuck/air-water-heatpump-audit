@@ -6,7 +6,9 @@ Konstanten der Prüfungen, damit Hilfe und Urteil nie auseinanderlaufen.
 
 from __future__ import annotations
 
+from . import cost as k1
 from . import cycles as c3
+from . import dhw as w1
 from . import efficiency as e1
 from . import flow_temp as t2
 from .result import num
@@ -126,4 +128,58 @@ CHECK_HELP: dict[str, dict[str, str]] = {
     "C7": {"what": "Wie viel ihrer Laufzeit die Wärmepumpe mit kleiner Leistung (niedrige Drehzahl) arbeitet.",
            "rating": "Grün. Viel kleine Leistung ist effizient, solange sie nicht oft taktet (siehe C3).",
            "source": "Beschreibend."},
+    # Audit 4 – Warmwasser
+    "W1": {"what": "Wie nah die Wärmepumpe beim Warmwasser an das physikalisch Mögliche herankommt (Gütegrad), "
+                   "daneben die Arbeitszahl: Wärme ins Warmwasser ÷ Strom vom Zähler während der Ladungen.",
+           "rating": f"Wie beim Heizen (E3): Grün {_k(e1.CARNOT_OK_MIN)}–{_k(e1.CARNOT_PLAUSIBLE_MAX)}, Gelb darunter, "
+                     f"Rot unter {_k(e1.CARNOT_WARN_BELOW)} nur mit belastbarem Fühler-Offset. Ab {w1.MIN_CHARGES} "
+                     "Ladungen; braucht einen Stromzähler mit 0,1 kWh oder feiner.",
+           "source": "Abgeleitet aus dem Feldtest Fraunhofer ISE (Gütegrad); der Gütegrad rechnet die höhere "
+                     "Temperatur beim Warmwasser heraus."},
+    "W2": {"what": "Wie warm der Speicher nach dem Laden ist (Median der normalen Ladungen).",
+           "rating": f"Gelb über {_k(w1.EFFICIENCY_MAX_C)} °C (kostet Effizienz). Gelb unter {_k(w1.HYGIENE_MIN_C)} °C, "
+                     f"wenn nicht mindestens alle {w1.DISINFECTION_MAX_GAP_DAYS} Tage auf "
+                     f"{_k(w1.DISINFECTION_C)} °C aufgeheizt wird. Je 1 K Fühlertoleranz.",
+           "source": "DVGW-Arbeitsblatt W 551 (Trinkwasserhygiene), Effizienzgrenze abgeleitet."},
+    "W3": {"what": "Wie oft der Speicher auf 60 °C aufgeheizt wird (Legionellenschutz) und wie viel Strom der "
+                   "Heizstab dabei braucht.",
+           "rating": f"Gelb bei mehr als {w1.DISINFECTION_MAX_PER_WEEK}-mal pro Woche: kostet Strom ohne weiteren "
+                     "Hygienegewinn. Ab 14 Tagen.",
+           "source": "Abgeleitet."},
+    "W4": {"what": "Wie viel Wärme der Speicher nachts verliert, ohne dass Wasser gezapft wird, umgerechnet auf die "
+                   "Prüfbedingung des Energielabels (65 °C im Speicher, 20 °C Raum).",
+           "rating": f"Grün bis Klasse {w1.ERP_OK_CLASS}, der Mindestanforderung für neue Speicher, und wegen der "
+                     f"Schätzgenauigkeit auch noch Klasse {w1.ERP_HINT_ABOVE_CLASS}; Gelb darüber. "
+                     "Braucht den Speicherinhalt in den Stammdaten und 5 ruhige Nächte.",
+           "source": "Physikalisch; Klassengrenzen aus der EU-Verordnung 812/2013."},
+    "W5": {"what": "Ob der Speicher zu einer kalten Tageszeit geladen wird: Vergleich mit den wärmsten drei Stunden "
+                   "desselben Tages. Wärmere Luft macht die Wärmepumpe effizienter.",
+           "rating": f"Gelb, wenn ein Ladefenster am Nachmittag mindestens {_k(w1.TIMING_HINT_PCT)} % des "
+                     "Warmwasserstroms sparen würde (nach Carnot).",
+           "source": "Physikalisch (Carnot), Schwelle abgeleitet."},
+    # Audit 5 – Kosten
+    "K1": {"what": "Was eine Kilowattstunde Wärme in der letzten Woche gekostet hat: Strom × Preis ÷ Wärme, mit "
+                   "anteiligem Grundpreis des Wärmepumpenzählers.",
+           "rating": "Grün, wenn sie höchstens 10 % teurer ist als mit dem früheren Brennstoff (Messgenauigkeit der "
+                     "Wärme), sonst Gelb. Ohne Vergleichspreis nur zur Information. Im Winter ist sie teurer als im "
+                     "Jahresmittel.",
+           "source": "Abgeleitet; Nutzungsgrad der früheren Heizung aus den Stammdaten."},
+    "K2": {"what": "Strom und Kosten aufs Jahr hochgerechnet: Grundlast (Warmwasser, Bereitschaft) an 365 Tagen, "
+                   "der Rest nach den Gradtagen des Standorts.",
+           "rating": INFO_ONLY + f" Ab {k1.PROJECTION_MIN_DAYS} gültigen Tagen; mit mehr Wochen und kälteren Tagen "
+                     "wird sie genauer.",
+           "source": "Gradtagzahl G20/15 nach VDI 4710."},
+    "K3": {"what": "Ob sich der eigene Wärmepumpentarif lohnt: Preisunterschied zum Haushaltsstrom × Jahresstrom, "
+                   "abzüglich Grundpreis des zweiten Zählers.",
+           "rating": "Grün, wenn der Tarif spart, sonst Gelb.",
+           "source": "Rechnung aus den Stammdaten und K2."},
+    "K4": {"what": "Bei dynamischem Tarif: der im Mittel gezahlte Preis im Vergleich zum mittleren Preis.",
+           "rating": "Gelb, wenn die Wärmepumpe mehr als 3 % über dem Mittel zahlt, also bevorzugt in teuren Stunden "
+                     "läuft. Ab 7 Tagen.",
+           "source": "Abgeleitet."},
+    "K5": {"what": "Wie oft und wie lange der Netzbetreiber die Wärmepumpe sperrt oder drosselt, und ob danach der "
+                   "Heizstab nachheizt.",
+           "rating": f"Gelb bei mehr als {k1.LOCK_MAX_PER_DAY} Sperren am Tag, einer Sperre über "
+                     f"{_k(k1.LOCK_MAX_H)} h oder Heizstab nach einer Sperre. Ab 7 Tagen.",
+           "source": "Übliche Bedingungen von Wärmepumpentarifen."},
 }
