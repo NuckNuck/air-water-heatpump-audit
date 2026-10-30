@@ -1,5 +1,5 @@
-"""Config Flow: zuerst Profile und Audits wählen, dann fünf Schritte Rollen (Betriebssignale, Messwerte, Werte der
-Steuerung, Heizkreis, Stellgrößen). Gibt es noch einen Eintrag der Vorgänger-Integration „WP-Audit“, lässt er sich
+"""Config Flow: zuerst Profile und Audits wählen, dann sieben Schritte Rollen (Betriebssignale, Messwerte, Werte der
+Steuerung, Heizkreis, Warmwasser, Tarif, Stellgrößen). Gibt es noch einen Eintrag der Vorgänger-Integration „WP-Audit“, lässt er sich
 stattdessen übernehmen. Options Flow für Stammdaten; Untereinträge für Audits („Audit hinzufügen“) und Ereignisse.
 Reconfigure geht die Rollen-Schritte mit den gespeicherten Zuordnungen durch.
 
@@ -25,9 +25,11 @@ from .audit_core.audits import BY_ID, REGISTRY
 from .const import (CONF_AUDIT, CONF_AUDITS, CONF_IMPORT_TIMELINE_FROM, LEGACY_DOMAIN, SUBENTRY_AUDIT, audit_title,
                     language, migrate_roles)
 from .const import (CONF_BOOSTER_HEATER_2_KW, CONF_BOOSTER_HEATER_KW, CONF_CAPACITY_MIN_TABLE,
-                    CONF_CIRCUIT_FLOW_MAX_LPM, CONF_DATA_SINCE, CONF_DATA_SOURCE, CONF_EVENT_KIND, CONF_EVENT_NOTE,
-                    CONF_EVENT_TIME, CONF_FLOW_RATE_MIN_LPM, CONF_HEATING_HOURS, CONF_HYDRAULIC_SEPARATION, CONF_IMMERSION_HEATER_KW, CONF_ROOM_TEMP_TARGET,
-                    CONF_WINDOW_DAYS, DATA_SOURCES, DEFAULT_OPTIONS, DOMAIN, EVENT_KIND_LABELS, EVENT_KINDS,
+                    CONF_CIRCUIT_FLOW_MAX_LPM, CONF_DATA_SINCE, CONF_DATA_SOURCE, CONF_DHW_TANK_VOLUME_L,
+                    CONF_EVENT_KIND, CONF_EVENT_NOTE, CONF_EVENT_TIME, CONF_FLOW_RATE_MIN_LPM,
+                    CONF_HEATING_DEGREE_DAYS, CONF_HEATING_HOURS, CONF_HOUSEHOLD_PRICE, CONF_HYDRAULIC_SEPARATION,
+                    CONF_IMMERSION_HEATER_KW, CONF_REFERENCE_EFFICIENCY, CONF_REFERENCE_FUEL_PRICE,
+                    CONF_ROOM_TEMP_TARGET, CONF_TARIFF_BASE_FEE, CONF_TARIFF_PRICE, CONF_WINDOW_DAYS, DATA_SOURCES, DEFAULT_OPTIONS, DOMAIN, EVENT_KIND_LABELS, EVENT_KINDS,
                     HYDRAULIC_SEPARATIONS, OPTION_SECTIONS, OPTIONAL_OPTIONS, ROLE_DOMAINS, ROLE_STEPS,
                     SUBENTRY_EVENT)
 from .profiles import COMMON_ROLE_SUGGESTIONS, INTERFACE_PROFILES, MODEL_PROFILES, role_candidates
@@ -41,6 +43,30 @@ CONF_MODEL_PROFILE = "model_profile"
 def _kw() -> selector.NumberSelector:
     return selector.NumberSelector(selector.NumberSelectorConfig(min=0, max=20, step=0.1, unit_of_measurement="kW",
                                                                  mode=selector.NumberSelectorMode.BOX))
+
+
+def _number(maximum: float, step: float, unit: str) -> selector.NumberSelector:
+    return selector.NumberSelector(selector.NumberSelectorConfig(min=0, max=maximum, step=step, unit_of_measurement=unit,
+                                                                 mode=selector.NumberSelectorMode.BOX))
+
+
+async def energy_price(hass, meter: str | None) -> float | None:
+    """Arbeitspreis aus dem Energie-Dashboard, wenn dort der Stromzähler der Wärmepumpe als Netzbezug steht."""
+    if not meter:
+        return None
+    try:
+        from homeassistant.components.energy.data import async_get_manager
+        manager = await async_get_manager(hass)
+    except Exception:  # noqa: BLE001 – ohne Energie-Dashboard gibt es keinen Vorschlag
+        return None
+    for source in (manager.data or {}).get("energy_sources", []):
+        if source.get("type") != "grid":
+            continue
+        # bis HA 2025: Liste flow_from; danach eine Quelle je Zähler
+        for flow in source.get("flow_from") or [source]:
+            if flow.get("stat_energy_from") == meter and flow.get("number_energy_price"):
+                return float(flow["number_energy_price"])
+    return None
 
 
 def _audit_selector(options: list[str], multiple: bool) -> selector.SelectSelector:
@@ -157,6 +183,12 @@ class AirWaterAuditConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_circuit(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         return await self._role_step("circuit", user_input)
 
+    async def async_step_dhw(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return await self._role_step("dhw", user_input)
+
+    async def async_step_tariff(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return await self._role_step("tariff", user_input)
+
     async def async_step_controls(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         return await self._role_step("controls", user_input)
 
@@ -190,6 +222,13 @@ def _option_selectors() -> dict[str, Any]:
         CONF_BOOSTER_HEATER_2_KW: _kw(),
         CONF_HEATING_HOURS: selector.NumberSelector(selector.NumberSelectorConfig(
             min=0, max=8760, step=1, unit_of_measurement="h", mode=selector.NumberSelectorMode.BOX)),
+        CONF_DHW_TANK_VOLUME_L: _number(5000, 1, "l"),
+        CONF_HEATING_DEGREE_DAYS: _number(8000, 1, "Kd"),
+        CONF_TARIFF_PRICE: _number(2, 0.001, "€/kWh"),
+        CONF_TARIFF_BASE_FEE: _number(1000, 0.01, "€/a"),
+        CONF_HOUSEHOLD_PRICE: _number(2, 0.001, "€/kWh"),
+        CONF_REFERENCE_FUEL_PRICE: _number(2, 0.001, "€/kWh"),
+        CONF_REFERENCE_EFFICIENCY: _number(1.2, 0.01, ""),
         CONF_ROOM_TEMP_TARGET: selector.NumberSelector(selector.NumberSelectorConfig(
             min=15, max=26, step=0.5, unit_of_measurement="°C", mode=selector.NumberSelectorMode.BOX)),
         CONF_WINDOW_DAYS: selector.NumberSelector(selector.NumberSelectorConfig(
@@ -201,7 +240,7 @@ def _option_selectors() -> dict[str, Any]:
 
 
 class AirWaterAuditOptionsFlow(OptionsFlow):
-    """Stammdaten (Spezifikation 1.4) in drei Abschnitten: Anlage, Standort und Komfort, Auswertung.
+    """Stammdaten (Spezifikation 1.4) in vier Abschnitten: Anlage, Standort und Komfort, Kosten, Auswertung.
 
     Kein OptionsFlowWithReload: Das Neuladen übernimmt der Update-Listener, der auch auf Ereignisse reagiert.
     """
@@ -209,6 +248,8 @@ class AirWaterAuditOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         current = DEFAULT_OPTIONS | dict(self.config_entry.options)
+        if current.get(CONF_TARIFF_PRICE) is None:  # nur Vorschlag; gespeichert wird erst beim Absenden
+            current[CONF_TARIFF_PRICE] = await energy_price(self.hass, self.config_entry.data.get("electricity_meter"))
         if user_input is not None:
             flat = {k: v for section in user_input.values() for k, v in section.items()}
             # Ein geleertes optionales Feld fehlt in user_input; dann gilt „kein Wert“, nicht der alte.

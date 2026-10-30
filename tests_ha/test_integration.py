@@ -1,7 +1,7 @@
 """Config Flow, Recorder-Adapter und Ergebnis-Sensoren gegen ein echtes HA im Testmodus."""
 
 from datetime import timedelta
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, State
@@ -12,7 +12,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.components.recorder.common import async_wait_recording_done
 
 from custom_components.air_water_heatpump_audit.const import CHECKS, DEFAULT_OPTIONS, DOMAIN, OPTION_SECTIONS, ROLE_STEPS
-from custom_components.air_water_heatpump_audit.audit_core.audits import BY_ID
+from custom_components.air_water_heatpump_audit.audit_core.audits import BY_ID, REGISTRY
 from custom_components.air_water_heatpump_audit.profiles import COMMON_ROLE_SUGGESTIONS, INTERFACE_PROFILES, MODEL_PROFILES
 from custom_components.air_water_heatpump_audit.recorder_source import to_series
 
@@ -50,6 +50,12 @@ async def test_config_flow_prefills_and_creates_entry(hass: HomeAssistant):
     assert result["step_id"] == "controller"
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["step_id"] == "circuit"
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["step_id"] == "dhw"
+    schema = {str(k): k.description for k in result["data_schema"].schema}
+    assert schema["dhw_tank_temp"] is None  # Speicherfühler existiert hier nicht
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["step_id"] == "tariff"
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
     assert result["step_id"] == "controls"
     with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
@@ -111,7 +117,7 @@ async def test_import_from_legacy_wp_audit(hass: HomeAssistant, hass_storage):
     assert entry.data["interface_profile"] == "esphome_ecodan"
     assert entry.options["heating_hours"] == 6279
     kinds = sorted(sub.subentry_type for sub in entry.subentries.values())
-    assert kinds == ["audit"] * 4 + ["event"]
+    assert kinds == ["audit"] * len(REGISTRY) + ["event"]
     days = await entry.runtime_data._merge_timeline([])
     assert days[0] == {"day": "2020-01-01"}  # Tag aus dem Speicher der Vorgängerin
 
@@ -302,6 +308,10 @@ async def test_reconfigure_adds_new_roles_and_keeps_cleared(hass: HomeAssistant)
         assert schema["circuit_flow_temp"] == {"suggested_value": "sensor.heatpump_z1_feed_temp"}
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {"circuit_flow_temp": "sensor.heatpump_z1_feed_temp"})
+        assert result["step_id"] == "dhw"
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        assert result["step_id"] == "tariff"
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
         assert result["step_id"] == "controls"
         schema = {str(k): k.description for k in result["data_schema"].schema}
         assert schema["short_cycle_lockout"] == {"suggested_value": "select.heatpump_short_cycle_lockout_duration_min"}
@@ -350,6 +360,20 @@ async def test_options_flow_master_data(hass: HomeAssistant):
     assert entry.options["heating_hours"] is None  # geleert → unbekannt, nicht der alte Wert
     assert entry.options["capacity_min_table"] == DEFAULT_OPTIONS["capacity_min_table"]
     assert "plant" not in entry.options  # flach gespeichert
+
+
+async def test_options_flow_suggests_price_from_energy_dashboard(hass: HomeAssistant):
+    """Steht der WP-Zähler im Energie-Dashboard, schlägt der Options Flow dessen Arbeitspreis vor."""
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR, options=DEFAULT_OPTIONS)
+    entry.add_to_hass(hass)
+    manager = type("M", (), {"data": {"energy_sources": [
+        {"type": "grid", "stat_energy_from": "sensor.other", "number_energy_price": 0.30},
+        {"type": "grid", "stat_energy_from": MAHTANAR["electricity_meter"], "number_energy_price": 0.25}]}})()
+    with patch("homeassistant.components.energy.data.async_get_manager", new=AsyncMock(return_value=manager)):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+    cost = next(v for k, v in result["data_schema"].schema.items() if str(k) == "cost").schema
+    fields = {str(k): k.description for k in cost.schema}
+    assert fields["tariff_price"] == {"suggested_value": 0.25}
 
 
 async def test_options_flow_rejects_bad_capacity_table(hass: HomeAssistant):

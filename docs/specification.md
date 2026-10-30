@@ -1,10 +1,10 @@
 # Luft-Wasser-Wärmepumpen-Audit – Spezifikation
 
-Stand: Version 0.10.1. Fachliche Grundlage der Integration: was jede Prüfung misst, wann sie urteilt und woher jede
+Stand: Version 0.15.0. Fachliche Grundlage der Integration: was jede Prüfung misst, wann sie urteilt und woher jede
 Schwelle stammt. Die Abschnittsnummern verwenden auch die Kommentare im Code (z. B. „Spezifikation 1.5“).
 Aufbau des Codes und Entscheidungen zum Umbau auf Audit-Module: [`audit_modules_design.md`](audit_modules_design.md).
 
-Quellen stehen als Kurzschlüssel in Klammern, das Verzeichnis folgt in Abschnitt 7.
+Quellen stehen als Kurzschlüssel in Klammern, das Verzeichnis folgt in Abschnitt 9.
 
 ---
 
@@ -78,12 +78,16 @@ es in der Instanz gibt. Beispiel einer vollständigen Anlage: [`examples/mitsubi
 | `circuit_flow_temp`, `circuit_return_temp` | Vor- und Rücklauf im Heizkreis hinter Puffer oder Weiche (optional) | T1–T3 |
 | `circuit_pump_running` | Heizkreispumpe läuft (optional) | T1 |
 | `room_temp` | Raumtemperatur des wichtigsten Raums (optional) | T6 |
+| `dhw_tank_temp` | Temperatur im Warmwasserspeicher | Audit 4 |
+| `dhw_setpoint` | Warmwasser-Sollwert (optional) | W2 |
+| `price_signal` | aktueller Strompreis bei dynamischem Tarif, €/kWh (optional) | K1, K2, K4 |
+| `grid_lock` | Sperre oder Dimmung durch den Netzbetreiber aktiv (optional) | K5 |
 
 Rollen mit Text-Zustand: `controller_date`. Alle anderen werden als Zahl gelesen, an/aus als 1/0.
 
 ### 1.4 Stammdaten
 
-Options Flow in drei Abschnitten. Leere optionale Felder heißen „unbekannt“; die abhängige Prüfung ist dann
+Options Flow in vier Abschnitten. Leere optionale Felder heißen „unbekannt“; die abhängige Prüfung ist dann
 `not_assessable` mit dem Grund „Stammdaten fehlen“, nie ein Ersatzwert eines anderen Geräts.
 
 | Abschnitt | Key | Bedeutung | Genutzt von |
@@ -92,9 +96,16 @@ Options Flow in drei Abschnitten. Leere optionale Felder heißen „unbekannt“
 | Anlage | `flow_rate_min_lpm` | Mindestdurchfluss der Wärmepumpe laut Hersteller | T4 |
 | Anlage | `circuit_flow_max_lpm` | größter Förderstrom der Heizkreispumpe laut Datenblatt; T3 kappt die Mischungsbilanz darauf | T3 |
 | Anlage | `capacity_min_table` | kleinste Heizleistung (kW) je Vorlauftemperatur und Außentemperatur, YAML, linear interpoliert | C4 |
-| Anlage | `immersion_heater_kw`, `booster_heater_kw`, `booster_heater_2_kw` | Leistung von Heizstab und Zusatzheizungen | C5 |
+| Anlage | `immersion_heater_kw`, `booster_heater_kw`, `booster_heater_2_kw` | Leistung von Heizstab und Zusatzheizungen | C5, W3 |
+| Anlage | `dhw_tank_volume_l` | Nenninhalt des Warmwasserspeichers | W4 |
 | Standort und Komfort | `heating_hours` | Heizstunden pro Jahr am Standort (BWP-KK) | C1 |
+| Standort und Komfort | `heating_degree_days` | langjähriges Mittel der Gradtagzahl G20/15 am Standort (Kd/a) | K2 |
 | Standort und Komfort | `room_temp_target` | gewünschte Raumtemperatur | T6 |
+| Kosten | `tariff_price` | Arbeitspreis des Wärmepumpenstroms (€/kWh); Vorschlag aus dem Energie-Dashboard, wenn dort der Zähler der Rolle `electricity_meter` als Netzbezug steht | K1–K3 |
+| Kosten | `tariff_base_fee` | zusätzlicher Grundpreis des Wärmepumpenzählers (€/a) | K1–K3 |
+| Kosten | `household_price` | Arbeitspreis des Haushaltsstroms (€/kWh) | K3 |
+| Kosten | `reference_fuel_price` | Preis des früheren Brennstoffs je abgerechneter kWh, mit Grundpreis-Anteil | K1, K2 |
+| Kosten | `reference_efficiency` | Jahresnutzungsgrad der früheren Heizung, bezogen auf die abgerechnete kWh; Vorgabe 0,86 (Gas-Brennwertkessel, DBU-BW S. 7/39: Mittel 86,2 % auf Hs, n = 60; Gas wird nach Brennwert abgerechnet) | K1, K2 |
 | Auswertung | `window_days` | Auswertefenster in Tagen (Standard 30; mit Recorder wirkt höchstens dessen Aufbewahrung) | alle |
 | Auswertung | `data_since` | Daten gelten ab (z. B. Einbau der Schnittstelle) | alle |
 | Auswertung | `data_source` | `auto`, `influxdb` oder `recorder` | alle |
@@ -108,7 +119,7 @@ Der Besitzer trägt Änderungen an der Anlage als Untereintrag ein: Zeitpunkt, A
 Abschnitte; Audits mit Mehrtageswerten mitteln nie über einen Trenner hinweg.
 
 - **Audit 0** prüft die Daten und nutzt das ganze Fenster.
-- **Audits 1–3** rechnen ab dem letzten Ereignis im Fenster (`section_start`). Jede Ereignisart setzt sie zurück.
+- **Audits 1–5** rechnen ab dem letzten Ereignis im Fenster (`section_start`). Jede Ereignisart setzt sie zurück.
 - **Ausnahmen:** D4 und T2 (Fühlerabgleich) nutzen das ganze Fenster, denn Ereignisse ändern die Anlage, nicht die
   Fühler. Der Zeitstrahl speichert Tageswerte über das ganze Fenster.
 - Kein aktives Nachfragen: Die Integration fordert keine Ereignisse an.
@@ -164,7 +175,7 @@ trägt ein Ereignis ein. Ist der Vorschlag erreicht, zeigt sie „✓ eingestell
 
 Jede Prüfung meldet, wie viel ihr noch fehlt (`progress`: vorhanden, nötig, Einheit, Zählweise `full_days`,
 `elapsed` oder `rate`). Daraus schätzt `audit_core/readiness.py` je Audit den Tag, an dem alle Prüfungen bewertbar
-sind (Hochrechnung, Audit 0 ab Fensterbeginn, Audits 1–3 ab dem letzten Ereignis). Fällt ein Tag durch, rückt der
+sind (Hochrechnung, Audit 0 ab Fensterbeginn, Audits 1–5 ab dem letzten Ereignis). Fällt ein Tag durch, rückt der
 Termin nach hinten.
 
 In der Tabelle füllt sich der Marker einer `not_assessable`-Prüfung mit `progress` von links in der Farbe von
@@ -323,7 +334,75 @@ mittleren Heizkreistemperatur (WPS S. 68/83).
 
 ---
 
-## 6. Umsetzung
+## 6. Audit 4 – Warmwasser
+
+Ziel: Zeigen, ob die Wärmepumpe Warmwasser effizient, hygienisch ausreichend warm und zu einer günstigen Tageszeit
+bereitet, und wie viel der Speicher verliert. Warmwasser macht im Feld 19 % der Wärme aus (WPQS S. 7/73).
+
+### 6.1 Rechenweg
+
+- **Ladung:** Phase mit `dhw_active` an, mindestens 60 s, vollständig im Abschnitt, ohne Lücke im Lebenszeichen und
+  ohne Neustart-Artefakt (D9). Strom je Ladung = Zählerstand am Ende − am Anfang (Grundsatz 1), Wärme und ideale
+  Strommenge wie in Audit 1 (4.1) über die Ladung. Ladungen unter 0,2 kWh Strom zählen für W1 nicht.
+- **Speichertemperatur nach der Ladung:** höchster Wert von `dhw_tank_temp` bis 30 min nach dem Ende (vor der nächsten
+  Ladung). Während der Ladung zeigen manche Speicherfühler Mischwerte aus nachströmendem Kaltwasser; sie werden nicht
+  verwendet.
+- **Aufheizen auf 60 °C** (Legionellenschaltung): Ladung mit Speichertemperatur ≥ 59 °C (60 °C − 1 K Fühlertoleranz).
+- **Ruhige Nacht** (W4): längstes Stück zwischen 0 und 5 Uhr Ortszeit ohne Ladung (inklusive 30 min danach), ohne
+  Lücke und Artefakt, mindestens 3 h; kühlt der Speicher darin schneller als 1 K/h ab, wurde gezapft, die Nacht zählt
+  nicht (`derived`).
+
+### 6.2 Prüfungen
+
+| ID | Key | Kennzahl | Gate | Urteil | Herkunft |
+|---|---|---|---|---|---|
+| W1 | `dhw_efficiency` | Gütegrad über alle Ladungen (ideale ÷ gemessene Strommenge), dazu Arbeitszahl mit Feldvergleich | 7 Ladungen mit Zählerwerten; D8 ≤ 0,1 kWh; `dq` ≠ `low` | wie E3: `ok` 0,30–0,50 · `hint` < 0,30 · `warn` < 0,24 nur mit belastbarem D4 · `info` > 0,50 | `derived`: Der Gütegrad rechnet den höheren Hub heraus, es gelten die Schwellen von E3. Feldvergleich Arbeitszahl nur Warmwasser L/W im Bestand: Mittel 2,8, 2,1–3,5 (WPQS S. 79, n = 18); heatpumpmonitor.org Median 3,09 (OEM) |
+| W2 | `dhw_temperature` | Median der Speichertemperatur nach dem Laden über alle Ladungen | 7 Ladungen | `hint` < 49 °C (Hygiene) · `hint` > 61 °C (Effizienz) · sonst `ok`, unter 50 °C mit Anmerkung „knapp“ | `sourced`: untere Betriebstemperatur 50 °C für Ein- und Zweifamilienhäuser ohne Zirkulation, mit Zirkulation gelten 60 °C (DVGW-INFO S. 11); eine periodische Aufheizung ersetzt das nicht sicher (UBA-TWW S. 5); UBA empfiehlt durchgängig über 55 °C (S. 4). Über 60 °C verlangt keine Regel mehr, jedes Kelvin kostet ≈ 1,4 % (WPQS S. 171). Je 1 K Fühlertoleranz |
+| W3 | `disinfection` | Aufheizungen auf 60 °C pro Woche, Heizstab-Strom dabei (Einschaltdauer bis 30 min nach der Ladung × `immersion_heater_kw`) | 14 Tage | `ok` · `hint` > 2 pro Woche · `ok` mit Text, wenn schon der Median (W2) ≥ 59 °C ist | `derived`; keine Pflicht und keine Häufigkeit in den Regeln (DVGW-INFO S. 15, UBA-TWW S. 5) – keine Aufheizung ist kein Befund |
+| W4 | `standby_loss` | Warmhalteverlust aus dem Abkühlen in ruhigen Nächten: S = V · ρc · ΣΔT ÷ Σt, umgerechnet auf 45 K (Speicher 65 °C, Raum 20 °C angenommen), mit Effizienzklasse | 5 ruhige Nächte und 15 h; Stammdatum `dhw_tank_volume_l`; Speicher ≥ 10 K über 20 °C | `ok` bis Klassengrenze D · `hint` darüber; Text nennt Klasse und kWh/Tag | `physical`; Klassen nach EU-812 Anh. II Tab. 2 (S < a + b·V^0,4); Mindestanforderung für neue Speicher Klasse C (EU-814, [sekundär]); eine Klasse Toleranz, weil 0,5-K-Fühler und angenommene Raumtemperatur die Schätzung etwa eine Klasse unsicher machen (grün im Zweifel). Prüfbedingung 45 K [sekundär] |
+| W5 | `dhw_timing` | Einbuße nach Carnot, weil bei kälterer Luft geladen wird als im Mittel der wärmsten drei Stunden desselben Tages, gewichtet mit der Wärme je Ladung | 7 Ladungen mit Außentemperatur (Wetterdienst bevorzugt) | `ok` < 10 % · `hint` ≥ 10 % (gerundeter Wert) | `physical`: Carnot-COP T_Senke ÷ (T_Senke − T_außen), ≈ 2,0–2,5 %/K bei 45 K Hub; 10 % eigene Festlegung (`derived`): darunter ist ein Zeitfenster am Nachmittag den Komfortverlust kaum wert |
+
+**Gesamturteil Audit 4:** schlechtestes Urteil aus W1–W5. Zeitstrahl: Gütegrad der Ladungen je Tag mit den Bändern
+von E3.
+
+Nicht im Umfang: Zirkulationsverluste (WPQS S. 84: 32 % der geladenen Wärme bei 5 Anlagen) lassen sich ohne
+Zirkulationsfühler nicht von Speicherverlusten trennen; sie erscheinen in W4 als hoher Verlust.
+
+---
+
+## 7. Audit 5 – Kosten
+
+Ziel: Den gemessenen Strom in Euro umrechnen: Was kostet eine Kilowattstunde Wärme, was das Jahr, und lohnt der Tarif?
+
+### 7.1 Rechenweg
+
+- **Tage:** die gültigen Tage aus Audit 1 (4.1), auch mit aufgefüllten Lücken.
+- **Kosten eines Tages:** Mit `price_signal` jeder Zählerschritt × der Preis zu Beginn des Schritts; sonst Strom ×
+  `tariff_price`. Grundpreis (`tariff_base_fee`) anteilig je Tag (÷ 365).
+- **Vergleichspreis der Wärme** = `reference_fuel_price` ÷ `reference_efficiency`.
+- **Hochrechnung** (K2): Je Tag Gradtage G = 20 °C − Tagesmittel außen, wenn das Mittel unter 15 °C liegt, sonst 0
+  (G20/15, VDI 3807/DWD-GT; Außentemperatur vom Wetterdienst bevorzugt). Ausgleichsgerade Strom bzw. Wärme = a + b·G
+  über die gültigen Tage; Jahr = 365·a + b·`heating_degree_days`. Ist die Spannweite der Tages-G < 4 K oder die Gerade
+  unplausibel (a < 0 oder b ≤ 0), wird alles mit den Gradtagen skaliert („grob“).
+
+### 7.2 Prüfungen
+
+| ID | Key | Kennzahl | Gate | Urteil | Herkunft |
+|---|---|---|---|---|---|
+| K1 | `heat_price` | Wärmepreis der letzten 7 gültigen Tage in ct/kWh, mit Grundpreis-Anteil | 7 gültige Tage; Preis | `ok` ≤ Vergleichspreis × 1,10 · `hint` darüber · `info` ohne Vergleichspreis | `derived`: 10 % ≈ Messunsicherheit der Wärme; Nutzungsgrad Gas-Brennwert 0,86 auf Hs (DBU-BW). Wochenwert, im Winter höher als im Jahresmittel |
+| K2 | `annual_cost` | Strom, Kosten und Wärme im Jahr, Ersparnis gegen den Vergleich | 14 gültige Tage; `heating_degree_days` | `info` (Hochrechnung) | `sourced`: Gradtagzahl G20/15 (DWD-GT); Referenz Potsdam 3.666,8 Kd. Mindestens 14 Tage `derived` |
+| K3 | `tariff_benefit` | Ersparnis des eigenen Wärmepumpentarifs: (`household_price` − `tariff_price`) × Jahresstrom aus K2 − `tariff_base_fee` | wie K2; beide Preise; kein `price_signal` | `ok` ≥ 0 · `hint` < 0 | `physical` (Rechnung) |
+| K4 | `price_timing` | gezahlter Mittelpreis gegen das Zeitmittel von `price_signal` | 7 Tage; Rolle `price_signal` | `ok` ≤ +3 % · `hint` darüber | `derived`: 3 % eigene Festlegung (Zufall einer Woche) |
+| K5 | `grid_lock` | Sperren pro Tag, Dauer, längste Sperre; Heizstab-Stunden während und bis 2 h nach einer Sperre | 7 Tage; Rolle `grid_lock` | `ok` · `hint`, wenn der Heizstab dabei läuft. Anzahl und Dauer nur im Text | `derived`; seit 2024 keine feste Höchstdauer, nur Mindestleistung 4,2 kW (BK6-22-300 Anl. 1 Ziff. 4.5.1; präventiv höchstens 2 h täglich bis Ende 2028, Ziff. 10.5). Die frühere Tarifregel „3 × 2 h“ ist ohne Primärquelle und wird nicht verwendet |
+
+**Gesamturteil Audit 5:** schlechtestes Urteil aus K1, K3–K5; K2 ist Information. Zeitstrahl: Wärmepreis je Tag (ohne
+Grundpreis) mit dem Band von K1.
+
+Geplant: Anteil eigener PV-Strom (Rolle für Netzbezug bzw. Eigenverbrauch).
+
+---
+
+## 8. Umsetzung
 
 - **Kern** `audit_core/`: reines Python ohne Abhängigkeiten, Funktionen auf Zeitreihen (Liste von Zeit/Wert). Je
   Audit ein Modul in `audit_core/audits/`, gemeinsame Grundgrößen (Offset, Wärme, Zyklen, `dq`) in `context.py`.
@@ -336,7 +415,7 @@ mittleren Heizkreistemperatur (WPS S. 68/83).
 
 ---
 
-## 7. Quellen
+## 9. Quellen
 
 Status: [gelesen] = selbst gelesen, [sekundär] = nur über Zusammenfassungen, Foren oder Herstellerangaben.
 
@@ -346,6 +425,14 @@ Status: [gelesen] = selbst gelesen, [sekundär] = nur über Zusammenfassungen, F
 | WPQS-PI | Fraunhofer ISE: Presseinformation 03.11.2025 „Wärmepumpen heizen auch im Altbau klimafreundlich“. https://www.ise.fraunhofer.de/content/dam/ise/de/documents/presseinformationen/2025/3025_ISE_PI_Waermepumpen-heizen-auch-im-Altbau-klimafreundlich.pdf | [gelesen] |
 | WPS | Fraunhofer ISE: Schlussbericht „WPsmart im Bestand“, V2.1, 23.07.2020. https://wp-monitoring.ise.fraunhofer.de/wpqs-im-bestand/download/Berichte/BMWi-03ET1272A-WPsmart_im_Bestand-Schlussbericht.pdf | [gelesen] |
 | ISE-HPC-2026 | Bavia Bampi, Avci, Wapler, Günther, Nienborg (Fraunhofer ISE): „Investigation of the effect of storage operation in Single-Family Homes with Separate Tanks for Space Heating and DHW“, 15th IEA Heat Pump Conference 2026, doi:10.23697/r0dk-ep45 | [gelesen] |
+| DVGW-INFO | DVGW: Information „Energieeinsparungen im Warmwasserbereich in Trinkwasser-Installationen – geht das?“, März 2023. https://www.dvgw.de/medien/dvgw/leistungen/publikationen/energiesparen-warmwasser-dvgw-langfassung.pdf | [gelesen] |
+| UBA-TWW | Umweltbundesamt: Fact Sheet „Trinkwarmwasserkonzepte für Gebäude mit einer Wärmepumpenheizung“, Januar 2024. https://www.umweltbundesamt.de/publikationen/trinkwarmwasserkonzepte-fuer-gebaeude-einer | [gelesen] |
+| W 551 | DVGW-Arbeitsblatt W 551 (Kleinanlagen: 60 °C Reglertemperatur empfohlen), kostenpflichtig, über Fachpresse | [sekundär] |
+| EU-812 | Delegierte Verordnung (EU) Nr. 812/2013, Anhang II Tabelle 2 (Effizienzklassen Warmwasserspeicher). https://www.legislation.gov.uk/eur/2013/812/annex/II/adopted | [gelesen] |
+| EU-814 | Verordnung (EU) Nr. 814/2013 (Ökodesign Warmwasserspeicher: Warmhalteverlust ab 2017 höchstens Klasse C); Prüfbedingung 45 K über EN 12897 | [sekundär] |
+| DBU-BW | Wolff, Teuber, Budde, Jagnow: Felduntersuchung Brennwertkessel, DBU-Abschlussbericht AZ 14133, 2004. https://opac.dbu.de/ab/DBU-Abschlussbericht-AZ-14133.pdf | [gelesen] |
+| BK6-22-300 | Bundesnetzagentur: Festlegung zu § 14a EnWG, Anlage 1 zum Beschluss vom 27.11.2023. https://www.bundesnetzagentur.de/DE/Beschlusskammern/1_GZ/BK6-GZ/2022/BK6-22-300/Beschluss/BK6-22-300_Beschluss_Anlage1.pdf | [gelesen] |
+| DWD-GT | Deutscher Wetterdienst: Gradtagzahlen nach VDI 3807 und Klimafaktoren. https://www.dwd.de/DE/leistungen/klimafaktoren/klimafaktoren.html | [gelesen] |
 | BINE-2013 | BINE Themeninfo I/2013 „Elektrisch angetriebene Wärmepumpen“, FIZ Karlsruhe. https://www.energieinstitut.at/tools/machvier/doc/BINE_WP_Effizienz_reale_Bedingungen.pdf | [gelesen] |
 | BWP-LF | Bundesverband Wärmepumpe: „Leitfaden Hydraulik“, Stand Juli 2016 | [gelesen] |
 | BWP-KK | Bundesverband Wärmepumpe: Klimakarte (Norm-Außentemperatur und Heizstunden je PLZ). https://www.waermepumpe.de/werkzeuge/klimakarte/ | [gelesen] |

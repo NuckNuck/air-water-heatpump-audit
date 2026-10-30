@@ -7,6 +7,24 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
+## [0.15.0] – 2026-10-30
+
+### Neu
+- **Audit Warmwasser** (W1–W5): Gütegrad und Arbeitszahl der Warmwasserbereitung, Speichertemperatur gegen die
+  Hygiene-Untergrenze von 50 °C und gegen unnötige Wärme über 60 °C, Häufigkeit der Aufheizung auf 60 °C mit
+  Heizstab-Strom, Speicherverlust mit Klasse des Energielabels, Einbuße durch Laden zu kalten Tageszeiten.
+- **Audit Kosten** (K1–K5): Wärmepreis in ct/kWh gegen den früheren Brennstoff, Kosten pro Jahr über die Gradtage des
+  Standorts, lohnt der eigene Wärmepumpentarif, dynamischer Strompreis, Sperrzeiten des Netzbetreibers.
+- Neue Einrichtungsschritte „Warmwasser“ und „Tarif“, neuer Stammdaten-Abschnitt „Kosten“. Der Arbeitspreis wird aus
+  dem Energie-Dashboard vorgeschlagen.
+- Profil Mitsubishi Ecodan (ESPHome): Speichertemperatur und Warmwasser-Sollwert werden vorgeschlagen.
+- Zeitstrahl: Gütegrad Warmwasser und Wärmepreis je Tag.
+
+### Hinweis
+- Beide Audits sind nach dem Update nicht automatisch an: Einstellungen → Geräte & Dienste →
+  Luft-Wasser-Wärmepumpen-Audit → **Audit hinzufügen**. Die Speichertemperatur über **Neu konfigurieren** zuordnen,
+  Preise und Speicherinhalt unter **Konfigurieren** eintragen.
+
 ## [0.14.2] – 2026-10-27
 
 ### Behoben

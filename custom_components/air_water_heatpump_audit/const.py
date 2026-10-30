@@ -20,13 +20,18 @@ ROLE_STEPS: dict[str, tuple[str, ...]] = {
     "controller": ("controller_heating_consumed", "controller_dhw_consumed", "controller_date", "controller_heat_today"),
     # Heizkreis hinter Puffer oder Weiche und Raum (Audit 2); bei Anlagen ohne Trennung leer lassen
     "circuit": ("flow_setpoint", "circuit_flow_temp", "circuit_return_temp", "circuit_pump_running", "room_temp"),
+    # Warmwasserspeicher (Audit Warmwasser)
+    "dhw": ("dhw_tank_temp", "dhw_setpoint"),
+    # Tarif (Audit Kosten): nur bei dynamischem Strompreis bzw. Sperrsignal des Netzbetreibers
+    "tariff": ("price_signal", "grid_lock"),
     # Stellgrößen (Spezifikation 1.8): Was die Schnittstelle zur Wärmepumpe schreiben kann. Nur zugeordnete Rollen
     # erscheinen als Vorschlag in der Spalte „Aktion“.
     "controls": tuple(CONTROL_ROLES),
 }
 ROLE_DOMAINS: dict[str, list[str]] = {
     role: ["binary_sensor"] for role in ROLE_STEPS["signals"] if role not in ("compressor_frequency", "heartbeat")
-} | {"outdoor_temp_reference": ["sensor", "weather"], "circuit_pump_running": ["binary_sensor"]} | {
+} | {"outdoor_temp_reference": ["sensor", "weather"], "circuit_pump_running": ["binary_sensor"],
+     "price_signal": ["sensor", "input_number"], "grid_lock": ["binary_sensor", "input_boolean", "switch"]} | {
     role: list(spec.domains) for role, spec in CONTROL_ROLES.items()
 }
 # Umbenannte Rollen der Vorgänger-Integration (WP-Audit Version 1): herstellerneutral statt FTC (Mitsubishi).
@@ -57,16 +62,27 @@ CONF_CIRCUIT_FLOW_MAX_LPM = "circuit_flow_max_lpm"
 CONF_ROOM_TEMP_TARGET = "room_temp_target"
 CONF_CAPACITY_MIN_TABLE = "capacity_min_table"
 CONF_HEATING_HOURS = "heating_hours"
+CONF_DHW_TANK_VOLUME_L = "dhw_tank_volume_l"
+CONF_HEATING_DEGREE_DAYS = "heating_degree_days"
+CONF_TARIFF_PRICE = "tariff_price"
+CONF_TARIFF_BASE_FEE = "tariff_base_fee"
+CONF_HOUSEHOLD_PRICE = "household_price"
+CONF_REFERENCE_FUEL_PRICE = "reference_fuel_price"
+CONF_REFERENCE_EFFICIENCY = "reference_efficiency"
 # Abschnitte des Options-Formulars; gespeichert werden die Optionen flach.
 OPTION_SECTIONS: dict[str, tuple[str, ...]] = {
     "plant": (CONF_HYDRAULIC_SEPARATION, CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_CAPACITY_MIN_TABLE, CONF_IMMERSION_HEATER_KW,
-              CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW),
-    "site": (CONF_HEATING_HOURS, CONF_ROOM_TEMP_TARGET),
+              CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW, CONF_DHW_TANK_VOLUME_L),
+    "site": (CONF_HEATING_HOURS, CONF_HEATING_DEGREE_DAYS, CONF_ROOM_TEMP_TARGET),
+    "cost": (CONF_TARIFF_PRICE, CONF_TARIFF_BASE_FEE, CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE,
+             CONF_REFERENCE_EFFICIENCY),
     "evaluation": (CONF_WINDOW_DAYS, CONF_DATA_SINCE, CONF_DATA_SOURCE),
 }
 # Optionale Stammdaten: leer heißt „unbekannt“, die abhängige Prüfung ist dann nicht bewertbar.
 OPTIONAL_OPTIONS = (CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_CAPACITY_MIN_TABLE, CONF_HEATING_HOURS,
-                    CONF_IMMERSION_HEATER_KW, CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW, CONF_DATA_SINCE)
+                    CONF_IMMERSION_HEATER_KW, CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW, CONF_DATA_SINCE,
+                    CONF_DHW_TANK_VOLUME_L, CONF_HEATING_DEGREE_DAYS, CONF_TARIFF_PRICE, CONF_TARIFF_BASE_FEE,
+                    CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY)
 HYDRAULIC_SEPARATIONS = ["unknown", "none", "series_buffer", "parallel_buffer", "hydraulic_separator"]
 # auto: InfluxDB 2, wenn die HA-Integration InfluxDB eingerichtet ist, sonst Recorder
 DATA_SOURCES = ["auto", "influxdb", "recorder"]
@@ -85,9 +101,19 @@ DEFAULT_OPTIONS = {
     CONF_ROOM_TEMP_TARGET: 20.0,  # Norm-Innentemperatur Wohnräume (DIN EN 12831)
     CONF_CAPACITY_MIN_TABLE: None,  # Datenblatt, Vorschlag aus dem Modell-Profil (profiles.py)
     CONF_HEATING_HOURS: None,  # Klimakarte des Bundesverbands Wärmepumpe für den Standort
+    CONF_DHW_TANK_VOLUME_L: None,  # Typenschild des Speichers; ohne Wert ist W4 nicht bewertbar
+    CONF_HEATING_DEGREE_DAYS: None,  # langjähriges Mittel G20/15 am Standort; ohne Wert keine Jahreshochrechnung
+    CONF_TARIFF_PRICE: None,  # Arbeitspreis €/kWh; Vorschlag aus dem Energie-Dashboard (config_flow.energy_price)
+    CONF_TARIFF_BASE_FEE: None,  # zusätzlicher Grundpreis €/Jahr für den Wärmepumpenzähler
+    CONF_HOUSEHOLD_PRICE: None,
+    CONF_REFERENCE_FUEL_PRICE: None,  # früherer Brennstoff, €/kWh inklusive Grundpreis-Anteil
+    # Jahresnutzungsgrad der früheren Heizung, bezogen auf den abgerechneten Brennwert: Feldmittel Gas-Brennwertkessel
+    # 0,86 (DBU-Feldtest, 60 Anlagen); nur wirksam, wenn auch ein Brennstoffpreis eingetragen ist
+    CONF_REFERENCE_EFFICIENCY: 0.86,
 }
 MASTER_KEYS = (CONF_HYDRAULIC_SEPARATION, CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_ROOM_TEMP_TARGET, CONF_CAPACITY_MIN_TABLE,
-               CONF_HEATING_HOURS)
+               CONF_HEATING_HOURS, CONF_DHW_TANK_VOLUME_L, CONF_HEATING_DEGREE_DAYS, CONF_TARIFF_PRICE,
+               CONF_TARIFF_BASE_FEE, CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY)
 
 # Ereignisse (Spezifikation 1.5) als Untereinträge des Config Entry
 SUBENTRY_EVENT = "event"

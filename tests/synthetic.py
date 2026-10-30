@@ -15,7 +15,9 @@ END = START + 10 * 24 * H
 EVENT = START + 6 * 24 * H + 9 * H
 MASTER = {"hydraulic_separation": "parallel_buffer", "flow_rate_min_lpm": 14.3, "circuit_flow_max_lpm": 60.0,
           "room_temp_target": 21.0, "heating_hours": 6000,
-          "capacity_min_table": {35: {-7: 3.9, 2: 3.5, 7: 3.5}, 45: {-7: 3.7, 2: 3.2, 7: 3.2}}}
+          "capacity_min_table": {35: {-7: 3.9, 2: 3.5, 7: 3.5}, 45: {-7: 3.7, 2: 3.2, 7: 3.2}},
+          "dhw_tank_volume_l": 200, "tariff_price": 0.25, "tariff_base_fee": 60.0, "household_price": 0.30,
+          "reference_fuel_price": 0.12, "reference_efficiency": 0.9, "heating_degree_days": 3500}
 HEATER_KW = {"immersion_heater": 3.0, "booster_heater": 0.0, "booster_heater_2": 0.0}
 
 
@@ -29,8 +31,9 @@ def series() -> dict:
         "outdoor_temp", "outdoor_temp_reference", "pump_running", "defrost", "dhw_active", "immersion_heater",
         "booster_heater", "booster_heater_2", "heartbeat", "controller_heating_consumed", "controller_dhw_consumed",
         "controller_date", "flow_setpoint", "circuit_flow_temp", "circuit_return_temp", "circuit_pump_running",
-        "room_temp")}
+        "room_temp", "dhw_tank_temp", "dhw_setpoint")}
     meter = 1000.0
+    tank = 45.0
     uptime = 0.0
     day_kwh = 0.0
     t = START
@@ -56,6 +59,14 @@ def series() -> dict:
             ret = flow - 0.5
             freq = 0.0
             kw = 0.02
+        # Speicher: lädt um 5 Uhr auf 46 °C (am Tag 8 Desinfektion auf 60 °C), kühlt 0,2 K/h ab, Zapfen um 18 Uhr
+        if dhw:
+            target = 60.0 if minute // 1440 == 8 else 46.0
+            tank = min(target, tank + (1.0 if target > 50 else 0.5))
+        else:
+            tank -= 0.2 / 60
+        if hour_of_day == 18 and in_cycle < 10:
+            tank -= 1.0
         # Neustart der Schnittstelle am Tag 3 um 12:00, Lücke am Tag 4 von 10:00 bis 10:20
         if minute == 3 * 24 * 60 + 12 * 60:
             uptime = 0.0
@@ -82,6 +93,8 @@ def series() -> dict:
             s["circuit_flow_temp"].append((t, round((flow - 2.0 if on and not dhw else setpoint - 1.5) * 2) / 2))
             s["circuit_return_temp"].append((t, round((setpoint - 4.0) * 2) / 2))
             s["circuit_pump_running"].append((t, 1.0))
+            s["dhw_tank_temp"].append((t, round(tank * 2) / 2))
+            s["dhw_setpoint"].append((t, 46.0))
             s["room_temp"].append((t, round(22.3 + 0.3 * math.sin(2 * math.pi * minute / 1440), 1)))
         if minute % 60 == 0:
             s["outdoor_temp_reference"].append((t, round(outdoor, 1)))

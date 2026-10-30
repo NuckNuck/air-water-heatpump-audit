@@ -13,8 +13,10 @@ from __future__ import annotations
 
 from functools import cached_property
 
+from . import cost as k1
 from . import cycles as c3
 from . import data_basis as d0
+from . import dhw as w1
 from . import days, heat
 from . import efficiency as e1
 from . import flow_temp as t2
@@ -27,7 +29,7 @@ ROLE_KEYS = (
     "outdoor_temp", "outdoor_temp_reference", "pump_running", "defrost", "dhw_active", "immersion_heater",
     "booster_heater", "booster_heater_2", "heartbeat", "controller_heating_consumed", "controller_dhw_consumed",
     "controller_date", "controller_heat_today", "flow_setpoint", "circuit_flow_temp", "circuit_return_temp", "circuit_pump_running",
-    "room_temp",
+    "room_temp", "dhw_tank_temp", "dhw_setpoint", "price_signal", "grid_lock",
 )
 HEATER_ROLES = ("immersion_heater", "booster_heater", "booster_heater_2")
 
@@ -184,6 +186,35 @@ class Context:
     def circuit_offset(self) -> CheckResult:  # T2; wie D4 übers ganze Fenster: Ereignisse ändern nicht die Fühler
         return t2.check_circuit_sensor_offset(self.s["flow_temp"], self.s["circuit_flow_temp"], self.pauses,
                                               self.start, self.end)
+
+    # --- Warmwasser (Audit 4) ----------------------------------------------------------------------------------
+    def _charges(self, since: float) -> list[w1.Charge]:
+        s = self.s
+        return w1.detect_charges(s["dhw_active"], s["electricity_meter"], self.heat_corrected, self.carnot_ideal,
+                                 s["dhw_tank_temp"], s["flow_temp"], s["return_temp"], s["outdoor_temp"],
+                                 s["heartbeat"], self.artifacts, since, self.end)
+
+    @cached_property
+    def dhw_charges(self) -> list[w1.Charge]:
+        return self._charges(self.section_start)
+
+    @cached_property
+    def dhw_charges_window(self) -> list[w1.Charge]:
+        return self.dhw_charges if self.section_start <= self.start else self._charges(self.start)
+
+    # --- Kosten (Audit 5) --------------------------------------------------------------------------------------
+    @cached_property
+    def day_costs(self) -> dict[str, float | None]:
+        """Stromkosten je gültigem Tag (ganzes Fenster): dynamischer Preis, sonst Arbeitspreis aus den Stammdaten."""
+        price = self.master.get("tariff_price")
+        return {r["day"]: k1.day_cost(r, self.s["electricity_meter"], self.s["price_signal"],
+                                      None if price is None else float(price), self.tz)
+                for r in self.daily_rows_window}
+
+    @cached_property
+    def outdoor_daily(self) -> Series:
+        """Außentemperatur für Gradtage: Wetterdienst bevorzugt, Außenfühler wird durch Abtauen verfälscht (D10)."""
+        return self.s["outdoor_temp_reference"] or self.s["outdoor_temp"]
 
     # --- Tage --------------------------------------------------------------------------------------------------
     def full_days(self) -> list[tuple[float, float]]:

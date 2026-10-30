@@ -70,6 +70,22 @@
           "room_temp": "Raumtemperatur (kältester Raum)"
         }
       },
+      "dhw": {
+        "title": "Wärmepumpen-Audit: Warmwasser",
+        "description": "Für das Audit Warmwasser. Die Speichertemperatur ist Pflicht, der Sollwert optional.",
+        "data": {
+          "dhw_tank_temp": "Warmwasser-Speichertemperatur",
+          "dhw_setpoint": "Warmwasser-Sollwert"
+        }
+      },
+      "tariff": {
+        "title": "Wärmepumpen-Audit: Tarif",
+        "description": "Nur für das Audit Kosten und nur, wenn vorhanden: ein Sensor mit dem aktuellen Strompreis (dynamischer Tarif, €/kWh) und ein Signal, solange der Netzbetreiber die Wärmepumpe sperrt oder drosselt. Feste Preise stehen in den Stammdaten.",
+        "data": {
+          "price_signal": "Dynamischer Strompreis (€/kWh)",
+          "grid_lock": "Sperre/Drosselung durch den Netzbetreiber"
+        }
+      },
       "controls": {
         "title": "Wärmepumpen-Audit: Stellgrößen",
         "description": "Werte, die die Schnittstelle zur Wärmepumpe schreiben kann. Ist eine Rolle zugeordnet, schlägt die Spalte „Aktion“ einen Wert vor, den ein Admin mit einem Klick übernehmen kann; das Audit ändert nie selbst etwas. Leer lassen, was die Schnittstelle nicht kann.",
@@ -101,7 +117,8 @@
               "capacity_min_table": "Mindestleistung laut Datenblatt",
               "immersion_heater_kw": "Leistung Heizstab",
               "booster_heater_kw": "Leistung Zusatzheizung 1",
-              "booster_heater_2_kw": "Leistung Zusatzheizung 2"
+              "booster_heater_2_kw": "Leistung Zusatzheizung 2",
+              "dhw_tank_volume_l": "Inhalt Warmwasserspeicher"
             },
             "data_description": {
               "hydraulic_separation": "Wie sind Wärmepumpe und Heizkreis verbunden? Bestimmt, ob der Pufferverlust (T1) geprüft wird.",
@@ -110,7 +127,8 @@
               "capacity_min_table": "Kleinste Heizleistung in kW je Vorlauftemperatur und Außentemperatur (C4). Form (YAML): je Vorlauftemperatur eine Zeile, darunter eingerückt Außentemperatur: kW, z. B. „35:“ und darunter „-7: 3.9“, „2: 3.5“, „7: 3.5“. Zwischenwerte werden linear interpoliert.",
               "immersion_heater_kw": "Elektrischer Heizstab im Speicher (C5).",
               "booster_heater_kw": "Elektrische Zusatzheizung im Heizkreis (C5).",
-              "booster_heater_2_kw": "Zweite Stufe der Zusatzheizung, falls vorhanden (C5)."
+              "booster_heater_2_kw": "Zweite Stufe der Zusatzheizung, falls vorhanden (C5).",
+              "dhw_tank_volume_l": "Nenninhalt laut Typenschild (W4)."
             },
             "description": "Herstellerangaben aus Datenblatt oder Installationshandbuch."
           },
@@ -118,11 +136,31 @@
             "name": "Standort und Komfort",
             "data": {
               "heating_hours": "Heizstunden pro Jahr",
-              "room_temp_target": "Ziel-Raumtemperatur"
+              "room_temp_target": "Ziel-Raumtemperatur",
+              "heating_degree_days": "Gradtage pro Jahr"
             },
             "data_description": {
               "heating_hours": "Stunden mit Außentemperatur unter der Heizgrenze (15 °C) am Standort, z. B. aus der Klimakarte des Bundesverbands Wärmepumpe. Für die Hochrechnung der Starts pro Jahr (C1).",
-              "room_temp_target": "Gewünschte Temperatur im Bezugsraum (T6)."
+              "room_temp_target": "Gewünschte Temperatur im Bezugsraum (T6).",
+              "heating_degree_days": "Langjähriges Mittel der Gradtagzahl G20/15 am Standort, z. B. aus dem Gradtagzahlen-Rechner des IWU. Für die Hochrechnung aufs Jahr (K2)."
+            }
+          },
+          "cost": {
+            "name": "Kosten",
+            "description": "Preise brutto. Der Arbeitspreis wird aus dem Energie-Dashboard vorgeschlagen, wenn der Stromzähler der Wärmepumpe dort eingetragen ist.",
+            "data": {
+              "tariff_price": "Arbeitspreis Wärmepumpenstrom",
+              "tariff_base_fee": "Grundpreis Wärmepumpenzähler",
+              "household_price": "Arbeitspreis Haushaltsstrom",
+              "reference_fuel_price": "Preis früherer Brennstoff",
+              "reference_efficiency": "Nutzungsgrad frühere Heizung"
+            },
+            "data_description": {
+              "tariff_price": "Preis je kWh für den Strom der Wärmepumpe (K1, K2).",
+              "tariff_base_fee": "Nur der zusätzliche Grundpreis pro Jahr für einen eigenen Wärmepumpenzähler; ohne eigenen Zähler leer lassen.",
+              "household_price": "Zum Vergleich: lohnt der eigene Wärmepumpentarif (K3)?",
+              "reference_fuel_price": "Zum Vergleich, z. B. Gas: Kosten je kWh inklusive Grundpreis-Anteil (K1, K2).",
+              "reference_efficiency": "Anteil des abgerechneten Brennstoffs, der als Wärme ankommt. Gas-Brennwertkessel erreichen im Feld im Mittel 0,86, bezogen auf den Brennwert, nach dem Gas abgerechnet wird."
             }
           },
           "evaluation": {
@@ -449,6 +487,126 @@
       },
       "timeline": {
         "name": "Zeitstrahl"
+      },
+      "dhw": {
+        "name": "Audit 4 Warmwasser",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "cost": {
+        "name": "Audit 5 Kosten",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "dhw_efficiency": {
+        "name": "W1 Gütegrad Warmwasser",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "dhw_temperature": {
+        "name": "W2 Speichertemperatur",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "disinfection": {
+        "name": "W3 Aufheizen auf 60 °C",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "standby_loss": {
+        "name": "W4 Speicherverlust",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "dhw_timing": {
+        "name": "W5 Ladezeitpunkt",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "heat_price": {
+        "name": "K1 Wärmepreis",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "annual_cost": {
+        "name": "K2 Kosten pro Jahr",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "tariff_benefit": {
+        "name": "K3 Wärmepumpentarif",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "price_timing": {
+        "name": "K4 Strompreis dynamisch",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
+      },
+      "grid_lock": {
+        "name": "K5 Sperrzeiten",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
       }
     }
   },
@@ -497,7 +655,9 @@
         "data_basis": "Datenbasis – kann man den Messwerten trauen? (empfohlen)",
         "efficiency": "Effizienz – wie gut arbeitet die Wärmepumpe?",
         "flow_temperature": "Vorlauf – heizt sie wärmer als nötig?",
-        "capacity": "Leistung – passt die Wärmepumpe zum Haus?"
+        "capacity": "Leistung – passt die Wärmepumpe zum Haus?",
+        "dhw": "Warmwasser – effizient, hygienisch und zur richtigen Zeit?",
+        "cost": "Kosten – was kostet die Wärme, lohnt der Tarif?"
       }
     }
   },
