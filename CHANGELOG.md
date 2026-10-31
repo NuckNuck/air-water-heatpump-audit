@@ -7,6 +7,12 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
+## [0.15.1] – 2026-10-31
+
+### Behoben
+- Stammdaten: Ein Wert 0 (z. B. „Zusatzheizung 0 kW“) wurde im Formular nicht vorbelegt und ging beim nächsten
+  Speichern verloren. Er bleibt jetzt erhalten.
+
 ## [0.15.0] – 2026-10-30
 
 ### Neu

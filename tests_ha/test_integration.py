@@ -362,6 +362,18 @@ async def test_options_flow_master_data(hass: HomeAssistant):
     assert "plant" not in entry.options  # flach gespeichert
 
 
+async def test_options_flow_keeps_zero_values(hass: HomeAssistant):
+    """0 kW ist ein Wert („keine Zusatzheizung“), nicht „unbekannt“: Er wird vorbelegt und bleibt beim Speichern."""
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR,
+                            options=DEFAULT_OPTIONS | {"booster_heater_kw": 0.0})
+    entry.add_to_hass(hass)
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+    plant = next(v for k, v in result["data_schema"].schema.items() if str(k) == "plant").schema
+    fields = {str(k): k.description for k in plant.schema}
+    assert fields["booster_heater_kw"] == {"suggested_value": 0.0}
+
+
 async def test_options_flow_suggests_price_from_energy_dashboard(hass: HomeAssistant):
     """Steht der WP-Zähler im Energie-Dashboard, schlägt der Options Flow dessen Arbeitspreis vor."""
     entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR, options=DEFAULT_OPTIONS)
