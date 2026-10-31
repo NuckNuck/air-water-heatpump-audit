@@ -19,6 +19,8 @@ from .result import (DERIVED, ELAPSED, HINT, INFO, NOT_ASSESSABLE, OK, PHYSICAL,
                      num, progress)
 from .series import Interval, Series, clip, combine, intervals_where, overlaps, subtract, total, value_at
 
+# Ereignisse, ab denen das Audit Warmwasser neu rechnet (Arten wie in den Ereignis-Untereinträgen)
+EVENT_KINDS = ("dhw_setting", "hardware", "other")
 CHARGE_MIN_S = 60  # kürzere Phasen sind Umschalten des Ventils, keine Ladung (wie Zyklus-Klasse dhw)
 AFTER_CHARGE_S = 30 * 60  # Speichertemperatur nach der Ladung: höchster Wert in dieser Zeit
 MIN_CHARGES = 7  # W1, W2, W5: etwa eine Woche mit einer Ladung pro Tag
@@ -39,7 +41,9 @@ DISINFECTION_INTERVAL_DAYS = 7
 INTERVAL_SLACK_DAYS = 1
 # W6: Wasseraustausch. Steht Trinkwasser länger als 72 h, gilt der Betrieb nicht mehr als bestimmungsgemäß.
 STAGNATION_MAX_DAYS = 3.0
-MIN_DRAW_DAYS = 7
+# Wert ab dem ersten vollen Tag; Urteil erst, wenn der Zeitraum die 72 h überspannt; Wochenmuster erst nach 7 Tagen
+MIN_DRAW_DAYS = 3
+FULL_PATTERN_DAYS = 7
 SHOWER_LPM = 8.0  # Mischwasser 40 °C je Minute an einer üblichen Dusche
 # W1: Arbeitszahl nur Warmwasser, Luft/Wasser im Bestand: Mittel 2,8, Spanne 2,1–3,5 (WP-QS S. 79)
 FIELD_DHW_COP, FIELD_DHW_COP_RANGE = 2.8, (2.1, 3.5)
@@ -483,15 +487,19 @@ def check_dhw_draw(draw: Draw | None, volume_l: float | None, persons: list[hh.P
     """W6: Wie viel Warmwasser der Haushalt braucht, wie oft der Speicherinhalt ausgetauscht wird und wie viele
     Duschen ein voller Speicher hergibt. Urteil nur über den Austausch (Hygiene); der Rest ist Information."""
     key = ("W6", "dhw_draw")
-    prog = progress((end - since) / 3600, MIN_DRAW_DAYS * 24, "hours", ELAPSED, since)
+    days_ = (end - since) / 86400
+    prog = progress(days_ * 24, MIN_DRAW_DAYS * 24, "hours", ELAPSED, since)
     if not volume_l:
         return CheckResult(*key, NOT_ASSESSABLE, text="Stammdaten fehlen: Inhalt des Warmwasserspeichers.",
                            origin=SOURCED)
-    if end - since < MIN_DRAW_DAYS * 86400 or draw is None or draw.turnover_days is None:
-        return CheckResult(*key, NOT_ASSESSABLE, text=f"Bewertet ab {MIN_DRAW_DAYS} Tagen mit Ladungen.",
+    if days_ < 1 or draw is None or draw.turnover_days is None:
+        return CheckResult(*key, NOT_ASSESSABLE, text="Wert ab dem ersten vollen Tag mit Ladungen.",
                            origin=SOURCED, progress=prog)
     text = (f"Ihr zapft im Mittel ≈ {num(draw.mixed_l_day, '.0f')} l Duschwasser (40 °C) am Tag; damit ist der "
             f"Speicher etwa alle {num(draw.turnover_days, '.1f')} Tage einmal ausgetauscht. ")
+    if days_ < FULL_PATTERN_DAYS:
+        text += (f"Vorläufig aus {num(days_, '.1f')} Tagen; Wochentage und Wochenende gleichen sich erst nach "
+                 f"{FULL_PATTERN_DAYS} Tagen aus. ")
     expected = hh.expected_mixed_l(persons, dates)
     if expected:
         text += (f"Üblich für Ø {num(hh.persons_mean(persons, dates), '.1f')} Personen im Haushalt wären ≈ "
@@ -513,7 +521,10 @@ def check_dhw_draw(draw: Draw | None, volume_l: float | None, persons: list[hh.P
                  f"Wärmepumpe mit ≈ {num(draw.charge_kw, '.0f')} kW nach, eine laufende Dusche zieht ≈ "
                  f"{num(shower_kw, '.0f')} kW. Mehrere Duschen kurz hintereinander leeren den Speicher deshalb "
                  "schneller, als er nachlädt. ")
-    if draw.turnover_days <= STAGNATION_MAX_DAYS:
+    if days_ < MIN_DRAW_DAYS:
+        verdict = NOT_ASSESSABLE
+        text += f"Ob das Wasser länger als 72 h steht, ist erst nach {MIN_DRAW_DAYS} Tagen bewertbar."
+    elif draw.turnover_days <= STAGNATION_MAX_DAYS:
         verdict = OK
     else:
         verdict = HINT

@@ -15,7 +15,8 @@ from .result import CheckResult
 if TYPE_CHECKING:
     from .context import Context
 
-WINDOW, SECTION = "window", "section"
+# Zeitraum eines Audits: ganzes Fenster, ab dem letzten Ereignis, ab dem letzten Warmwasser-Ereignis (context.py)
+WINDOW, SECTION, DHW_SECTION = "window", "section", "dhw"
 
 
 @dataclass(frozen=True)
@@ -39,7 +40,7 @@ class AuditSpec:
     audit_id: str
     order: int
     color: str  # feste Audit-Farbe (Datenreife, Zeitstrahl), keine Ampelfarbe
-    section: str  # WINDOW: ganzes Fenster; SECTION: ab dem letzten Ereignis (Spezifikation 1.5)
+    section: str  # WINDOW: ganzes Fenster; SECTION: ab dem letzten Ereignis; DHW_SECTION: ab dem letzten Warmwasser-Ereignis
     roles: tuple[str, ...]  # alle Rollen, die das Audit (auch über Grundgrößen) liest
     required_roles: tuple[str, ...]  # ohne sie ist das Audit nicht sinnvoll; für die Einrichtung
     master_keys: tuple[str, ...]  # Stammdaten, die das Audit nutzt

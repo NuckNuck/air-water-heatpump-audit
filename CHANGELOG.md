@@ -25,6 +25,10 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
   50 °C immer gelb. Die Aktion schlägt zuerst die Legionellenschaltung vor.
 - **W4** nennt den Anteil des Verlusts an der geladenen Wärme.
 - **W5** empfiehlt kein festes Ladefenster am Nachmittag mehr, sondern eines passend zu den Duschzeiten.
+- **Audit Warmwasser** beginnt nur noch bei Ereignissen neu, die das Warmwasser betreffen (Warmwasser-Einstellung,
+  Umbau, Sonstiges). Bisher verwarf z. B. eine verstellte Heizkreispumpe auch die Warmwasser-Daten davor. Die Karte
+  zeigt je Audit das Ereignis, ab dem es rechnet.
+- **W6** zeigt die Zapfmenge ab dem ersten vollen Tag (vorläufig) und bewertet den Austausch ab 3 Tagen.
 
 ## [0.15.1] – 2026-10-31
 

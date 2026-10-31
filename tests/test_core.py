@@ -825,9 +825,23 @@ class RegistryTest(unittest.TestCase):
     def test_golden_report_unchanged(self):
         """Vergleichsbericht der synthetischen Anlage, erzeugt vor dem Umbau (tests/golden)."""
         golden = __import__("pathlib").Path(__file__).with_name("golden") / "synthetic_report.json"
-        # Die Vergleichsdatei kennt nur die ersten vier Audits; Warmwasser und Kosten kamen später dazu.
-        self.assertEqual(self.run_with(["data_basis", "efficiency", "flow_temperature", "capacity"]),
-                         __import__("json").loads(golden.read_text(encoding="utf-8")))
+        # Die Vergleichsdatei kennt nur die ersten vier Audits; Warmwasser und Kosten kamen später dazu, ebenso das
+        # Ereignis je Audit (es steht weiter auch unter „section“).
+        report = self.run_with(["data_basis", "efficiency", "flow_temperature", "capacity"])
+        for audit in report["audits"].values():
+            self.assertEqual(audit.pop("event"), None if audit is report["audits"]["data_basis"] else
+                             report["section"]["event"])
+        self.assertEqual(report, __import__("json").loads(golden.read_text(encoding="utf-8")))
+
+    def test_dhw_section_ignores_heating_events(self):
+        """Eine verstellte Heizkreispumpe beginnt den Abschnitt der Audits 1–3 neu, nicht den des Warmwassers."""
+        from audit_core.context import Context
+        events = [{"time": 5 * H, "kind": "pump_setting"}, {"time": 2 * H, "kind": "dhw_setting"}]
+        ctx = Context({}, 0, 10 * H, recorder_keep_days=None, long_term_days=None, heater_kw={}, master={},
+                      events=events, controls={}, tz="UTC")
+        self.assertEqual((ctx.section_start, ctx.dhw_section_start), (5 * H, 2 * H))
+        self.assertEqual(ctx.event_of("dhw")["kind"], "dhw_setting")
+        self.assertIsNone(ctx.event_of("window"))
 
     def test_each_audit_alone_with_only_its_roles(self):
         """Ein Audit allein, nur mit seinen angemeldeten Rollen, urteilt wie im Gesamtlauf."""
@@ -940,7 +954,11 @@ class DhwTest(unittest.TestCase):
         rare = w1.draw_of(charges[::6], 0, end, 200, 46.0)
         self.assertEqual(w1.check_dhw_draw(rare, 200, [], [], 0, end).verdict, HINT)
         self.assertEqual(w1.check_dhw_draw(draw, None, [], [], 0, end).verdict, NOT_ASSESSABLE)
-        self.assertEqual(w1.check_dhw_draw(draw, 200, [], [], 0, 5 * 24 * H).verdict, NOT_ASSESSABLE)
+        r = w1.check_dhw_draw(draw, 200, [], [], 0, 2 * 24 * H)
+        self.assertEqual((r.verdict, r.value), (NOT_ASSESSABLE, 1.6))
+        self.assertIn("Vorläufig aus 2,0 Tagen", r.text)
+        self.assertEqual(w1.check_dhw_draw(draw, 200, [], [], 0, 5 * 24 * H).verdict, OK)
+        self.assertEqual(w1.check_dhw_draw(draw, 200, [], [], 0, 12 * H).verdict, NOT_ASSESSABLE)
 
     def test_disinfection_frequency_and_heater(self):
         from audit_core import dhw as w1
