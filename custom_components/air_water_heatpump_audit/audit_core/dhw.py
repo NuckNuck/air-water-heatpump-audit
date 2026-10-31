@@ -15,8 +15,8 @@ from . import household as hh
 from .data_basis import heartbeat_gaps
 from .efficiency import KELVIN, MIN_LIFT_K, carnot_verdict
 from .heat import RHO_CP_KJ_PER_L_K, energy_kwh, time_mean
-from .result import (DERIVED, ELAPSED, HINT, INFO, NOT_ASSESSABLE, OK, PHYSICAL, RATE, SOURCED, CheckResult, count,
-                     num, progress)
+from .result import (DERIVED, ELAPSED, HINT, INFO, NOT_ASSESSABLE, OK, PHYSICAL, RATE, SOURCED, WARN, CheckResult,
+                     count, num, progress)
 from .series import Interval, Series, clip, combine, intervals_where, overlaps, subtract, total, value_at
 
 # Ereignisse, ab denen das Audit Warmwasser neu rechnet (Arten wie in den Ereignis-Untereinträgen)
@@ -35,16 +35,19 @@ HYGIENE_MIN_C = 50.0
 EFFICIENCY_MAX_C = 60.0
 DHW_PENALTY_PCT_PER_K = 1.4
 DISINFECTION_MAX_PER_WEEK = 2  # W3: öfter kostet Strom ohne Hygienegewinn
-# W2 unter 50 °C: grün, wenn der Speicher regelmäßig auf 60 °C aufgeheizt wird (Entscheid F226). Abstand aus den
-# Stammdaten, Vorgabe einmal pro Woche; ein Tag Spielraum für die Uhrzeit der Aufheizung.
+# W2 unter 50 °C: grün, wenn der Speicher regelmäßig auf 60 °C aufgeheizt wird (Entscheid F226). Kein Regelwerk nennt
+# einen Abstand (DVGW 2023 S. 15, UBA 2023 S. 5); Vorgabe einmal pro Woche als eigene Festlegung, im Stammdatum
+# einstellbar (Mitsubishi Ecodan ab Werk: alle 15 Tage). Ein Tag Spielraum für die Uhrzeit der Aufheizung.
 DISINFECTION_INTERVAL_DAYS = 7
 INTERVAL_SLACK_DAYS = 1
-# W6: Wasseraustausch. Steht Trinkwasser länger als 72 h, gilt der Betrieb nicht mehr als bestimmungsgemäß.
+# W6: Wasseraustausch. Bestimmungsgemäßer Betrieb heißt Austausch mindestens alle 7 Tage, besser alle 3 Tage
+# (DVGW-Information 2020; DVGW-Kompaktinfo 2024 S. 2).
 STAGNATION_MAX_DAYS = 3.0
+STAGNATION_WARN_DAYS = 7.0
 # Wert ab dem ersten vollen Tag; Urteil erst, wenn der Zeitraum die 72 h überspannt; Wochenmuster erst nach 7 Tagen
 MIN_DRAW_DAYS = 3
 FULL_PATTERN_DAYS = 7
-SHOWER_LPM = 8.0  # Mischwasser 40 °C je Minute an einer üblichen Dusche
+SHOWER_LPM = 10.0  # Mischwasser je Minute an einer üblichen Dusche: 10–12 l/min (Verbraucherzentrale NRW 2025)
 # W1: Arbeitszahl nur Warmwasser, Luft/Wasser im Bestand: Mittel 2,8, Spanne 2,1–3,5 (WP-QS S. 79)
 FIELD_DHW_COP, FIELD_DHW_COP_RANGE = 2.8, (2.1, 3.5)
 # W4: Bereitschaftsverlust aus dem Abkühlen in ruhigen Nachtstunden, auf die Prüfbedingung der EU-Kennzeichnung
@@ -523,14 +526,18 @@ def check_dhw_draw(draw: Draw | None, volume_l: float | None, persons: list[hh.P
                  "schneller, als er nachlädt. ")
     if days_ < MIN_DRAW_DAYS:
         verdict = NOT_ASSESSABLE
-        text += f"Ob das Wasser länger als 72 h steht, ist erst nach {MIN_DRAW_DAYS} Tagen bewertbar."
+        text += f"Ob das Wasser zu lange steht, ist erst nach {MIN_DRAW_DAYS} Tagen bewertbar."
     elif draw.turnover_days <= STAGNATION_MAX_DAYS:
         verdict = OK
-    else:
+    elif draw.turnover_days <= STAGNATION_WARN_DAYS:
         verdict = HINT
-        text += (f"Länger als {num(STAGNATION_MAX_DAYS * 24, '.0f')} h steht Trinkwasser nach den Regeln nicht mehr "
-                 "bestimmungsgemäß: regelmäßig auf 60 °C aufheizen; bleibt der Verbrauch dauerhaft so klein, beim nächsten "
-                 "Tausch einen kleineren Speicher wählen.")
+        text += (f"Empfohlen ist ein Austausch mindestens alle {num(STAGNATION_MAX_DAYS, 'g')} Tage; regelmäßiges "
+                 "Aufheizen auf 60 °C gleicht das aus.")
+    else:
+        verdict = WARN
+        text += (f"Länger als {num(STAGNATION_WARN_DAYS, 'g')} Tage steht Trinkwasser nach den Regeln nicht mehr "
+                 "bestimmungsgemäß: regelmäßig auf 60 °C aufheizen; bleibt der Verbrauch dauerhaft so klein, beim "
+                 "nächsten Tausch einen kleineren Speicher wählen.")
     details = {"mixed_l_day": round(draw.mixed_l_day), "tank_l_day": None if draw.tank_l_day is None else
                round(draw.tank_l_day), "charged_kwh_day": round(draw.charged_kwh_day, 2),
                "standby_kwh_day": None if draw.standby_kwh_day is None else round(draw.standby_kwh_day, 2),

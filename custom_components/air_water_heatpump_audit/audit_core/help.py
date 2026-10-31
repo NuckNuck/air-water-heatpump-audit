@@ -141,7 +141,7 @@ CHECK_HELP: dict[str, dict[str, str]] = {
                    "60 °C).",
            "rating": f"Grün von {_k(w1.HYGIENE_MIN_C)} bis {_k(w1.EFFICIENCY_MAX_C)} °C. Darunter grün, wenn der "
                      "Speicher regelmäßig auf 60 °C aufgeheizt wird (Abstand aus den Stammdaten, Vorgabe "
-                     f"{w1.DISINFECTION_INTERVAL_DAYS} Tage), sonst Gelb. Über {_k(w1.EFFICIENCY_MAX_C)} °C Gelb "
+                     f"{w1.DISINFECTION_INTERVAL_DAYS} Tage; kein Regelwerk nennt einen Abstand), sonst Gelb. Über {_k(w1.EFFICIENCY_MAX_C)} °C Gelb "
                      "(kostet Strom ohne Hygienegewinn). Je 1 K Fühlertoleranz. Gilt für Ein- und "
                      "Zweifamilienhäuser ohne Zirkulation; mit Zirkulation verlangen die Regeln 60 °C.",
            "source": "DVGW-Information Warmwasser 2023 (S. 11), Umweltbundesamt 2024; Effizienz: Fraunhofer ISE "
@@ -168,11 +168,12 @@ CHECK_HELP: dict[str, dict[str, str]] = {
                    "Bereitschaftsverlust, als Duschwasser mit 40 °C), wie oft der Speicherinhalt dabei ausgetauscht "
                    "wird und wie viele Liter ein voller Speicher hergibt. Mit den Personen aus den Stammdaten "
                    "kommt der übliche Bedarf zum Vergleich dazu.",
-           "rating": f"Grün, wenn der Speicherinhalt mindestens alle {_k(w1.STAGNATION_MAX_DAYS * 24)} h "
-                     f"ausgetauscht wird, sonst Gelb. Ab {w1.MIN_DRAW_DAYS} Tagen; braucht den Speicherinhalt in den "
-                     "Stammdaten.",
-           "source": "Stagnation nach den Regeln für Trinkwasser-Installationen; Mengen je Person: siehe "
-                     "Spezifikation."},
+           "rating": f"Grün, wenn der Speicherinhalt mindestens alle {_k(w1.STAGNATION_MAX_DAYS)} Tage "
+                     f"ausgetauscht wird, Gelb bis {_k(w1.STAGNATION_WARN_DAYS)} Tage, Rot darüber. Wert ab dem ersten "
+                     f"vollen Tag, Urteil ab {w1.MIN_DRAW_DAYS} Tagen; braucht den Speicherinhalt in den Stammdaten.",
+           "source": "DVGW: bestimmungsgemäßer Betrieb heißt Austausch mindestens alle 7, besser alle 3 Tage. Dusche "
+                     "40 l bei 40 °C (DIN EN 15450), Durchfluss 10 l/min (Verbraucherzentrale NRW); Bedarf je Person "
+                     "nach BWP-Leitfaden Trinkwassererwärmung."},
     # Audit 5 – Kosten
     "K1": {"what": "Was eine Kilowattstunde Wärme in der letzten Woche gekostet hat: Strom × Preis ÷ Wärme, mit "
                    "anteiligem Grundpreis des Wärmepumpenzählers.",

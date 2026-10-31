@@ -14,7 +14,7 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
   übliche Duschzeit und Anwesenheit – immer, Wechselwochen ab einem Startdatum, bestimmte Wochentage (auch jede
   zweite Woche) oder ein Anteil der Zeit.
 - **W6 Zapfmenge und Austausch**: Warmwasser pro Tag als Duschwasser 40 °C, Austausch des Speicherinhalts (gelb über
-  72 h), Vergleich mit dem üblichen Bedarf des Haushalts, Vorrat eines vollen Speichers bei 45/50/55 °C,
+  3 Tagen, rot über 7 Tagen nach DVGW), Vergleich mit dem üblichen Bedarf des Haushalts, Vorrat eines vollen Speichers bei 45/50/55 °C,
   Nachladetemperatur und Ladeleistung im Vergleich zu einer laufenden Dusche.
 - Stammdaten-Abschnitt **Warmwasser**: Speicherinhalt (bisher unter „Anlage“), Kaltwassertemperatur, Abstand der
   Aufheizung auf 60 °C.
@@ -29,6 +29,8 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
   Umbau, Sonstiges). Bisher verwarf z. B. eine verstellte Heizkreispumpe auch die Warmwasser-Daten davor. Die Karte
   zeigt je Audit das Ereignis, ab dem es rechnet.
 - **W6** zeigt die Zapfmenge ab dem ersten vollen Tag (vorläufig) und bewertet den Austausch ab 3 Tagen.
+- Werte mit Quellen belegt (Spezifikation 6.6): Dusche 40 l bei 40 °C und 10 l/min, Bedarf je Person nach dem
+  BWP-Leitfaden, Stagnation nach DVGW. Kleinkinder rechnen mit 2 statt 3 Bädern pro Woche.
 
 ## [0.15.1] – 2026-10-31
 

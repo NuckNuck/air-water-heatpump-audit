@@ -26,16 +26,22 @@ WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 PRESENCE_MODES = ("always", "rotation", "weekdays", "share")
 SHOWER_TIMES = ("morning", "midday", "evening", "varied")
 
-# Mischwasser an der Dusche und Kaltwasser (Bezugswerte, Quellen: docs/specification.md 6.6)
+# Mischwasser an der Dusche und Kaltwasser (Quellen: docs/specification.md 6.6). Kaltwasser 10 °C ist der
+# Planungswert (BWP 2019 S. 20); geliefert wird im Mittel eher 14 °C, das Stammdatum erlaubt den genaueren Wert.
 MIXED_C = 40.0
 COLD_WATER_C = 10.0
-# Liter Mischwasser (40 °C) je Vorgang und Grundbedarf je Person und Tag (Hände, Küche, Waschbecken)
+# Liter Mischwasser (40 °C) je Vorgang: Dusche 40 l (DIN EN 15450 Anh. E); Vollbad 103–140 l (DIN EN 15450, DIN 4708),
+# hier 120 l; Kinderbad bis 5 Jahre etwa die halbe Wanne (abgeleitet). Grundbedarf je Person und Tag für Hände, Küche
+# und Waschbecken abgeleitet aus den kleinen Zapfungen der Profile in DIN EN 15450.
 SHOWER_L = 40.0
 BATH_L = 120.0
-CHILD_BATH_L = 60.0  # Kinderbad bis 5 Jahre: halbe Wanne
+CHILD_BATH_L = 60.0
 BASE_L_PER_DAY = 10.0
-# Typische Gewohnheiten, wenn nichts eingetragen ist: (bis Alter, Duschen/Woche, Bäder/Woche)
-TYPICAL_HABITS = ((5, 0.0, 3.0), (11, 3.0, 1.0), (17, 6.0, 0.0), (200, 6.0, 0.0))
+# Typische Gewohnheiten, wenn nichts eingetragen ist: (bis Alter, Duschen/Woche, Bäder/Woche). Kleinkinder 2 Bäder
+# (BIÖG: Säuglinge 1–2 pro Woche); Erwachsene knapp an jedem Tag (43–52 % duschen täglich, Umfragen 2014/2024);
+# für Schulkinder gibt es keine Erhebung, die Werte sind abgeleitet. Zusammen mit dem Grundbedarf ergibt ein
+# Erwachsener ≈ 44 l Mischwasser am Tag, passend zum Faustwert 25 l bei 60 °C (BWP 2019 S. 23).
+TYPICAL_HABITS = ((5, 0.0, 2.0), (11, 3.0, 1.0), (17, 6.0, 0.0), (200, 6.0, 0.0))
 
 
 @dataclass(frozen=True)

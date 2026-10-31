@@ -951,8 +951,10 @@ class DhwTest(unittest.TestCase):
         self.assertEqual((r.verdict, r.value, r.details["persons_mean"]), (OK, 1.6, 2.5))
         self.assertEqual(r.details["reserve_l"], {"45": 233, "50": 267, "55": 300})
         self.assertIn("Nachgeladen wird erst", r.text)
-        rare = w1.draw_of(charges[::6], 0, end, 200, 46.0)
+        rare = w1.draw_of(charges[::6], 0, end, 200, None)  # 1,2 kWh am Tag → alle 6,7 Tage
         self.assertEqual(w1.check_dhw_draw(rare, 200, [], [], 0, end).verdict, HINT)
+        very_rare = w1.draw_of(charges[:1], 0, end, 200, None)
+        self.assertEqual(w1.check_dhw_draw(very_rare, 200, [], [], 0, end).verdict, WARN)
         self.assertEqual(w1.check_dhw_draw(draw, None, [], [], 0, end).verdict, NOT_ASSESSABLE)
         r = w1.check_dhw_draw(draw, 200, [], [], 0, 2 * 24 * H)
         self.assertEqual((r.verdict, r.value), (NOT_ASSESSABLE, 1.6))
@@ -1036,8 +1038,8 @@ class HouseholdTest(unittest.TestCase):
         toddler, adult, custom = hh.parse_persons([{"name": "T", "birth_year": 2023}, {"name": "A"},
                                                    {"name": "C", "showers_per_week": 14, "baths_per_week": 0}])
         on = date(2026, 11, 2)
-        self.assertEqual(toddler.habits(on), (0.0, 3.0))
-        self.assertAlmostEqual(toddler.mixed_l_per_day(on), 3 * 60 / 7 + 10)
+        self.assertEqual(toddler.habits(on), (0.0, 2.0))
+        self.assertAlmostEqual(toddler.mixed_l_per_day(on), 2 * 60 / 7 + 10)
         self.assertEqual(adult.habits(on), (6.0, 0.0))
         self.assertAlmostEqual(custom.mixed_l_per_day(on), 14 * 40 / 7 + 10)
         self.assertIsNone(hh.expected_mixed_l([], [on]))

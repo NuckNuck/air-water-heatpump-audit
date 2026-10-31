@@ -118,7 +118,7 @@ Ladung ist die Zeit, in der das Umschaltventil auf Warmwasser steht.
 | W3 Aufheizen auf 60 °C | Wie oft die Legionellenschaltung läuft und wie viel der Heizstab dabei braucht. Gelb bei mehr als zweimal pro Woche. Ob eine fehlende Aufheizung ein Problem ist, bewertet W2. |
 | W4 Speicherverlust | Wie viel Wärme der Speicher nachts verliert, umgerechnet auf die Klassen des Energielabels. Grün bis Klasse D (die Schätzung ist etwa eine Klasse unsicher). Braucht den Speicherinhalt. |
 | W5 Ladezeitpunkt | Ob zu einer kalten Tageszeit geladen wird; gelb, wenn Laden zur wärmsten Tageszeit mindestens 10 % des Warmwasserstroms sparen würde. Mit den Duschzeiten des Haushalts sagt der Text, ob ein Ladefenster passt. |
-| W6 Zapfmenge und Austausch | Wie viel Warmwasser der Haushalt am Tag braucht (als Duschwasser 40 °C), wie oft der Speicherinhalt ausgetauscht wird und wie viele Liter ein voller Speicher bei 45, 50 und 55 °C hergibt. Gelb, wenn das Wasser länger als 72 Stunden im Speicher steht. Mit den Personen des Haushalts kommt der übliche Bedarf zum Vergleich dazu. |
+| W6 Zapfmenge und Austausch | Wie viel Warmwasser der Haushalt am Tag braucht (als Duschwasser 40 °C), wie oft der Speicherinhalt ausgetauscht wird und wie viele Liter ein voller Speicher bei 45, 50 und 55 °C hergibt. Grün bei Austausch mindestens alle 3 Tage, gelb bis 7 Tage, rot darüber (DVGW). Mit den Personen des Haushalts kommt der übliche Bedarf zum Vergleich dazu. |
 
 ### Audit 5 – Kosten: Was kostet die Wärme, lohnt der Tarif?
 

@@ -225,7 +225,8 @@ _ACTIONS: dict[str, Callable[[CheckResult, dict], Action]] = {
                      "Vormittag bis Nachmittag).",
                      "Eine Woche beobachten: Reicht das Wasser nicht, das Fenster wieder breiter machen.",
                      _EVENT_STEP]),
-    "W6": _fixed(OWNER, "Das Wasser steht im Speicher länger als 72 Stunden.", steps=[
+    "W6": _fixed(OWNER, "Das Wasser steht lange im Speicher.",
+                 lambda r: f"Austausch mindestens alle 3 Tage{_today(r, '.1f')}", steps=[
         "Die Legionellenschaltung einschalten (alle 7 Tage 60 °C), solange so wenig gezapft wird.",
         "Bei längerer Abwesenheit vor dem ersten Duschen einmal auf 60 °C aufheizen.",
         "Bleibt der Verbrauch dauerhaft klein, beim nächsten Tausch einen kleineren Speicher wählen."]),
