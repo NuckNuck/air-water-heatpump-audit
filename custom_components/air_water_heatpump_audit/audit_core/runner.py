@@ -11,6 +11,7 @@ from . import days
 from . import readiness as rd
 from . import timeline as tl
 from .actions import attach_actions
+from .impact import annotate
 from .audits import BY_ID, REGISTRY
 from .context import HEATER_ROLES, ROLE_KEYS, Context, data_quality, section_start  # noqa: F401 (Schnittstelle)
 from .registry import AuditSpec
@@ -49,8 +50,10 @@ def run_audits(s: dict[str, Series], start: float, end: float, *, recorder_keep_
             spec.finish(ctx, results)
         since = ctx.since(spec.section)
         readiness[spec.audit_id] = rd.audit_readiness(since, results, end, tz)
+        with_actions = attach_actions(results, ctx.controls)
+        annotate(with_actions, ctx.year_basis)  # Wirkung in €/Jahr und Zielkonflikte (Spezifikation 1.10)
         report_audits[spec.audit_id] = {"verdict": overall(results), "dq": ctx.dq, "event": ctx.event_of(spec.section),
-                                        "checks": [r.as_dict() for r in attach_actions(results, ctx.controls)]}
+                                        "checks": [r.as_dict() for r in with_actions]}
     with_timeline = [a for a in specs if a.timeline]
     report = {
         "period": {"start": start, "end": end},

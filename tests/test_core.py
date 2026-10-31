@@ -1015,6 +1015,47 @@ class DhwTest(unittest.TestCase):
         self.assertIn("morgens geduscht", w1.check_dhw_timing(night, outdoor, 0, "UTC", morning).text)
 
 
+class ImpactTest(unittest.TestCase):
+    """Wirkung der Aktionen in kWh und €/Jahr, Zielkonflikte (Spezifikation 1.10)."""
+
+    class Basis:
+        def __init__(self, **kw):
+            self.ctx = type("Ctx", (), {"master": kw.pop("master", {})})()
+            self.electricity_kwh, self.dhw_electricity_kwh = kw.get("el", 4000.0), kw.get("dhw", 700.0)
+            self.heating_electricity_kwh = self.electricity_kwh - self.dhw_electricity_kwh
+            self.cop, self.dhw_cop, self.price = kw.get("cop", 3.5), 3.0, kw.get("price", 0.25)
+
+    def test_savings_and_costs_per_check(self):
+        from audit_core.impact import annotate
+        from audit_core.result import CheckResult
+        rs = [CheckResult("T1", "buffer_flow_loss", HINT, 3.5, "K", action={}),
+              CheckResult("W5", "dhw_timing", HINT, 10.8, "%", action={}),
+              CheckResult("W2", "dhw_temperature", HINT, 45.0, "°C", details={"interval_days": 7}, action={}),
+              CheckResult("C5", "backup_heater_share", HINT, 3.0, "%", action={}),
+              CheckResult("K3", "tariff_benefit", HINT, -40, "€/a", action={}),
+              CheckResult("E3", "carnot_efficiency", OK, 0.4, "", action=None)]
+        annotate(rs, self.Basis(master={"dhw_tank_volume_l": 200}))
+        t1, w5, w2, c5, k3, e3 = (r.action for r in rs)
+        self.assertEqual(t1["impact"], {"kwh_year": round(3300 * 2 * 0.025), "eur_year": round(165 * 0.25),
+                                        "basis": t1["impact"]["basis"]})
+        self.assertIn("Abgleich", t1["conflicts"][0])
+        self.assertEqual(w5["impact"]["kwh_year"], round(700 * 0.108))
+        self.assertIn("K4", w5["conflicts"][1])
+        # Legionellenschaltung alle 7 Tage: 52 × 200 l × 15 K → kostet
+        self.assertEqual(w2["impact"]["kwh_year"], -round(365 / 7 * 200 * 4.153 * 15 / 3600))
+        self.assertLess(w2["impact"]["eur_year"], 0)
+        self.assertEqual(c5["impact"]["kwh_year"], round(4000 * 0.01 * (1 - 1 / 3.5)))
+        self.assertEqual((k3["impact"]["kwh_year"], k3["impact"]["eur_year"]), (None, 40))
+        self.assertIsNone(e3)
+
+    def test_without_price_only_kwh(self):
+        from audit_core.impact import annotate
+        from audit_core.result import CheckResult
+        r = CheckResult("T6", "heating_curve_headroom", HINT, 21.0, "°C", action={})
+        annotate([r], self.Basis(price=None))
+        self.assertEqual((r.action["impact"]["kwh_year"], r.action["impact"]["eur_year"]), (round(3300 * 0.025), None))
+
+
 class HouseholdTest(unittest.TestCase):
     """Haushalt: Anwesenheit und erwarteter Warmwasserbedarf."""
 
@@ -1104,6 +1145,12 @@ class CostTest(unittest.TestCase):
         self.assertEqual(k1.check_tariff(r, self.MASTER | {"tariff_base_fee": 300}, False).verdict, HINT)
         self.assertEqual(k1.check_tariff(r, self.MASTER, True).verdict, NOT_ASSESSABLE)
         self.assertEqual(k1.degree_days(16.0), 0.0)
+        # Wohnfläche und Personen: 2845 kWh ÷ (1,2 × 100 m²) ≈ 24 kWh/m² → Klasse A+
+        r = k1.check_annual_cost(rows, outdoor, costs, self.MASTER | {"living_area_m2": 100}, tz, 0, 3.0)
+        self.assertEqual((r.details["electricity_kwh_m2"], r.details["energy_class"]), (28, "A+"))
+        self.assertEqual(r.details["cost_per_person_eur"], round((2845 * 0.25 + 73) / 3))
+        self.assertIn("Klasse A+", r.text)
+        self.assertEqual([k1.energy_class(x) for x in (29, 30, 99, 250)], ["A+", "A", "C", "H"])
 
     def test_price_timing_and_grid_lock(self):
         from audit_core import cost as k1

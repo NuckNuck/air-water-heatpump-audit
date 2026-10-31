@@ -21,6 +21,7 @@ from . import data_basis as d0
 from . import dhw as w1
 from . import days, heat
 from . import household as hh
+from . import impact
 from . import efficiency as e1
 from . import flow_temp as t2
 from .result import HINT, NOT_ASSESSABLE, OK, CheckResult
@@ -257,6 +258,11 @@ class Context:
     def outdoor_daily(self) -> Series:
         """Außentemperatur für Gradtage: Wetterdienst bevorzugt, Außenfühler wird durch Abtauen verfälscht (D10)."""
         return self.s["outdoor_temp_reference"] or self.s["outdoor_temp"]
+
+    @cached_property
+    def year_basis(self) -> impact.YearBasis:
+        """Jahreswerte für die Wirkung der Aktionen (impact.py)."""
+        return impact.YearBasis(self)
 
     # --- Tage --------------------------------------------------------------------------------------------------
     def full_days(self) -> list[tuple[float, float]]:

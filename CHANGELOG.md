@@ -7,6 +7,17 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
+## [0.17.0] – in Arbeit
+
+### Neu
+- **Wirkung je Aktion**: Gelbe und rote Prüfungen nennen, was ihre Aktion ungefähr im Jahr bringt oder kostet
+  (kWh Strom und €), z. B. Vorlauf senken (T1, T6), Ladezeit (W5), Heizstab (C5), Tarif (K3, K4) – und was die
+  Legionellenschaltung kostet (W2).
+- **Zielkonflikte** stehen bei der Aktion, z. B. „Der Speicher muss bis zum nächsten Duschen reichen (W6)“.
+- Die Karte zeigt oben **„Was am meisten bringt“**: bis zu fünf Aktionen nach Ersparnis.
+- Stammdatum **Wohnfläche**: K2 nennt Wärme und Strom je m² und die ungefähre Klasse im Energieausweis; mit den
+  Personen im Haushalt auch die Kosten je Person.
+
 ## [0.16.0] – in Arbeit
 
 ### Neu

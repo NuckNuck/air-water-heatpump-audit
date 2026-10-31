@@ -224,3 +224,14 @@ mit Hinweis „Empfohlen: zeigt, wie belastbar die anderen Urteile sind“ (F150
   Abschnitt eines Audits auf. Der Bericht trägt je Audit das Ereignis (`audits.<id>.event`), Sensor und Karte zeigen
   es je Audit.
 
+
+## Wirkung und Zielkonflikte (31.10.2026, Version 0.17.0)
+
+- `audit_core/impact.py` läuft im Runner nach `attach_actions` je Audit: `annotate(results, ctx.year_basis)`.
+  `YearBasis` (Grundgröße `year_basis` im `Context`) rechnet Jahresstrom, Warmwasser- und Heizstrom, Arbeitszahlen
+  und Preis einmal je Lauf.
+- Regeln je Prüfung in `_IMPACT` (kWh Strom, positiv = Ersparnis) und feste Sätze in `CONFLICTS`. Eine Regel liest
+  nur das eigene Ergebnis und Grundgrößen, nie das Ergebnis eines anderen Audits; so bleibt „Audit allein = Audit im
+  Gesamtlauf“ wahr.
+- Die Karte sortiert die Ersparnisse über alle gezeigten Audits selbst (`_priorities`); im Bericht gibt es dafür kein
+  eigenes Feld.

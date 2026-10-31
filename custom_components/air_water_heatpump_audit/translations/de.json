@@ -149,12 +149,14 @@
             "data": {
               "heating_hours": "Heizstunden pro Jahr",
               "room_temp_target": "Ziel-Raumtemperatur",
-              "heating_degree_days": "Gradtage pro Jahr"
+              "heating_degree_days": "Gradtage pro Jahr",
+              "living_area_m2": "Wohnfläche"
             },
             "data_description": {
               "heating_hours": "Stunden mit Außentemperatur unter der Heizgrenze (15 °C) am Standort, z. B. aus der Klimakarte des Bundesverbands Wärmepumpe. Für die Hochrechnung der Starts pro Jahr (C1).",
               "room_temp_target": "Gewünschte Temperatur im Bezugsraum (T6).",
-              "heating_degree_days": "Langjähriges Mittel der Gradtagzahl G20/15 am Standort, z. B. aus dem Gradtagzahlen-Rechner des IWU. Für die Hochrechnung aufs Jahr (K2)."
+              "heating_degree_days": "Langjähriges Mittel der Gradtagzahl G20/15 am Standort, z. B. aus dem Gradtagzahlen-Rechner des IWU. Für die Hochrechnung aufs Jahr (K2).",
+              "living_area_m2": "Für den Verbrauch je m² und die Klasse im Energieausweis (K2)."
             }
           },
           "cost": {

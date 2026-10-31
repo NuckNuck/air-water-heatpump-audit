@@ -1,6 +1,6 @@
 # Luft-Wasser-Wärmepumpen-Audit – Spezifikation
 
-Stand: Version 0.16.0. Fachliche Grundlage der Integration: was jede Prüfung misst, wann sie urteilt und woher jede
+Stand: Version 0.17.0. Fachliche Grundlage der Integration: was jede Prüfung misst, wann sie urteilt und woher jede
 Schwelle stammt. Die Abschnittsnummern verwenden auch die Kommentare im Code (z. B. „Spezifikation 1.5“).
 Aufbau des Codes und Entscheidungen zum Umbau auf Audit-Module: [`audit_modules_design.md`](audit_modules_design.md).
 
@@ -103,6 +103,7 @@ Options Flow in Abschnitten, dazu die Personen im Haushalt als Untereinträge (6
 | Standort und Komfort | `heating_hours` | Heizstunden pro Jahr am Standort (BWP-KK) | C1 |
 | Standort und Komfort | `heating_degree_days` | langjähriges Mittel der Gradtagzahl G20/15 am Standort (Kd/a) | K2 |
 | Standort und Komfort | `room_temp_target` | gewünschte Raumtemperatur | T6 |
+| Standort und Komfort | `living_area_m2` | Wohnfläche | K2 |
 | Kosten | `tariff_price` | Arbeitspreis des Wärmepumpenstroms (€/kWh); Vorschlag aus dem Energie-Dashboard, wenn dort der Zähler der Rolle `electricity_meter` als Netzbezug steht | K1–K3 |
 | Kosten | `tariff_base_fee` | zusätzlicher Grundpreis des Wärmepumpenzählers (€/a) | K1–K3 |
 | Kosten | `household_price` | Arbeitspreis des Haushaltsstroms (€/kWh) | K3 |
@@ -185,6 +186,38 @@ In der Tabelle füllt sich der Marker einer `not_assessable`-Prüfung mit `progr
 bewertbar ist, zeigt der Marker ihr Urteil.
 
 ---
+
+### 1.10 Wirkung und Zielkonflikte
+
+Die Audits urteilen einzeln; `audit_core/impact.py` ergänzt danach jede gelbe oder rote Aktion um eine grobe
+Wirkung in kWh Strom und €/Jahr (`action.impact`: `kwh_year`, `eur_year`, `basis` = Rechenweg) und um Sätze zu
+Zielkonflikten (`action.conflicts`). Die Karte zeigt beides an der Aktion und oben eine Liste „Was am meisten bringt“
+(bis zu fünf Aktionen mit Ersparnis, nach Euro sortiert). Gerechnet wird nur aus Grundgrößen und dem eigenen Ergebnis,
+damit ein Audit allein dieselbe Wirkung zeigt wie im Gesamtlauf.
+
+| Grundlage | Herkunft |
+|---|---|
+| Jahresstrom | Hochrechnung über die Gradtage wie K2 (`project_year`, ganzes Fenster), ab 14 gültigen Tagen |
+| Warmwasserstrom | Strom der Ladungen je Tag × 365 |
+| Heizstrom | Jahresstrom − Warmwasserstrom |
+| Preis | Mittel aus den Tageskosten (auch dynamisch), sonst `tariff_price`; ohne Preis nur kWh |
+
+| Prüfung | Wirkung | Rechenweg |
+|---|---|---|
+| T1 | Ersparnis | (Vorlaufverlust − 1,5 K) × 2,5 %/K × Heizstrom |
+| T6 | Ersparnis | 1 K × 2,5 %/K × Heizstrom (je Schritt der Heizkurve) |
+| W2 > 60 °C | Ersparnis | (T − 60 K) × 1,4 %/K × Warmwasserstrom |
+| W2 < 50 °C | Kosten | 365 ÷ Abstand × V · ρc · (60 °C − T), mit dem Heizstab (obere Grenze) |
+| W3 | Ersparnis | Aufheizungen über eine pro Woche × Heizstab-Strom je Aufheizung |
+| W4 | Ersparnis | Verlust über der Grenze Klasse C (bei heutiger Temperatur) × 8,76 ÷ Arbeitszahl Warmwasser |
+| W5 | Ersparnis | Einbuße × Warmwasserstrom; nur wenn ein Ladefenster zu den Duschzeiten passt |
+| C5 | Ersparnis | (Anteil − 2 %) × Jahresstrom × (1 − 1 ÷ Jahresarbeitszahl) |
+| K3 | Ersparnis | aus K3 (Tarifwechsel) |
+| K4 | Ersparnis | Jahresstrom × (gezahlter − mittlerer Preis) |
+
+Faustwerte wie in den Prüfungen (2–3 %/K Vorlauf, 1,4 %/K Warmwasser); die Wirkung ist `derived` und dient zum
+Sortieren. Zielkonflikte stehen fest je Prüfung (z. B. W2: mehr Hygiene kostet Strom, W4/W1; W5: Vorrat bis zum
+nächsten Duschen W6, günstigste gegen wärmste Stunde K4; T6: nur so weit, wie alle Räume warm bleiben).
 
 ## 2. Audit 0 – Datenbasis
 
@@ -425,7 +458,7 @@ Ziel: Den gemessenen Strom in Euro umrechnen: Was kostet eine Kilowattstunde Wä
 | ID | Key | Kennzahl | Gate | Urteil | Herkunft |
 |---|---|---|---|---|---|
 | K1 | `heat_price` | Wärmepreis der letzten 7 gültigen Tage in ct/kWh, mit Grundpreis-Anteil | 7 gültige Tage; Preis | `ok` ≤ Vergleichspreis × 1,10 · `hint` darüber · `info` ohne Vergleichspreis | `derived`: 10 % ≈ Messunsicherheit der Wärme; Nutzungsgrad Gas-Brennwert 0,86 auf Hs (DBU-BW). Wochenwert, im Winter höher als im Jahresmittel |
-| K2 | `annual_cost` | Strom, Kosten und Wärme im Jahr, Ersparnis gegen den Vergleich | 14 gültige Tage; `heating_degree_days` | `info` (Hochrechnung) | `sourced`: Gradtagzahl G20/15 (DWD-GT); Referenz Potsdam 3.666,8 Kd. Mindestens 14 Tage `derived` |
+| K2 | `annual_cost` | Strom, Kosten und Wärme im Jahr, Ersparnis gegen den Vergleich | 14 gültige Tage; `heating_degree_days` | `info` (Hochrechnung) | `sourced`: Gradtagzahl G20/15 (DWD-GT); Referenz Potsdam 3.666,8 Kd. Mindestens 14 Tage `derived`. Mit `living_area_m2` dazu Wärme und Strom je m² und die Klasse des Energieausweises nach Endenergie (GEG Anlage 10: A+ < 30, A < 50, B < 75, C < 100, D < 130, E < 160, F < 200, G < 250, H darüber; Strom ÷ (1,2 × Wohnfläche) nach GEG § 82 Abs. 2); mit Personen (6.6) die Kosten je Person |
 | K3 | `tariff_benefit` | Ersparnis des eigenen Wärmepumpentarifs: (`household_price` − `tariff_price`) × Jahresstrom aus K2 − `tariff_base_fee` | wie K2; beide Preise; kein `price_signal` | `ok` ≥ 0 · `hint` < 0 | `physical` (Rechnung) |
 | K4 | `price_timing` | gezahlter Mittelpreis gegen das Zeitmittel von `price_signal` | 7 Tage; Rolle `price_signal` | `ok` ≤ +3 % · `hint` darüber | `derived`: 3 % eigene Festlegung (Zufall einer Woche) |
 | K5 | `grid_lock` | Sperren pro Tag, Dauer, längste Sperre; Heizstab-Stunden während und bis 2 h nach einer Sperre | 7 Tage; Rolle `grid_lock` | `ok` · `hint`, wenn der Heizstab dabei läuft. Anzahl und Dauer nur im Text | `derived`; seit 2024 keine feste Höchstdauer, nur Mindestleistung 4,2 kW (BK6-22-300 Anl. 1 Ziff. 4.5.1; präventiv höchstens 2 h täglich bis Ende 2028, Ziff. 10.5). Die frühere Tarifregel „3 × 2 h“ ist ohne Primärquelle und wird nicht verwendet |
