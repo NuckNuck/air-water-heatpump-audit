@@ -52,6 +52,9 @@ was die zugeschalteten Audits anfordern (transitiv), jede höchstens einmal.
 | `pause_windows`, `circuit_offset` | `t2.pause_windows`, T2 | circuit_flow_temp; `sensor_offset`-Rollen | T1, T2 |
 | `daily_rows` | `e1.daily_rows` | electricity_meter, outdoor_temp; `heat_*`, `carnot_ideal` | Effizienz, Zeitstrahl |
 | `dhw_charges` | `w1.detect_charges` | dhw_active, dhw_tank_temp, electricity_meter; `heat_corrected`, `carnot_ideal`, `artifacts` | Warmwasser |
+| `dhw_quiet_windows`, `dhw_standby` | `w1.quiet_windows`, `w1.standby_w` | dhw_tank_temp, dhw_active; Stammdatum `dhw_tank_volume_l` | W4, W6 |
+| `dhw_draw` | `w1.draw_of` | `dhw_charges`, `dhw_standby`; `cold_water_c` | W2, W4, W6 |
+| `persons`, `dhw_dates` | `hh.parse_persons`, `hh.local_dates` | Stammdatum `household` (Untereinträge „Person“) | W5, W6 |
 | `day_costs`, `outdoor_daily` | `k1.day_cost` | price_signal, outdoor_temp_reference; `daily_rows` | Kosten |
 
 Grundsatz: **Eine Prüfung, deren Ergebnis andere brauchen (D4, D8, T2), wird als Grundgröße gerechnet; die Prüfung
@@ -204,7 +207,20 @@ mit Hinweis „Empfohlen: zeigt, wie belastbar die anderen Urteile sind“ (F150
   (Schritt „Tarif“); neue Stammdaten im Abschnitt „Kosten“ und `dhw_tank_volume_l`, `heating_degree_days`.
 - Der Arbeitspreis wird im Options Flow aus dem Energie-Dashboard vorgeschlagen (`config_flow.energy_price`), wenn dort
   der Zähler der Rolle `electricity_meter` als Netzbezug steht – HA-Wissen bleibt damit außerhalb des Kerns.
-- Ereignisse setzen auch diese Audits zurück (ein gemeinsamer `section_start`). Eine Auswahl je Ereignisart (z. B.
-  nur `dhw_setting` für Warmwasser) wäre fachlich genauer, bräuchte aber Abschnitte je Audit in `Context`.
+- Ereignisse setzten anfangs auch diese Audits zurück (ein gemeinsamer `section_start`). Seit 0.16.0 hat das Audit
+  Warmwasser einen eigenen Abschnitt (siehe unten).
 - Der Golden-Test vergleicht weiter nur die ersten vier Audits; „Audit allein“ und Registry-Test decken die neuen mit
   ab. Schwellen und Quellen: Spezifikation Abschnitte 6 und 7.
+
+## Haushalt und Abschnitte je Audit (31.10.2026, Version 0.16.0)
+
+- `audit_core/household.py`: Personen mit Anwesenheitsmuster und erwartetem Warmwasserbedarf, ohne HA-Bezug. HA legt
+  sie als Untereinträge `person` an; der Coordinator reicht sie als Stammdatum `household` (Liste von dicts) weiter.
+- Grundgrößen können andere Grundgrößen nutzen: `dhw_draw` braucht `dhw_standby` (W4); W2 und W4 lesen `dhw_draw` für
+  ihre Texte. Das ist der erste Schritt zu Prüfungen, die aufeinander verweisen; Wechselwirkungen mit Euro je Aktion
+  folgen als eigenes Vorhaben.
+- Abschnitte je Audit: `AuditSpec.section` kennt neben `window` und `section` jetzt `dhw`. `Context` führt dafür
+  `dhw_section_start`/`dhw_event` (nur Ereignisse aus `dhw.EVENT_KINDS`); `since()` und `event_of()` lösen den
+  Abschnitt eines Audits auf. Der Bericht trägt je Audit das Ereignis (`audits.<id>.event`), Sensor und Karte zeigen
+  es je Audit.
+
