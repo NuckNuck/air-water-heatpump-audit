@@ -1,6 +1,6 @@
 # Luft-Wasser-Wärmepumpen-Audit – Spezifikation
 
-Stand: Version 0.15.0. Fachliche Grundlage der Integration: was jede Prüfung misst, wann sie urteilt und woher jede
+Stand: Version 0.16.0. Fachliche Grundlage der Integration: was jede Prüfung misst, wann sie urteilt und woher jede
 Schwelle stammt. Die Abschnittsnummern verwenden auch die Kommentare im Code (z. B. „Spezifikation 1.5“).
 Aufbau des Codes und Entscheidungen zum Umbau auf Audit-Module: [`audit_modules_design.md`](audit_modules_design.md).
 
@@ -87,7 +87,7 @@ Rollen mit Text-Zustand: `controller_date`. Alle anderen werden als Zahl gelesen
 
 ### 1.4 Stammdaten
 
-Options Flow in vier Abschnitten. Leere optionale Felder heißen „unbekannt“; die abhängige Prüfung ist dann
+Options Flow in Abschnitten, dazu die Personen im Haushalt als Untereinträge (6.6). Leere optionale Felder heißen „unbekannt“; die abhängige Prüfung ist dann
 `not_assessable` mit dem Grund „Stammdaten fehlen“, nie ein Ersatzwert eines anderen Geräts.
 
 | Abschnitt | Key | Bedeutung | Genutzt von |
@@ -97,7 +97,9 @@ Options Flow in vier Abschnitten. Leere optionale Felder heißen „unbekannt“
 | Anlage | `circuit_flow_max_lpm` | größter Förderstrom der Heizkreispumpe laut Datenblatt; T3 kappt die Mischungsbilanz darauf | T3 |
 | Anlage | `capacity_min_table` | kleinste Heizleistung (kW) je Vorlauftemperatur und Außentemperatur, YAML, linear interpoliert | C4 |
 | Anlage | `immersion_heater_kw`, `booster_heater_kw`, `booster_heater_2_kw` | Leistung von Heizstab und Zusatzheizungen | C5, W3 |
-| Anlage | `dhw_tank_volume_l` | Nenninhalt des Warmwasserspeichers | W4 |
+| Warmwasser | `dhw_tank_volume_l` | Nenninhalt des Warmwasserspeichers | W4, W6 |
+| Warmwasser | `cold_water_c` | Kaltwassertemperatur im Jahresmittel, Vorgabe 10 °C | W6 |
+| Warmwasser | `dhw_disinfection_interval_days` | Abstand der Aufheizung auf 60 °C, Vorgabe 7 Tage | W2 |
 | Standort und Komfort | `heating_hours` | Heizstunden pro Jahr am Standort (BWP-KK) | C1 |
 | Standort und Komfort | `heating_degree_days` | langjähriges Mittel der Gradtagzahl G20/15 am Standort (Kd/a) | K2 |
 | Standort und Komfort | `room_temp_target` | gewünschte Raumtemperatur | T6 |
@@ -357,16 +359,49 @@ bereitet, und wie viel der Speicher verliert. Warmwasser macht im Feld 19 % der 
 | ID | Key | Kennzahl | Gate | Urteil | Herkunft |
 |---|---|---|---|---|---|
 | W1 | `dhw_efficiency` | Gütegrad über alle Ladungen (ideale ÷ gemessene Strommenge), dazu Arbeitszahl mit Feldvergleich | 7 Ladungen mit Zählerwerten; D8 ≤ 0,1 kWh; `dq` ≠ `low` | wie E3: `ok` 0,30–0,50 · `hint` < 0,30 · `warn` < 0,24 nur mit belastbarem D4 · `info` > 0,50 | `derived`: Der Gütegrad rechnet den höheren Hub heraus, es gelten die Schwellen von E3. Feldvergleich Arbeitszahl nur Warmwasser L/W im Bestand: Mittel 2,8, 2,1–3,5 (WPQS S. 79, n = 18); heatpumpmonitor.org Median 3,09 (OEM) |
-| W2 | `dhw_temperature` | Median der Speichertemperatur nach dem Laden über alle Ladungen | 7 Ladungen | `hint` < 49 °C (Hygiene) · `hint` > 61 °C (Effizienz) · sonst `ok`, unter 50 °C mit Anmerkung „knapp“ | `sourced`: untere Betriebstemperatur 50 °C für Ein- und Zweifamilienhäuser ohne Zirkulation, mit Zirkulation gelten 60 °C (DVGW-INFO S. 11); eine periodische Aufheizung ersetzt das nicht sicher (UBA-TWW S. 5); UBA empfiehlt durchgängig über 55 °C (S. 4). Über 60 °C verlangt keine Regel mehr, jedes Kelvin kostet ≈ 1,4 % (WPQS S. 171). Je 1 K Fühlertoleranz |
-| W3 | `disinfection` | Aufheizungen auf 60 °C pro Woche, Heizstab-Strom dabei (Einschaltdauer bis 30 min nach der Ladung × `immersion_heater_kw`) | 14 Tage | `ok` · `hint` > 2 pro Woche · `ok` mit Text, wenn schon der Median (W2) ≥ 59 °C ist | `derived`; keine Pflicht und keine Häufigkeit in den Regeln (DVGW-INFO S. 15, UBA-TWW S. 5) – keine Aufheizung ist kein Befund |
+| W2 | `dhw_temperature` | Median der Speichertemperatur nach dem Laden über alle Ladungen; unter 49 °C dazu der Abstand der Aufheizungen auf 60 °C im ganzen Fenster | 7 Ladungen; unter 49 °C ohne Aufheizung erst nach `dhw_disinfection_interval_days` + 1 Tag | unter 49 °C: `ok`, wenn alle Abstände (auch bis jetzt) ≤ Stammdatum + 1 Tag, sonst `hint` (Entscheid F226) · `hint` > 61 °C (Effizienz) · sonst `ok`, unter 50 °C mit Anmerkung „knapp“; Text nennt den Austausch aus W6 | `sourced`: untere Betriebstemperatur 50 °C für Ein- und Zweifamilienhäuser ohne Zirkulation, mit Zirkulation gelten 60 °C (DVGW-INFO S. 11); eine periodische Aufheizung ersetzt das nicht sicher (UBA-TWW S. 5); UBA empfiehlt durchgängig über 55 °C (S. 4). Ein Intervall für die Aufheizung nennt kein Regelwerk (DVGW-INFO S. 15, UBA-TWW S. 5); Vorgabe 7 Tage ist eigene Festlegung (`derived`), Mitsubishi Ecodan ab Werk 15 Tage (MEL-FTC6 S. 26). Über 60 °C verlangt keine Regel mehr, jedes Kelvin kostet ≈ 1,4 % (WPQS S. 171). Je 1 K Fühlertoleranz |
+| W3 | `disinfection` | Aufheizungen auf 60 °C pro Woche, Heizstab-Strom dabei (Einschaltdauer bis 30 min nach der Ladung × `immersion_heater_kw`) | 14 Tage | `ok` · `hint` > 2 pro Woche · `ok` mit Text, wenn schon der Median (W2) ≥ 59 °C ist | `derived`; keine Pflicht und keine Häufigkeit in den Regeln (DVGW-INFO S. 15, UBA-TWW S. 5) – keine Aufheizung ist hier kein Befund, unter 50 °C bewertet sie W2 |
 | W4 | `standby_loss` | Warmhalteverlust aus dem Abkühlen in ruhigen Nächten: S = V · ρc · ΣΔT ÷ Σt, umgerechnet auf 45 K (Speicher 65 °C, Raum 20 °C angenommen), mit Effizienzklasse | 5 ruhige Nächte und 15 h; Stammdatum `dhw_tank_volume_l`; Speicher ≥ 10 K über 20 °C | `ok` bis Klassengrenze D · `hint` darüber; Text nennt Klasse und kWh/Tag | `physical`; Klassen nach EU-812 Anh. II Tab. 2 (S < a + b·V^0,4); Mindestanforderung für neue Speicher Klasse C (EU-814, [sekundär]); eine Klasse Toleranz, weil 0,5-K-Fühler und angenommene Raumtemperatur die Schätzung etwa eine Klasse unsicher machen (grün im Zweifel). Prüfbedingung 45 K [sekundär] |
-| W5 | `dhw_timing` | Einbuße nach Carnot, weil bei kälterer Luft geladen wird als im Mittel der wärmsten drei Stunden desselben Tages, gewichtet mit der Wärme je Ladung | 7 Ladungen mit Außentemperatur (Wetterdienst bevorzugt) | `ok` < 10 % · `hint` ≥ 10 % (gerundeter Wert) | `physical`: Carnot-COP T_Senke ÷ (T_Senke − T_außen), ≈ 2,0–2,5 %/K bei 45 K Hub; 10 % eigene Festlegung (`derived`): darunter ist ein Zeitfenster am Nachmittag den Komfortverlust kaum wert |
+| W5 | `dhw_timing` | Einbuße nach Carnot, weil bei kälterer Luft geladen wird als im Mittel der wärmsten drei Stunden desselben Tages, gewichtet mit der Wärme je Ladung | 7 Ladungen mit Außentemperatur (Wetterdienst bevorzugt) | `ok` < 10 % · `hint` ≥ 10 % (gerundeter Wert) | `physical`: Carnot-COP T_Senke ÷ (T_Senke − T_außen), ≈ 2,0–2,5 %/K bei 45 K Hub; 10 % eigene Festlegung (`derived`): darunter ist ein Ladefenster den Komfortverlust kaum wert. Duscht der Haushalt überwiegend morgens (6.6), sagt der Text, dass ein Fenster am Nachmittag bis zum nächsten Morgen reichen muss |
+| W6 | `dhw_draw` | Zapfmenge: (geladene Wärme − Bereitschaftsverlust aus W4) je Tag, als Mischwasser 40 °C und als Liter bei Speichertemperatur; Austausch = Speicherinhalt ÷ Liter je Tag; dazu Vorrat eines vollen Speichers V·(T − T_kalt)/(40 − T_kalt) bei heutiger Temperatur, 50 und 55 °C, Nachladetemperatur (Median der Speichertemperatur bei Ladebeginn), Ladeleistung gegen eine Dusche (10 l/min) und Bedarf laut Haushalt (6.6) | Wert ab 1 vollem Tag (vorläufig bis 7 Tage); Urteil ab 3 Tagen; Stammdatum `dhw_tank_volume_l` | `ok` Austausch ≤ 3 Tage · `hint` ≤ 7 Tage · `warn` darüber | `sourced`: bestimmungsgemäßer Betrieb = Austausch mindestens alle 7, besser alle 3 Tage (DVGW-STAG 2020, DVGW-TWIN-2024 S. 2). Für den Speicherinhalt nennt keine Regel eine eigene Frist; er wird wie das Wasser im Netz behandelt. Ohne W4 zählt die ganze geladene Wärme, der Text sagt das |
 
-**Gesamturteil Audit 4:** schlechtestes Urteil aus W1–W5. Zeitstrahl: Gütegrad der Ladungen je Tag mit den Bändern
+**Abschnitt:** Das Audit rechnet ab dem letzten Ereignis der Arten `dhw_setting`, `hardware` oder `other`; Ereignisse
+am Heizkreis (Heizkurve, Ventile, Abgleich, Pumpe) ändern am Warmwasser nichts und beginnen es nicht neu.
+
+**Gesamturteil Audit 4:** schlechtestes Urteil aus W1–W6. Zeitstrahl: Gütegrad der Ladungen je Tag mit den Bändern
 von E3.
 
 Nicht im Umfang: Zirkulationsverluste (WPQS S. 84: 32 % der geladenen Wärme bei 5 Anlagen) lassen sich ohne
 Zirkulationsfühler nicht von Speicherverlusten trennen; sie erscheinen in W4 als hoher Verlust.
+
+### 6.6 Haushalt
+
+Personen als Untereinträge (`person`): Name, Geburtsjahr, Duschen und Bäder pro Woche (leer = typisch fürs Alter),
+übliche Duschzeit (`morning`, `midday`, `evening`, `varied`) und Anwesenheit:
+
+| `presence` | Felder | Anwesend an einem Tag |
+|---|---|---|
+| `always` | – | immer |
+| `rotation` | `weeks_present`, `weeks_absent`, `rotation_start` | in den ersten `weeks_present` Wochen jedes Zyklus ab `rotation_start` (auch rückwärts) |
+| `weekdays` | `weekdays`, `every_n_weeks`, `rotation_start` | an diesen Wochentagen in jeder n-ten Woche ab dem Anker |
+| `share` | `share_pct` | mit diesem Anteil an jedem Tag |
+
+Erwarteter Bedarf je Person und Tag als Mischwasser 40 °C: (Duschen · 40 l + Bäder · Wanne) ÷ 7 + 10 l Grundbedarf,
+gewichtet mit der Anwesenheit und gemittelt über die Tage des Abschnitts.
+
+| Größe | Wert | Herkunft |
+|---|---|---|
+| Dusche | 40 l bei 40 °C | DIN EN 15450 Anh. E [sekundär über BWP-TWE S. 17] |
+| Durchfluss Dusche | 10 l/min (normal 10–12, Sparbrause < 9) | VZ-NRW |
+| Vollbad | 120 l; Normen 103 l (DIN EN 15450) bis 140 l (DIN 4708) | `derived` aus [sekundär] |
+| Kinderbad bis 5 Jahre | 60 l (etwa halbe Wanne) | `derived` |
+| Grundbedarf (Hände, Küche) | 10 l/Tag | `derived` aus den kleinen Zapfungen der Profile in DIN EN 15450 |
+| Gewohnheiten nach Alter | bis 5 J.: 2 Bäder/Woche (BIÖG: Säuglinge 1–2); 6–11 J.: 3 Duschen + 1 Bad; ab 12 J.: 6 Duschen | Kinder `derived` (keine Erhebung); Erwachsene: 43–52 % duschen täglich (Herstellerumfragen) |
+| Plausibilität | Erwachsener ≈ 44 l Mischwasser/Tag ≙ 25 l bei 60 °C | BWP-TWE S. 23 |
+| Kaltwasser | 10 °C Planungswert; real im Mittel ≈ 14 °C | BWP-TWE S. 20; Viega/SBZ 2019 [sekundär] |
+
+Nicht im Umfang (eigenes Issue): Schulferien je Person – Kinder getrennter Eltern können in einem anderen Bundesland
+zur Schule gehen; in den Ferien ändern sich oft Anwesenheit und Gewohnheiten.
 
 ---
 
@@ -427,6 +462,12 @@ Status: [gelesen] = selbst gelesen, [sekundär] = nur über Zusammenfassungen, F
 | ISE-HPC-2026 | Bavia Bampi, Avci, Wapler, Günther, Nienborg (Fraunhofer ISE): „Investigation of the effect of storage operation in Single-Family Homes with Separate Tanks for Space Heating and DHW“, 15th IEA Heat Pump Conference 2026, doi:10.23697/r0dk-ep45 | [gelesen] |
 | DVGW-INFO | DVGW: Information „Energieeinsparungen im Warmwasserbereich in Trinkwasser-Installationen – geht das?“, März 2023. https://www.dvgw.de/medien/dvgw/leistungen/publikationen/energiesparen-warmwasser-dvgw-langfassung.pdf | [gelesen] |
 | UBA-TWW | Umweltbundesamt: Fact Sheet „Trinkwarmwasserkonzepte für Gebäude mit einer Wärmepumpenheizung“, Januar 2024. https://www.umweltbundesamt.de/publikationen/trinkwarmwasserkonzepte-fuer-gebaeude-einer | [gelesen] |
+| DVGW-STAG | DVGW: Information zum bestimmungsgemäßen Betrieb von Trinkwasser-Installationen, 08.05.2020. https://www.dvgw.de/medien/dvgw/covid19/dvgw-information-trinkwasser-installation-coronavirus.pdf | [gelesen] |
+| DVGW-TWIN-2024 | DVGW: Kompaktinformation Stagnation und Wiederinbetriebnahme, März 2024 (Versorger-Kopie). https://evf.de/dateien/netze/twin-stagnation-wiederinbetriebnahme-maerz2024.pdf | [gelesen] |
+| BWP-TWE | Bundesverband Wärmepumpe: Leitfaden Trinkwassererwärmung, 2019. https://www.waermepumpe.de/uploads/tx_bcpageflip/BWP_LF_TWW_2019_02.pdf | [gelesen]; zitiert DIN EN 15450 |
+| VZ-NRW | Verbraucherzentrale NRW: Warmes Wasser sparen, 2025. https://www.verbraucherzentrale.nrw/de-x-simple/energie/warmes-wasser-sparen-88554 | [gelesen] |
+| BIÖG | Bundesinstitut für Öffentliche Gesundheit, kindergesundheit-info.de: Baden. https://www.kindergesundheit-info.de/themen/entwicklung/0-12-monate/babys-pflege/baden/ | [gelesen] |
+| MEL-FTC6 | Mitsubishi Electric: Ecodan FTC6 Installationshandbuch, Doc. 685702, Jan. 2025, PDF-S. 26, 76 (UK-Ausgabe) | [gelesen], Herstellerangabe |
 | W 551 | DVGW-Arbeitsblatt W 551 (Kleinanlagen: 60 °C Reglertemperatur empfohlen), kostenpflichtig, über Fachpresse | [sekundär] |
 | EU-812 | Delegierte Verordnung (EU) Nr. 812/2013, Anhang II Tabelle 2 (Effizienzklassen Warmwasserspeicher). https://www.legislation.gov.uk/eur/2013/812/annex/II/adopted | [gelesen] |
 | EU-814 | Verordnung (EU) Nr. 814/2013 (Ökodesign Warmwasserspeicher: Warmhalteverlust ab 2017 höchstens Klasse C); Prüfbedingung 45 K über EN 12897 | [sekundär] |

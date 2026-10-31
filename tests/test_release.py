@@ -16,7 +16,9 @@ class ReleaseTest(unittest.TestCase):
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         versions = re.findall(r"^## \[(\d+\.\d+\.\d+)\]", changelog, flags=re.MULTILINE)
         self.assertTrue(versions, "CHANGELOG.md ohne Versionsabschnitt")
-        self.assertEqual(versions[0], manifest["version"], "neueste Changelog-Version ≠ manifest.json")
+        # Ein Pre-Release (0.16.0b1) gehört zum Abschnitt seiner Zielversion (0.16.0)
+        target = re.match(r"\d+\.\d+\.\d+", manifest["version"]).group(0)
+        self.assertEqual(versions[0], target, "neueste Changelog-Version ≠ manifest.json")
 
 
 if __name__ == "__main__":

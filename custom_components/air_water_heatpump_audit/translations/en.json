@@ -117,8 +117,7 @@
               "capacity_min_table": "Minimum capacity from data sheet",
               "immersion_heater_kw": "Immersion heater power",
               "booster_heater_kw": "Booster heater 1 power",
-              "booster_heater_2_kw": "Booster heater 2 power",
-              "dhw_tank_volume_l": "Hot water tank volume"
+              "booster_heater_2_kw": "Booster heater 2 power"
             },
             "data_description": {
               "hydraulic_separation": "How heat pump and heating circuit are connected. Decides whether the buffer loss (T1) is checked.",
@@ -127,10 +126,23 @@
               "capacity_min_table": "Smallest heating capacity in kW per flow temperature and outdoor temperature (C4). Format (YAML): one line per flow temperature, below it indented outdoor: kW, e.g. \"35:\" followed by \"-7: 3.9\", \"2: 3.5\", \"7: 3.5\". Values in between are interpolated linearly.",
               "immersion_heater_kw": "Electric immersion heater in the cylinder (C5).",
               "booster_heater_kw": "Electric booster heater in the heating circuit (C5).",
-              "booster_heater_2_kw": "Second booster stage, if present (C5).",
-              "dhw_tank_volume_l": "Nominal volume from the rating plate (W4)."
+              "booster_heater_2_kw": "Second booster stage, if present (C5)."
             },
             "description": "Manufacturer data from the data sheet or installation manual."
+          },
+          "dhw": {
+            "name": "Hot water",
+            "description": "Tank and hygiene.",
+            "data": {
+              "dhw_tank_volume_l": "Hot water tank volume",
+              "cold_water_c": "Cold water temperature",
+              "dhw_disinfection_interval_days": "Heat to 60 °C every"
+            },
+            "data_description": {
+              "dhw_tank_volume_l": "Nominal volume from the rating plate (W4, W6).",
+              "cold_water_c": "Annual mean; 10 °C without a better value (W6).",
+              "dhw_disinfection_interval_days": "If the tank stays below 50 °C, W2 is green as long as it is heated to 60 °C at least this often. Legionella setting on the controller."
+            }
           },
           "site": {
             "name": "Site and comfort",
@@ -607,6 +619,16 @@
           "info": "Info",
           "not_assessable": "Not assessable"
         }
+      },
+      "dhw_draw": {
+        "name": "W6 hot water use and turnover",
+        "state": {
+          "ok": "OK",
+          "hint": "Hint",
+          "warn": "Warning",
+          "info": "Info",
+          "not_assessable": "Not assessable"
+        }
       }
     }
   },
@@ -658,6 +680,33 @@
         "capacity": "Capacity – does the heat pump fit the house?",
         "dhw": "Hot water – efficient, hygienic and at the right time?",
         "cost": "Cost – what does the heat cost, is the tariff worth it?"
+      }
+    },
+    "presence": {
+      "options": {
+        "always": "Always",
+        "rotation": "Alternating weeks (e.g. 1 week here, 1 week there)",
+        "weekdays": "Certain days (e.g. every other weekend)",
+        "share": "Share of time"
+      }
+    },
+    "shower_time": {
+      "options": {
+        "morning": "Morning",
+        "midday": "Midday",
+        "evening": "Evening",
+        "varied": "Varies"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
       }
     }
   },
@@ -719,6 +768,91 @@
       },
       "abort": {
         "reconfigure_successful": "Event saved."
+      }
+    },
+    "person": {
+      "entry_type": "Household member",
+      "initiate_flow": {
+        "user": "Add person"
+      },
+      "step": {
+        "user": {
+          "title": "Household member",
+          "description": "For the hot water demand (W5, W6). The audit compares the measured use with what is usual for this household.",
+          "data": {
+            "name": "Name",
+            "birth_year": "Year of birth",
+            "presence": "Lives here",
+            "showers_per_week": "Showers per week",
+            "baths_per_week": "Baths per week",
+            "shower_time": "Usually showers"
+          },
+          "data_description": {
+            "name": "Only to tell people apart, e.g. first name or “child 1”.",
+            "birth_year": "For typical habits by age if showers and baths are left empty. Small children take baths rather than showers.",
+            "presence": "When the person lives here, e.g. alternating weeks for children who also live with the other parent.",
+            "showers_per_week": "Leave empty for a typical value by age.",
+            "baths_per_week": "Leave empty for a typical value by age.",
+            "shower_time": "For the charging time (W5): an afternoon window does not fit if people shower in the morning."
+          }
+        },
+        "reconfigure": {
+          "title": "Change person",
+          "description": "For the hot water demand (W5, W6).",
+          "data": {
+            "name": "Name",
+            "birth_year": "Year of birth",
+            "presence": "Lives here",
+            "showers_per_week": "Showers per week",
+            "baths_per_week": "Baths per week",
+            "shower_time": "Usually showers"
+          },
+          "data_description": {
+            "name": "Only to tell people apart, e.g. first name or “child 1”.",
+            "birth_year": "For typical habits by age if showers and baths are left empty. Small children take baths rather than showers.",
+            "presence": "When the person lives here, e.g. alternating weeks for children who also live with the other parent.",
+            "showers_per_week": "Leave empty for a typical value by age.",
+            "baths_per_week": "Leave empty for a typical value by age.",
+            "shower_time": "For the charging time (W5): an afternoon window does not fit if people shower in the morning."
+          }
+        },
+        "presence": {
+          "title": "Presence",
+          "description": "Details of the chosen pattern.",
+          "data": {
+            "weeks_present": "Weeks here in a row",
+            "weeks_absent": "Weeks elsewhere after that",
+            "rotation_start": "Start of a week here",
+            "weekdays": "Days",
+            "every_n_weeks": "Every n-th week",
+            "share_pct": "Share of time here"
+          },
+          "data_description": {
+            "rotation_start": "A day on which a period here begins (may be in the past); the pattern repeats from there. For “certain days” the anchor for “every n-th week”.",
+            "every_n_weeks": "1 = every week, 2 = every other week (e.g. every other weekend).",
+            "share_pct": "If no fixed pattern fits: rough share, e.g. 30 %."
+          }
+        },
+        "reconfigure_presence": {
+          "title": "Presence",
+          "description": "Details of the chosen pattern.",
+          "data": {
+            "weeks_present": "Weeks here in a row",
+            "weeks_absent": "Weeks elsewhere after that",
+            "rotation_start": "Start of a week here",
+            "weekdays": "Days",
+            "every_n_weeks": "Every n-th week",
+            "share_pct": "Share of time here"
+          },
+          "data_description": {
+            "rotation_start": "A day on which a period here begins (may be in the past); the pattern repeats from there. For “certain days” the anchor for “every n-th week”.",
+            "every_n_weeks": "1 = every week, 2 = every other week (e.g. every other weekend).",
+            "share_pct": "If no fixed pattern fits: rough share, e.g. 30 %."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Person saved."
       }
     }
   }

@@ -7,6 +7,31 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
+## [0.16.0] – in Arbeit
+
+### Neu
+- **Personen im Haushalt** als Untereinträge: Geburtsjahr, Duschen und Bäder pro Woche (leer = typisch fürs Alter),
+  übliche Duschzeit und Anwesenheit – immer, Wechselwochen ab einem Startdatum, bestimmte Wochentage (auch jede
+  zweite Woche) oder ein Anteil der Zeit.
+- **W6 Zapfmenge und Austausch**: Warmwasser pro Tag als Duschwasser 40 °C, Austausch des Speicherinhalts (gelb über
+  3 Tagen, rot über 7 Tagen nach DVGW), Vergleich mit dem üblichen Bedarf des Haushalts, Vorrat eines vollen Speichers bei 45/50/55 °C,
+  Nachladetemperatur und Ladeleistung im Vergleich zu einer laufenden Dusche.
+- Stammdaten-Abschnitt **Warmwasser**: Speicherinhalt (bisher unter „Anlage“), Kaltwassertemperatur, Abstand der
+  Aufheizung auf 60 °C.
+- Release-Action: Ein Tag mit Zusatz (z. B. `v0.16.0b1`) wird ein Pre-Release.
+
+### Geändert
+- **W2**: Unter 50 °C grün, wenn der Speicher regelmäßig auf 60 °C aufgeheizt wird, sonst gelb; bisher war unter
+  50 °C immer gelb. Die Aktion schlägt zuerst die Legionellenschaltung vor.
+- **W4** nennt den Anteil des Verlusts an der geladenen Wärme.
+- **W5** empfiehlt kein festes Ladefenster am Nachmittag mehr, sondern eines passend zu den Duschzeiten.
+- **Audit Warmwasser** beginnt nur noch bei Ereignissen neu, die das Warmwasser betreffen (Warmwasser-Einstellung,
+  Umbau, Sonstiges). Bisher verwarf z. B. eine verstellte Heizkreispumpe auch die Warmwasser-Daten davor. Die Karte
+  zeigt je Audit das Ereignis, ab dem es rechnet.
+- **W6** zeigt die Zapfmenge ab dem ersten vollen Tag (vorläufig) und bewertet den Austausch ab 3 Tagen.
+- Werte mit Quellen belegt (Spezifikation 6.6): Dusche 40 l bei 40 °C und 10 l/min, Bedarf je Person nach dem
+  BWP-Leitfaden, Stagnation nach DVGW. Kleinkinder rechnen mit 2 statt 3 Bädern pro Woche.
+
 ## [0.15.1] – 2026-10-31
 
 ### Behoben

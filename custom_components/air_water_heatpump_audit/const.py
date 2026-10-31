@@ -69,10 +69,13 @@ CONF_TARIFF_BASE_FEE = "tariff_base_fee"
 CONF_HOUSEHOLD_PRICE = "household_price"
 CONF_REFERENCE_FUEL_PRICE = "reference_fuel_price"
 CONF_REFERENCE_EFFICIENCY = "reference_efficiency"
+CONF_COLD_WATER_C = "cold_water_c"
+CONF_DHW_DISINFECTION_INTERVAL_DAYS = "dhw_disinfection_interval_days"
 # Abschnitte des Options-Formulars; gespeichert werden die Optionen flach.
 OPTION_SECTIONS: dict[str, tuple[str, ...]] = {
     "plant": (CONF_HYDRAULIC_SEPARATION, CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_CAPACITY_MIN_TABLE, CONF_IMMERSION_HEATER_KW,
-              CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW, CONF_DHW_TANK_VOLUME_L),
+              CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW),
+    "dhw": (CONF_DHW_TANK_VOLUME_L, CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS),
     "site": (CONF_HEATING_HOURS, CONF_HEATING_DEGREE_DAYS, CONF_ROOM_TEMP_TARGET),
     "cost": (CONF_TARIFF_PRICE, CONF_TARIFF_BASE_FEE, CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE,
              CONF_REFERENCE_EFFICIENCY),
@@ -110,10 +113,13 @@ DEFAULT_OPTIONS = {
     # Jahresnutzungsgrad der früheren Heizung, bezogen auf den abgerechneten Brennwert: Feldmittel Gas-Brennwertkessel
     # 0,86 (DBU-Feldtest, 60 Anlagen); nur wirksam, wenn auch ein Brennstoffpreis eingetragen ist
     CONF_REFERENCE_EFFICIENCY: 0.86,
+    CONF_COLD_WATER_C: 10.0,  # Kaltwasser im Jahresmittel (W6)
+    CONF_DHW_DISINFECTION_INTERVAL_DAYS: 7,  # W2: Abstand der Aufheizungen auf 60 °C, wenn der Speicher kühler ist
 }
 MASTER_KEYS = (CONF_HYDRAULIC_SEPARATION, CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_ROOM_TEMP_TARGET, CONF_CAPACITY_MIN_TABLE,
                CONF_HEATING_HOURS, CONF_DHW_TANK_VOLUME_L, CONF_HEATING_DEGREE_DAYS, CONF_TARIFF_PRICE,
-               CONF_TARIFF_BASE_FEE, CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY)
+               CONF_TARIFF_BASE_FEE, CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY,
+               CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS)
 
 # Ereignisse (Spezifikation 1.5) als Untereinträge des Config Entry
 SUBENTRY_EVENT = "event"
@@ -130,6 +136,24 @@ EVENT_KIND_LABELS = {
            "hydraulic_balancing": "Hydraulic balancing", "pump_setting": "Pump setting changed",
            "dhw_setting": "Hot water setting", "hardware": "Hardware change", "other": "Other"},
 }
+
+# Personen im Haushalt als Untereinträge (Warmwasserbedarf, Audit Warmwasser); Felder wie audit_core.household
+SUBENTRY_PERSON = "person"
+CONF_PERSON_NAME = "name"
+CONF_BIRTH_YEAR = "birth_year"
+CONF_PRESENCE = "presence"
+CONF_WEEKS_PRESENT = "weeks_present"
+CONF_WEEKS_ABSENT = "weeks_absent"
+CONF_ROTATION_START = "rotation_start"
+CONF_WEEKDAYS = "weekdays"
+CONF_EVERY_N_WEEKS = "every_n_weeks"
+CONF_SHARE_PCT = "share_pct"
+CONF_SHOWERS_PER_WEEK = "showers_per_week"
+CONF_BATHS_PER_WEEK = "baths_per_week"
+CONF_SHOWER_TIME = "shower_time"
+# Felder des zweiten Schritts je Anwesenheitsmuster
+PRESENCE_FIELDS = {"always": (), "rotation": (CONF_WEEKS_PRESENT, CONF_WEEKS_ABSENT, CONF_ROTATION_START),
+                   "weekdays": (CONF_WEEKDAYS, CONF_EVERY_N_WEEKS, CONF_ROTATION_START), "share": (CONF_SHARE_PCT,)}
 
 VERDICTS = ["ok", "hint", "warn", "info", "not_assessable"]
 

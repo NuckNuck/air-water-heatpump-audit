@@ -18,7 +18,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .audit_core.help import CHECK_HELP
 from .audit_core.audits import BY_ID
-from .audit_core.registry import WINDOW
 from .const import CONF_AUDIT, DOMAIN, SUBENTRY_AUDIT, VERDICTS, audit_title, language
 from .coordinator import AirWaterAuditConfigEntry, AirWaterAuditCoordinator
 
@@ -121,8 +120,8 @@ class AuditSensor(_Base):
                                   "eta": _iso(ready["eta"]) if ready["eta"] is not None else None,
                                   "checks": [c | {"eta": _iso(c["eta"]) if c["eta"] is not None else None}
                                              for c in ready["checks"]]}
-        if BY_ID[self._audit].section != WINDOW and (event := data.get("section", {}).get("event")):
-            # Audits 1–3 rechnen ab dem letzten Ereignis (Spezifikation 1.5)
+        if event := audit.get("event"):
+            # Audits rechnen ab dem letzten Ereignis, das sie betrifft (Spezifikation 1.5)
             attrs["section"] = {"start": _iso(event["time"]), "kind": event["kind"], "title": event.get("title"),
                                 "note": event.get("note")}
         if self._audit == "data_basis" and "heat" in data:

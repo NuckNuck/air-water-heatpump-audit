@@ -49,7 +49,7 @@ def run_audits(s: dict[str, Series], start: float, end: float, *, recorder_keep_
             spec.finish(ctx, results)
         since = ctx.since(spec.section)
         readiness[spec.audit_id] = rd.audit_readiness(since, results, end, tz)
-        report_audits[spec.audit_id] = {"verdict": overall(results), "dq": ctx.dq,
+        report_audits[spec.audit_id] = {"verdict": overall(results), "dq": ctx.dq, "event": ctx.event_of(spec.section),
                                         "checks": [r.as_dict() for r in attach_actions(results, ctx.controls)]}
     with_timeline = [a for a in specs if a.timeline]
     report = {

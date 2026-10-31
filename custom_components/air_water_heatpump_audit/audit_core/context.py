@@ -6,7 +6,9 @@ deren Ergebnis andere brauchen (D2, D4, D8, T2), ist selbst eine Grundgröße; d
 nur an. So rechnet z. B. die Effizienz mit dem Offset, auch wenn das Datenbasis-Audit abgeschaltet ist.
 
 Zwei Zeiträume: `start` (ganzes Fenster: Fühler, Datenbasis, Zeitstrahl) und `section_start` (ab dem letzten
-Ereignis: Verhalten der Anlage, Spezifikation 1.5). Grundgrößen mit `_window` gelten fürs ganze Fenster.
+Ereignis: Verhalten der Anlage, Spezifikation 1.5). Grundgrößen mit `_window` gelten fürs ganze Fenster. Das Audit
+Warmwasser beginnt nur bei Ereignissen neu, die das Warmwasser betreffen (`dhw_section_start`): Eine verstellte
+Heizkreispumpe ändert nichts daran, wie viel geduscht wird.
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ from . import cycles as c3
 from . import data_basis as d0
 from . import dhw as w1
 from . import days, heat
+from . import household as hh
 from . import efficiency as e1
 from . import flow_temp as t2
 from .result import HINT, NOT_ASSESSABLE, OK, CheckResult
@@ -34,9 +37,11 @@ ROLE_KEYS = (
 HEATER_ROLES = ("immersion_heater", "booster_heater", "booster_heater_2")
 
 
-def section_start(events: list[dict], start: float, end: float) -> tuple[float, dict | None]:
-    """Beginn des aktuellen Abschnitts: letztes Ereignis im Fenster (Spezifikation 1.5), sonst Fensterbeginn."""
-    inside = [e for e in events if start < e["time"] <= end]
+def section_start(events: list[dict], start: float, end: float,
+                  kinds: tuple[str, ...] | None = None) -> tuple[float, dict | None]:
+    """Beginn des aktuellen Abschnitts: letztes Ereignis im Fenster (Spezifikation 1.5), sonst Fensterbeginn.
+    kinds: nur Ereignisse dieser Arten zählen; None = alle."""
+    inside = [e for e in events if start < e["time"] <= end and (kinds is None or e.get("kind") in kinds)]
     if not inside:
         return start, None
     last = max(inside, key=lambda e: e["time"])
@@ -67,6 +72,7 @@ class Context:
         self.s = {k: s.get(k) or [] for k in ROLE_KEYS}
         self.start, self.end = start, end
         self.section_start, self.event = section_start(events or [], start, end)
+        self.dhw_section_start, self.dhw_event = section_start(events or [], start, end, w1.EVENT_KINDS)
         self.recorder_keep_days, self.long_term_days = recorder_keep_days, long_term_days
         self.heater_kw = heater_kw
         self.master = master or {}
@@ -74,7 +80,11 @@ class Context:
         self.tz = tz
 
     def since(self, section: str) -> float:
-        return self.start if section == "window" else self.section_start
+        return {"window": self.start, "dhw": self.dhw_section_start}.get(section, self.section_start)
+
+    def event_of(self, section: str) -> dict | None:
+        """Das Ereignis, ab dem ein Audit mit diesem Zeitraum rechnet; None = ganzes Fenster."""
+        return {"window": None, "dhw": self.dhw_event}.get(section, self.event)
 
     # --- Datenbasis -------------------------------------------------------------------------------------------
     @cached_property
@@ -196,11 +206,43 @@ class Context:
 
     @cached_property
     def dhw_charges(self) -> list[w1.Charge]:
-        return self._charges(self.section_start)
+        return self._charges(self.dhw_section_start)
 
     @cached_property
     def dhw_charges_window(self) -> list[w1.Charge]:
-        return self.dhw_charges if self.section_start <= self.start else self._charges(self.start)
+        return self.dhw_charges if self.dhw_section_start <= self.start else self._charges(self.start)
+
+    @cached_property
+    def dhw_quiet_windows(self) -> list[tuple[float, float, float, float]]:
+        s = self.s
+        return w1.quiet_windows(s["dhw_tank_temp"], s["dhw_active"], s["heartbeat"], self.artifacts,
+                                self.dhw_section_start, self.end, self.tz)
+
+    @cached_property
+    def dhw_standby(self) -> tuple[float, float] | None:
+        """(Bereitschaftsverlust W, Speichertemperatur) aus W4, None solange zu wenige ruhige Nächte."""
+        return w1.standby_w(self.dhw_quiet_windows, self.master.get("dhw_tank_volume_l"))
+
+    @cached_property
+    def cold_water_c(self) -> float:
+        value = self.master.get("cold_water_c")
+        return hh.COLD_WATER_C if value is None else float(value)
+
+    @cached_property
+    def dhw_draw(self) -> w1.Draw | None:
+        """Zapfmenge im Abschnitt (W6); auch W2 und W4 nutzen sie für ihre Texte."""
+        standby = self.dhw_standby
+        return w1.draw_of(self.dhw_charges, self.dhw_section_start, self.end, self.master.get("dhw_tank_volume_l"),
+                          standby[0] if standby else None, self.cold_water_c)
+
+    # --- Haushalt ----------------------------------------------------------------------------------------------
+    @cached_property
+    def persons(self) -> list[hh.Person]:
+        return hh.parse_persons(self.master.get("household"))
+
+    @cached_property
+    def dhw_dates(self) -> list:
+        return hh.local_dates(self.dhw_section_start, self.end, self.tz)
 
     # --- Kosten (Audit 5) --------------------------------------------------------------------------------------
     @cached_property
