@@ -139,10 +139,11 @@ CHECK_HELP: dict[str, dict[str, str]] = {
                      f"{_k(w1.FIELD_DHW_COP)}."},
     "W2": {"what": "Wie warm der Speicher nach dem Laden ist (Median der normalen Ladungen, ohne Aufheizen auf "
                    "60 °C).",
-           "rating": f"Gelb unter {_k(w1.HYGIENE_MIN_C)} °C (Hygiene; eine Legionellenschaltung gleicht das nicht "
-                     f"sicher aus) und über {_k(w1.EFFICIENCY_MAX_C)} °C (kostet Strom ohne Hygienegewinn). Je 1 K "
-                     "Fühlertoleranz. Gilt für Ein- und Zweifamilienhäuser ohne Zirkulation; mit Zirkulation "
-                     "verlangen die Regeln 60 °C.",
+           "rating": f"Grün von {_k(w1.HYGIENE_MIN_C)} bis {_k(w1.EFFICIENCY_MAX_C)} °C. Darunter grün, wenn der "
+                     "Speicher regelmäßig auf 60 °C aufgeheizt wird (Abstand aus den Stammdaten, Vorgabe "
+                     f"{w1.DISINFECTION_INTERVAL_DAYS} Tage), sonst Gelb. Über {_k(w1.EFFICIENCY_MAX_C)} °C Gelb "
+                     "(kostet Strom ohne Hygienegewinn). Je 1 K Fühlertoleranz. Gilt für Ein- und "
+                     "Zweifamilienhäuser ohne Zirkulation; mit Zirkulation verlangen die Regeln 60 °C.",
            "source": "DVGW-Information Warmwasser 2023 (S. 11), Umweltbundesamt 2024; Effizienz: Fraunhofer ISE "
                      "WP-QS."},
     "W3": {"what": "Wie oft der Speicher auf 60 °C aufgeheizt wird (Legionellenschutz) und wie viel Strom der "
@@ -158,10 +159,20 @@ CHECK_HELP: dict[str, dict[str, str]] = {
                      "Braucht den Speicherinhalt in den Stammdaten und 5 ruhige Nächte.",
            "source": "Physikalisch; Klassengrenzen aus der EU-Verordnung 812/2013."},
     "W5": {"what": "Ob der Speicher zu einer kalten Tageszeit geladen wird: Vergleich mit den wärmsten drei Stunden "
-                   "desselben Tages. Wärmere Luft macht die Wärmepumpe effizienter.",
-           "rating": f"Gelb, wenn ein Ladefenster am Nachmittag mindestens {_k(w1.TIMING_HINT_PCT)} % des "
+                   "desselben Tages. Wärmere Luft macht die Wärmepumpe effizienter. Mit den Duschzeiten aus den "
+                   "Stammdaten sagt der Text, ob ein Ladefenster zum Haushalt passt.",
+           "rating": f"Gelb, wenn Laden zur wärmsten Tageszeit mindestens {_k(w1.TIMING_HINT_PCT)} % des "
                      "Warmwasserstroms sparen würde (nach Carnot).",
            "source": "Physikalisch (Carnot), Schwelle abgeleitet."},
+    "W6": {"what": "Wie viel Warmwasser der Haushalt am Tag zapft (aus der geladenen Wärme abzüglich "
+                   "Bereitschaftsverlust, als Duschwasser mit 40 °C), wie oft der Speicherinhalt dabei ausgetauscht "
+                   "wird und wie viele Liter ein voller Speicher hergibt. Mit den Personen aus den Stammdaten "
+                   "kommt der übliche Bedarf zum Vergleich dazu.",
+           "rating": f"Grün, wenn der Speicherinhalt mindestens alle {_k(w1.STAGNATION_MAX_DAYS * 24)} h "
+                     f"ausgetauscht wird, sonst Gelb. Ab {w1.MIN_DRAW_DAYS} Tagen; braucht den Speicherinhalt in den "
+                     "Stammdaten.",
+           "source": "Stagnation nach den Regeln für Trinkwasser-Installationen; Mengen je Person: siehe "
+                     "Spezifikation."},
     # Audit 5 – Kosten
     "K1": {"what": "Was eine Kilowattstunde Wärme in der letzten Woche gekostet hat: Strom × Preis ÷ Wärme, mit "
                    "anteiligem Grundpreis des Wärmepumpenzählers.",

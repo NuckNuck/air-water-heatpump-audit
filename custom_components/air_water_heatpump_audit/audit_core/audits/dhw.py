@@ -27,11 +27,23 @@ def _w3(ctx: Context):
                                  ctx.end)
 
 
+def _w2(ctx: Context):
+    draw = ctx.dhw_draw
+    return w1.check_dhw_temperature(ctx.dhw_charges, ctx.section_start, ctx.end, ctx.s["dhw_setpoint"],
+                                    ctx.dhw_charges_window, ctx.start, ctx.master.get("dhw_disinfection_interval_days"),
+                                    draw.turnover_days if draw and ctx.end - ctx.section_start >= w1.MIN_DRAW_DAYS * 86400
+                                    else None)
+
+
 def _w4(ctx: Context):
-    s = ctx.s
-    windows = w1.quiet_windows(s["dhw_tank_temp"], s["dhw_active"], s["heartbeat"], ctx.artifacts, ctx.section_start,
-                               ctx.end, ctx.tz)
-    return w1.check_standby_loss(windows, ctx.master.get("dhw_tank_volume_l"), ctx.section_start)
+    draw = ctx.dhw_draw
+    return w1.check_standby_loss(ctx.dhw_quiet_windows, ctx.master.get("dhw_tank_volume_l"), ctx.section_start,
+                                 draw.charged_kwh_day if draw else None)
+
+
+def _w6(ctx: Context):
+    return w1.check_dhw_draw(ctx.dhw_draw, ctx.master.get("dhw_tank_volume_l"), ctx.persons, ctx.section_dates,
+                             ctx.section_start, ctx.end, ctx.cold_water_c)
 
 
 AUDIT = AuditSpec(
@@ -41,17 +53,18 @@ AUDIT = AuditSpec(
            # Grundgrößen Fühler-Offset (D4) und Datenqualität (D2, D8)
            "compressor_running", "pump_running", "defrost"),
     required_roles=("dhw_active", "dhw_tank_temp"),
-    master_keys=("dhw_tank_volume_l", "immersion_heater_kw"),
+    master_keys=("dhw_tank_volume_l", "immersion_heater_kw", "cold_water_c", "dhw_disinfection_interval_days",
+                 "household"),
     names={"de": "Warmwasser", "en": "Hot water"},
     checks=(
         CheckSpec("W1", "dhw_efficiency", lambda ctx: w1.check_dhw_efficiency(
             ctx.dhw_charges, ctx.dq, ctx.offset_robust, ctx.meter_step, ctx.section_start)),
-        CheckSpec("W2", "dhw_temperature", lambda ctx: w1.check_dhw_temperature(
-            ctx.dhw_charges, ctx.section_start, ctx.end, ctx.s["dhw_setpoint"])),
+        CheckSpec("W2", "dhw_temperature", _w2),
         CheckSpec("W3", "disinfection", _w3),
         CheckSpec("W4", "standby_loss", _w4),
         CheckSpec("W5", "dhw_timing", lambda ctx: w1.check_dhw_timing(ctx.dhw_charges, ctx.outdoor_daily,
-                                                                       ctx.section_start, ctx.tz)),
+                                                                       ctx.section_start, ctx.tz, ctx.persons)),
+        CheckSpec("W6", "dhw_draw", _w6),
     ),
     timeline=TimelineSpec(scale=_scale, point=_point,
                           metric_names={"de": "Gütegrad Warmwasser", "en": "Hot water Carnot efficiency"}),

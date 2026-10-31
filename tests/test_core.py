@@ -882,10 +882,11 @@ class DhwTest(unittest.TestCase):
         cool = [self.charge(d, 45.0) for d in range(9)]
         r = w1.check_dhw_temperature(cool, 0, end, [(0, 45.0)])
         self.assertEqual(r.verdict, HINT)
-        self.assertIn("Umweltbundesamt", r.text)
-        # Aufheizen auf 60 °C ersetzt die Betriebstemperatur nicht und zählt nicht in den Median
+        self.assertIn("nicht zu sehen", r.text)
+        # Aufheizen auf 60 °C zählt nicht in den Median
         r = w1.check_dhw_temperature(cool + [self.charge(8, 60.0, hour=16)], 0, end, [])
-        self.assertEqual((r.verdict, r.value), (HINT, 45.0))
+        self.assertEqual((r.verdict, r.value), (OK, 45.0))
+        self.assertIn("regelmäßig auf 60 °C", r.text)
         self.assertEqual(w1.check_dhw_temperature([self.charge(d, 49.5) for d in range(9)], 0, end, []).verdict, OK)
         self.assertEqual(w1.check_dhw_temperature([self.charge(d, 55.0) for d in range(9)], 0, end, []).verdict, OK)
         r = w1.check_dhw_temperature([self.charge(d, 62.0) for d in range(9)], 0, end, [])
@@ -893,6 +894,53 @@ class DhwTest(unittest.TestCase):
         self.assertIn("Heizstab", r.text)
         always = w1.check_disinfection([self.charge(d, 61.0) for d in range(14)], [], 3.0, 0, 14 * 24 * H)
         self.assertEqual((always.verdict, always.value), (OK, None))
+
+    def test_temperature_below_50_depends_on_regular_disinfection(self):
+        from audit_core import dhw as w1
+        cool = [self.charge(d, 45.0) for d in range(30)]
+        # zu kurz, um das Fehlen zu beurteilen: 7 Tage Abstand + 1 Tag Spielraum
+        r = w1.check_dhw_temperature(cool[:8], 0, 8 * 24 * H, [])
+        self.assertEqual((r.verdict, r.value, r.progress["need"]), (NOT_ASSESSABLE, 45.0, 192))
+        weekly = [self.charge(d, 60.0, hour=16) for d in (2, 9, 16, 23)]
+        r = w1.check_dhw_temperature(cool, 0, 30 * 24 * H, [], cool + weekly, 0, 7, 1.8)
+        self.assertEqual(r.verdict, OK)
+        self.assertIn("alle 1,8 Tage", r.text)
+        # letzte Aufheizung zu lange her
+        r = w1.check_dhw_temperature(cool, 0, 30 * 24 * H, [], cool + weekly[:2], 0, 7)
+        self.assertEqual((r.verdict, r.details["days_since_disinfection"]), (HINT, 20.3))
+        # Abstand aus den Stammdaten: alle 15 Tage reicht dann
+        fortnight = [self.charge(d, 60.0, hour=16) for d in (5, 20)]
+        self.assertEqual(w1.check_dhw_temperature(cool, 0, 30 * 24 * H, [], cool + fortnight, 0, 15).verdict, OK)
+        self.assertEqual(w1.check_dhw_temperature(cool, 0, 30 * 24 * H, [], cool + fortnight, 0, 7).verdict, HINT)
+
+    def test_draw_turnover_and_reserve(self):
+        from datetime import date, timedelta
+        from audit_core import dhw as w1
+        from audit_core import household as hh
+        end = 10 * 24 * H
+        # zwei Ladungen am Tag zu je 3 kWh, 40 min → 6 kWh/Tag geladen; Verlust 46 W ≈ 1,1 kWh/Tag
+        charges = [Charge for d in range(10) for Charge in (self.charge(d, 45.0, heat=3.0, hour=7.0),
+                                                              self.charge(d, 45.0, heat=3.0, hour=18.0))]
+        for c in charges:
+            c.tank_before = 39.5
+        draw = w1.draw_of(charges, 0, end, 200, 46.0)
+        self.assertAlmostEqual(draw.drawn_kwh_day, 6.0 - 1.104, places=3)
+        self.assertEqual(round(draw.mixed_l_day), 141)
+        self.assertEqual(round(draw.turnover_days, 1), 1.6)
+        self.assertEqual((draw.trigger_c, round(draw.charge_kw, 1)), (39.5, 4.5))
+        d0 = date(2026, 11, 2)
+        dates = [d0 + timedelta(days=i) for i in range(14)]
+        persons = hh.parse_persons([{"name": "A", "birth_year": 1985}, {"name": "B", "birth_year": 1987},
+                                    {"name": "K", "birth_year": 2016, "presence": "rotation", "weeks_present": 1,
+                                     "weeks_absent": 1, "rotation_start": "2026-11-02"}])
+        r = w1.check_dhw_draw(draw, 200, persons, dates, 0, end)
+        self.assertEqual((r.verdict, r.value, r.details["persons_mean"]), (OK, 1.6, 2.5))
+        self.assertEqual(r.details["reserve_l"], {"45": 233, "50": 267, "55": 300})
+        self.assertIn("Nachgeladen wird erst", r.text)
+        rare = w1.draw_of(charges[::6], 0, end, 200, 46.0)
+        self.assertEqual(w1.check_dhw_draw(rare, 200, [], [], 0, end).verdict, HINT)
+        self.assertEqual(w1.check_dhw_draw(draw, None, [], [], 0, end).verdict, NOT_ASSESSABLE)
+        self.assertEqual(w1.check_dhw_draw(draw, 200, [], [], 0, 5 * 24 * H).verdict, NOT_ASSESSABLE)
 
     def test_disinfection_frequency_and_heater(self):
         from audit_core import dhw as w1
@@ -941,6 +989,42 @@ class DhwTest(unittest.TestCase):
         self.assertEqual(r.details["colder_k"], 10.0)
         noon = [self.charge(d, hour=13.0) for d in range(8)]
         self.assertEqual(w1.check_dhw_timing(noon, outdoor, 0, "UTC").value, 0.0)
+        from audit_core import household as hh
+        morning = hh.parse_persons([{"name": "A", "shower_time": "morning"}, {"name": "B", "shower_time": "evening",
+                                                                             "showers_per_week": 3}])
+        self.assertIn("morgens geduscht", w1.check_dhw_timing(night, outdoor, 0, "UTC", morning).text)
+
+
+class HouseholdTest(unittest.TestCase):
+    """Haushalt: Anwesenheit und erwarteter Warmwasserbedarf."""
+
+    def test_presence_patterns(self):
+        from datetime import date
+        from audit_core import household as hh
+        rot, days_, share = hh.parse_persons([
+            {"name": "K", "presence": "rotation", "weeks_present": 2, "weeks_absent": 1, "rotation_start": "2026-11-02"},
+            {"name": "W", "presence": "weekdays", "weekdays": ["fri", "sat", "sun"], "every_n_weeks": 2,
+             "rotation_start": "2026-11-02"},
+            {"name": "S", "presence": "share", "share_pct": 30}])
+        self.assertEqual([rot.presence_on(date(2026, 11, d)) for d in (2, 15, 16, 23)], [1, 1, 0, 1])
+        self.assertEqual([days_.presence_on(date(2026, 11, d)) for d in (6, 9, 13, 20)], [1, 0, 0, 1])
+        self.assertEqual(share.presence_on(date(2026, 11, 2)), 0.3)
+        # vor dem Anker zählt das Muster rückwärts weiter
+        self.assertEqual(rot.presence_on(date(2026, 10, 26)), 0)
+
+    def test_habits_by_age_and_expected_demand(self):
+        from datetime import date
+        from audit_core import household as hh
+        toddler, adult, custom = hh.parse_persons([{"name": "T", "birth_year": 2023}, {"name": "A"},
+                                                   {"name": "C", "showers_per_week": 14, "baths_per_week": 0}])
+        on = date(2026, 11, 2)
+        self.assertEqual(toddler.habits(on), (0.0, 3.0))
+        self.assertAlmostEqual(toddler.mixed_l_per_day(on), 3 * 60 / 7 + 10)
+        self.assertEqual(adult.habits(on), (6.0, 0.0))
+        self.assertAlmostEqual(custom.mixed_l_per_day(on), 14 * 40 / 7 + 10)
+        self.assertIsNone(hh.expected_mixed_l([], [on]))
+        self.assertEqual(round(hh.reserve_mixed_l(200, 45)), 233)
+        self.assertEqual(hh.parse_persons([{"birth_year": "x"}]), [])
 
 
 class CostTest(unittest.TestCase):

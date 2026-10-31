@@ -1,5 +1,7 @@
 # Legt beim Push eines Tags vX.Y.Z das GitHub-Release an. Die Release-Notes kommen aus CHANGELOG.md,
-# HACS bietet das Release danach als Update an.
+# HACS bietet das Release danach als Update an. Ein Tag mit Zusatz (z. B. v0.16.0b1) wird ein Pre-Release: HACS zeigt
+# es nur, wenn beim Repository „Beta-Versionen anzeigen“ an ist. Seine Notes kommen aus dem Abschnitt der Version,
+# sonst aus dem der Zielversion (0.16.0), sonst aus „Unveröffentlicht“.
 name: Release
 
 on:
@@ -23,16 +25,23 @@ jobs:
             echo "::error::Tag $GITHUB_REF_NAME passt nicht zur Version $manifest im manifest.json"
             exit 1
           fi
-          awk -v v="$version" '
-            /^## \[/ { if (found) exit; if (index($0, "## [" v "]") == 1) { found = 1; next } }
-            found && !/^\[[^]]+\]: / { print }
-          ' CHANGELOG.md > release_notes.md
-          if ! grep -q '[^[:space:]]' release_notes.md; then
-            echo "::error::CHANGELOG.md hat keinen Abschnitt für $version"
-            exit 1
+          notes() {
+            awk -v v="$1" '
+              /^## \[/ { if (found) exit; if (index($0, "## [" v "]") == 1) { found = 1; next } }
+              found && !/^\[[^]]+\]: / { print }
+            ' CHANGELOG.md > release_notes.md
+            grep -q '[^[:space:]]' release_notes.md
+          }
+          base=$(echo "$version" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+')
+          if [ "$base" = "$version" ]; then
+            notes "$version" || { echo "::error::CHANGELOG.md hat keinen Abschnitt für $version"; exit 1; }
+          else
+            echo "PRERELEASE=--prerelease" >> "$GITHUB_ENV"
+            notes "$version" || notes "$base" || notes "Unveröffentlicht" \
+              || { echo "::error::CHANGELOG.md hat keinen Abschnitt für $version, $base oder Unveröffentlicht"; exit 1; }
           fi
 
       - name: Release anlegen
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file release_notes.md --verify-tag
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file release_notes.md --verify-tag $PRERELEASE

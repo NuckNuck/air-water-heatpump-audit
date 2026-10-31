@@ -18,6 +18,7 @@ from . import cycles as c3
 from . import data_basis as d0
 from . import dhw as w1
 from . import days, heat
+from . import household as hh
 from . import efficiency as e1
 from . import flow_temp as t2
 from .result import HINT, NOT_ASSESSABLE, OK, CheckResult
@@ -201,6 +202,38 @@ class Context:
     @cached_property
     def dhw_charges_window(self) -> list[w1.Charge]:
         return self.dhw_charges if self.section_start <= self.start else self._charges(self.start)
+
+    @cached_property
+    def dhw_quiet_windows(self) -> list[tuple[float, float, float, float]]:
+        s = self.s
+        return w1.quiet_windows(s["dhw_tank_temp"], s["dhw_active"], s["heartbeat"], self.artifacts,
+                                self.section_start, self.end, self.tz)
+
+    @cached_property
+    def dhw_standby(self) -> tuple[float, float] | None:
+        """(Bereitschaftsverlust W, Speichertemperatur) aus W4, None solange zu wenige ruhige Nächte."""
+        return w1.standby_w(self.dhw_quiet_windows, self.master.get("dhw_tank_volume_l"))
+
+    @cached_property
+    def cold_water_c(self) -> float:
+        value = self.master.get("cold_water_c")
+        return hh.COLD_WATER_C if value is None else float(value)
+
+    @cached_property
+    def dhw_draw(self) -> w1.Draw | None:
+        """Zapfmenge im Abschnitt (W6); auch W2 und W4 nutzen sie für ihre Texte."""
+        standby = self.dhw_standby
+        return w1.draw_of(self.dhw_charges, self.section_start, self.end, self.master.get("dhw_tank_volume_l"),
+                          standby[0] if standby else None, self.cold_water_c)
+
+    # --- Haushalt ----------------------------------------------------------------------------------------------
+    @cached_property
+    def persons(self) -> list[hh.Person]:
+        return hh.parse_persons(self.master.get("household"))
+
+    @cached_property
+    def section_dates(self) -> list:
+        return hh.local_dates(self.section_start, self.end, self.tz)
 
     # --- Kosten (Audit 5) --------------------------------------------------------------------------------------
     @cached_property

@@ -22,7 +22,7 @@ from .audit_core.runner import ROLE_KEYS, roles_for, run_audits
 from .const import (CONF_AUDIT, CONF_IMPORT_TIMELINE_FROM, LEGACY_DOMAIN, SUBENTRY_AUDIT)
 from .const import (CONF_BOOSTER_HEATER_2_KW, CONF_BOOSTER_HEATER_KW, CONF_DATA_SINCE, CONF_DATA_SOURCE,
                     CONF_EVENT_KIND, CONF_EVENT_NOTE, CONF_EVENT_TIME, CONF_IMMERSION_HEATER_KW, CONF_WINDOW_DAYS,
-                    DEFAULT_OPTIONS, DOMAIN, MASTER_KEYS, SOURCE_INFLUXDB, SOURCE_RECORDER, SUBENTRY_EVENT,
+                    DEFAULT_OPTIONS, DOMAIN, MASTER_KEYS, SOURCE_INFLUXDB, SOURCE_RECORDER, SUBENTRY_EVENT, SUBENTRY_PERSON,
                     UPDATE_INTERVAL)
 from .recorder_source import load_series
 
@@ -103,6 +103,8 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                                                                 ("booster_heater", CONF_BOOSTER_HEATER_KW),
                                                                 ("booster_heater_2", CONF_BOOSTER_HEATER_2_KW))}
         master = {k: self._option(k) for k in MASTER_KEYS}
+        master["household"] = [dict(sub.data) for sub in self.config_entry.subentries.values()
+                               if sub.subentry_type == SUBENTRY_PERSON]
         return run_audits(series, start, end, recorder_keep_days=keep_days, long_term_days=long_term_days,
                           heater_kw=heater_kw, master=master, events=self._events(), controls=controls,
                           tz=str(dt_util.get_default_time_zone()), audits=self.audits())

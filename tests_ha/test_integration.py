@@ -568,3 +568,42 @@ async def test_card_resource_registered_and_updated(hass: HomeAssistant):
     await hass.async_block_till_done()
     urls = [r["url"] for r in resources.async_items() if r["url"].startswith(CARD_URL)]
     assert len(urls) == 1 and not urls[0].endswith("v=0.0.1")
+
+
+async def test_person_subentry_with_rotation_reaches_core(hass: HomeAssistant):
+    entry = MockConfigEntry(domain=DOMAIN, data=MAHTANAR, options=DEFAULT_OPTIONS | {"data_since": "2000-01-01 00:00:00"},
+                            subentries_data=[AUDIT_SUBENTRY("dhw")])
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    result = await hass.config_entries.subentries.async_init((entry.entry_id, "person"),
+                                                             context={"source": config_entries.SOURCE_USER})
+    assert result["step_id"] == "user"
+    result = await hass.config_entries.subentries.async_configure(result["flow_id"], {
+        "name": "Kind 1", "birth_year": 2015, "presence": "rotation", "shower_time": "evening"})
+    assert result["step_id"] == "presence"
+    assert set(result["data_schema"].schema) == {"weeks_present", "weeks_absent", "rotation_start"}
+    result = await hass.config_entries.subentries.async_configure(result["flow_id"], {
+        "weeks_present": 1, "weeks_absent": 1, "rotation_start": "2026-11-02"})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    (sub,) = [x for x in entry.subentries.values() if x.subentry_type == "person"]
+    assert sub.title == "Kind 1"
+    assert sub.data == {"name": "Kind 1", "birth_year": 2015, "presence": "rotation", "shower_time": "evening",
+                        "weeks_present": 1, "weeks_absent": 1, "rotation_start": "2026-11-02"}
+
+    # Ändern auf „immer“: der zweite Schritt entfällt, die Wechselwochen verschwinden aus den Daten
+    result = await entry.start_subentry_reconfigure_flow(hass, sub.subentry_id)
+    result = await hass.config_entries.subentries.async_configure(result["flow_id"], {
+        "name": "Kind 1", "birth_year": 2015, "presence": "always", "shower_time": "evening",
+        "showers_per_week": 4})
+    assert result["type"] is FlowResultType.ABORT
+    sub = entry.subentries[sub.subentry_id]
+    assert sub.data == {"name": "Kind 1", "birth_year": 2015, "presence": "always", "shower_time": "evening",
+                        "showers_per_week": 4}
+    await hass.async_block_till_done()
+    coordinator = hass.config_entries.async_get_entry(entry.entry_id).runtime_data
+    with patch("custom_components.air_water_heatpump_audit.coordinator.run_audits", return_value={}) as run:
+        coordinator._compute({}, 0, 1, 10, None, {})
+    assert run.call_args.kwargs["master"]["household"] == [sub.data]
+    assert run.call_args.kwargs["master"]["dhw_disinfection_interval_days"] == 7

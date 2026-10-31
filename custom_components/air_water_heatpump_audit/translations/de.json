@@ -117,8 +117,7 @@
               "capacity_min_table": "Mindestleistung laut Datenblatt",
               "immersion_heater_kw": "Leistung Heizstab",
               "booster_heater_kw": "Leistung Zusatzheizung 1",
-              "booster_heater_2_kw": "Leistung Zusatzheizung 2",
-              "dhw_tank_volume_l": "Inhalt Warmwasserspeicher"
+              "booster_heater_2_kw": "Leistung Zusatzheizung 2"
             },
             "data_description": {
               "hydraulic_separation": "Wie sind Wärmepumpe und Heizkreis verbunden? Bestimmt, ob der Pufferverlust (T1) geprüft wird.",
@@ -127,10 +126,23 @@
               "capacity_min_table": "Kleinste Heizleistung in kW je Vorlauftemperatur und Außentemperatur (C4). Form (YAML): je Vorlauftemperatur eine Zeile, darunter eingerückt Außentemperatur: kW, z. B. „35:“ und darunter „-7: 3.9“, „2: 3.5“, „7: 3.5“. Zwischenwerte werden linear interpoliert.",
               "immersion_heater_kw": "Elektrischer Heizstab im Speicher (C5).",
               "booster_heater_kw": "Elektrische Zusatzheizung im Heizkreis (C5).",
-              "booster_heater_2_kw": "Zweite Stufe der Zusatzheizung, falls vorhanden (C5).",
-              "dhw_tank_volume_l": "Nenninhalt laut Typenschild (W4)."
+              "booster_heater_2_kw": "Zweite Stufe der Zusatzheizung, falls vorhanden (C5)."
             },
             "description": "Herstellerangaben aus Datenblatt oder Installationshandbuch."
+          },
+          "dhw": {
+            "name": "Warmwasser",
+            "description": "Speicher und Hygiene.",
+            "data": {
+              "dhw_tank_volume_l": "Inhalt Warmwasserspeicher",
+              "cold_water_c": "Kaltwassertemperatur",
+              "dhw_disinfection_interval_days": "Aufheizen auf 60 °C alle"
+            },
+            "data_description": {
+              "dhw_tank_volume_l": "Nenninhalt laut Typenschild (W4, W6).",
+              "cold_water_c": "Im Jahresmittel; ohne genaueren Wert 10 °C (W6).",
+              "dhw_disinfection_interval_days": "Liegt der Speicher unter 50 °C, ist W2 grün, solange er spätestens nach so vielen Tagen auf 60 °C aufgeheizt wird. Einstellung der Legionellenschaltung am Bedienteil."
+            }
           },
           "site": {
             "name": "Standort und Komfort",
@@ -607,6 +619,16 @@
           "info": "Info",
           "not_assessable": "Nicht bewertbar"
         }
+      },
+      "dhw_draw": {
+        "name": "W6 Zapfmenge und Austausch",
+        "state": {
+          "ok": "OK",
+          "hint": "Hinweis",
+          "warn": "Warnung",
+          "info": "Info",
+          "not_assessable": "Nicht bewertbar"
+        }
       }
     }
   },
@@ -658,6 +680,33 @@
         "capacity": "Leistung – passt die Wärmepumpe zum Haus?",
         "dhw": "Warmwasser – effizient, hygienisch und zur richtigen Zeit?",
         "cost": "Kosten – was kostet die Wärme, lohnt der Tarif?"
+      }
+    },
+    "presence": {
+      "options": {
+        "always": "Immer",
+        "rotation": "Wechselwochen (z. B. 1 Woche hier, 1 Woche dort)",
+        "weekdays": "Bestimmte Tage (z. B. jedes zweite Wochenende)",
+        "share": "Anteil der Zeit"
+      }
+    },
+    "shower_time": {
+      "options": {
+        "morning": "Morgens",
+        "midday": "Mittags",
+        "evening": "Abends",
+        "varied": "Unterschiedlich"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "Montag",
+        "tue": "Dienstag",
+        "wed": "Mittwoch",
+        "thu": "Donnerstag",
+        "fri": "Freitag",
+        "sat": "Samstag",
+        "sun": "Sonntag"
       }
     }
   },
@@ -719,6 +768,91 @@
       },
       "abort": {
         "reconfigure_successful": "Ereignis gespeichert."
+      }
+    },
+    "person": {
+      "entry_type": "Person im Haushalt",
+      "initiate_flow": {
+        "user": "Person hinzufügen"
+      },
+      "step": {
+        "user": {
+          "title": "Person im Haushalt",
+          "description": "Für den Warmwasserbedarf (W5, W6). Das Audit vergleicht den gemessenen Verbrauch mit dem, was für diesen Haushalt üblich ist.",
+          "data": {
+            "name": "Name",
+            "birth_year": "Geburtsjahr",
+            "presence": "Im Haushalt",
+            "showers_per_week": "Duschen pro Woche",
+            "baths_per_week": "Bäder pro Woche",
+            "shower_time": "Duscht meistens"
+          },
+          "data_description": {
+            "name": "Nur zur Unterscheidung, z. B. Vorname oder „Kind 1“.",
+            "birth_year": "Für typische Gewohnheiten nach Alter, falls Duschen und Bäder leer bleiben. Kleine Kinder baden eher, als dass sie duschen.",
+            "presence": "Wann die Person hier wohnt, z. B. abwechselnde Wochen bei Kindern, die auch beim anderen Elternteil leben.",
+            "showers_per_week": "Leer lassen für einen typischen Wert nach Alter.",
+            "baths_per_week": "Leer lassen für einen typischen Wert nach Alter.",
+            "shower_time": "Für den Ladezeitpunkt (W5): Ein Ladefenster am Nachmittag passt nicht, wenn morgens geduscht wird."
+          }
+        },
+        "reconfigure": {
+          "title": "Person ändern",
+          "description": "Für den Warmwasserbedarf (W5, W6).",
+          "data": {
+            "name": "Name",
+            "birth_year": "Geburtsjahr",
+            "presence": "Im Haushalt",
+            "showers_per_week": "Duschen pro Woche",
+            "baths_per_week": "Bäder pro Woche",
+            "shower_time": "Duscht meistens"
+          },
+          "data_description": {
+            "name": "Nur zur Unterscheidung, z. B. Vorname oder „Kind 1“.",
+            "birth_year": "Für typische Gewohnheiten nach Alter, falls Duschen und Bäder leer bleiben. Kleine Kinder baden eher, als dass sie duschen.",
+            "presence": "Wann die Person hier wohnt, z. B. abwechselnde Wochen bei Kindern, die auch beim anderen Elternteil leben.",
+            "showers_per_week": "Leer lassen für einen typischen Wert nach Alter.",
+            "baths_per_week": "Leer lassen für einen typischen Wert nach Alter.",
+            "shower_time": "Für den Ladezeitpunkt (W5): Ein Ladefenster am Nachmittag passt nicht, wenn morgens geduscht wird."
+          }
+        },
+        "presence": {
+          "title": "Anwesenheit",
+          "description": "Angaben zum gewählten Muster.",
+          "data": {
+            "weeks_present": "Wochen hier am Stück",
+            "weeks_absent": "Wochen danach woanders",
+            "rotation_start": "Beginn einer Woche hier",
+            "weekdays": "Tage",
+            "every_n_weeks": "Jede n-te Woche",
+            "share_pct": "Anteil der Zeit hier"
+          },
+          "data_description": {
+            "rotation_start": "Ein Tag, an dem eine Phase hier beginnt (auch in der Vergangenheit); ab da wiederholt sich das Muster. Bei „Bestimmte Tage“ der Anker für „jede n-te Woche“.",
+            "every_n_weeks": "1 = jede Woche, 2 = jede zweite Woche (z. B. jedes zweite Wochenende).",
+            "share_pct": "Wenn kein festes Muster passt: grob geschätzter Anteil, z. B. 30 %."
+          }
+        },
+        "reconfigure_presence": {
+          "title": "Anwesenheit",
+          "description": "Angaben zum gewählten Muster.",
+          "data": {
+            "weeks_present": "Wochen hier am Stück",
+            "weeks_absent": "Wochen danach woanders",
+            "rotation_start": "Beginn einer Woche hier",
+            "weekdays": "Tage",
+            "every_n_weeks": "Jede n-te Woche",
+            "share_pct": "Anteil der Zeit hier"
+          },
+          "data_description": {
+            "rotation_start": "Ein Tag, an dem eine Phase hier beginnt (auch in der Vergangenheit); ab da wiederholt sich das Muster. Bei „Bestimmte Tage“ der Anker für „jede n-te Woche“.",
+            "every_n_weeks": "1 = jede Woche, 2 = jede zweite Woche (z. B. jedes zweite Wochenende).",
+            "share_pct": "Wenn kein festes Muster passt: grob geschätzter Anteil, z. B. 30 %."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Person gespeichert."
       }
     }
   }

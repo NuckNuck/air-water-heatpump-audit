@@ -1,6 +1,7 @@
 """Config Flow: zuerst Profile und Audits wählen, dann sieben Schritte Rollen (Betriebssignale, Messwerte, Werte der
 Steuerung, Heizkreis, Warmwasser, Tarif, Stellgrößen). Gibt es noch einen Eintrag der Vorgänger-Integration „WP-Audit“, lässt er sich
-stattdessen übernehmen. Options Flow für Stammdaten; Untereinträge für Audits („Audit hinzufügen“) und Ereignisse.
+stattdessen übernehmen. Options Flow für Stammdaten; Untereinträge für Audits („Audit hinzufügen“), Ereignisse und
+Personen im Haushalt.
 Reconfigure geht die Rollen-Schritte mit den gespeicherten Zuordnungen durch.
 
 Jede Rolle ist optional: fehlt sie, enden die abhängigen Prüfungen in „nicht bewertbar“. Vorbelegt wird aus dem
@@ -21,9 +22,14 @@ from homeassistant.helpers import selector
 from homeassistant.util import dt as dt_util
 
 from .audit_core.heat import parse_capacity_table
+from .audit_core.household import PRESENCE_MODES, SHOWER_TIMES, WEEKDAYS
 from .audit_core.audits import BY_ID, REGISTRY
 from .const import (CONF_AUDIT, CONF_AUDITS, CONF_IMPORT_TIMELINE_FROM, LEGACY_DOMAIN, SUBENTRY_AUDIT, audit_title,
                     language, migrate_roles)
+from .const import (CONF_BATHS_PER_WEEK, CONF_BIRTH_YEAR, CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS,
+                    CONF_EVERY_N_WEEKS, CONF_PERSON_NAME, CONF_PRESENCE, CONF_ROTATION_START, CONF_SHARE_PCT,
+                    CONF_SHOWER_TIME, CONF_SHOWERS_PER_WEEK, CONF_WEEKDAYS, CONF_WEEKS_ABSENT, CONF_WEEKS_PRESENT,
+                    PRESENCE_FIELDS, SUBENTRY_PERSON)
 from .const import (CONF_BOOSTER_HEATER_2_KW, CONF_BOOSTER_HEATER_KW, CONF_CAPACITY_MIN_TABLE,
                     CONF_CIRCUIT_FLOW_MAX_LPM, CONF_DATA_SINCE, CONF_DATA_SOURCE, CONF_DHW_TANK_VOLUME_L,
                     CONF_EVENT_KIND, CONF_EVENT_NOTE, CONF_EVENT_TIME, CONF_FLOW_RATE_MIN_LPM,
@@ -204,7 +210,8 @@ class AirWaterAuditConfigFlow(ConfigFlow, domain=DOMAIN):
     @classmethod
     @callback
     def async_get_supported_subentry_types(cls, config_entry: ConfigEntry) -> dict[str, type[ConfigSubentryFlow]]:
-        return {SUBENTRY_AUDIT: AuditSubentryFlow, SUBENTRY_EVENT: EventSubentryFlow}
+        return {SUBENTRY_AUDIT: AuditSubentryFlow, SUBENTRY_EVENT: EventSubentryFlow,
+                SUBENTRY_PERSON: PersonSubentryFlow}
 
 
 def _option_selectors() -> dict[str, Any]:
@@ -223,6 +230,9 @@ def _option_selectors() -> dict[str, Any]:
         CONF_HEATING_HOURS: selector.NumberSelector(selector.NumberSelectorConfig(
             min=0, max=8760, step=1, unit_of_measurement="h", mode=selector.NumberSelectorMode.BOX)),
         CONF_DHW_TANK_VOLUME_L: _number(5000, 1, "l"),
+        CONF_COLD_WATER_C: _number(25, 0.5, "°C"),
+        CONF_DHW_DISINFECTION_INTERVAL_DAYS: selector.NumberSelector(selector.NumberSelectorConfig(
+            min=1, max=60, step=1, unit_of_measurement="d", mode=selector.NumberSelectorMode.BOX)),
         CONF_HEATING_DEGREE_DAYS: _number(8000, 1, "Kd"),
         CONF_TARIFF_PRICE: _number(2, 0.001, "€/kWh"),
         CONF_TARIFF_BASE_FEE: _number(1000, 0.01, "€/a"),
@@ -240,7 +250,7 @@ def _option_selectors() -> dict[str, Any]:
 
 
 class AirWaterAuditOptionsFlow(OptionsFlow):
-    """Stammdaten (Spezifikation 1.4) in vier Abschnitten: Anlage, Standort und Komfort, Kosten, Auswertung.
+    """Stammdaten (Spezifikation 1.4) in Abschnitten: Anlage, Warmwasser, Standort und Komfort, Kosten, Auswertung.
 
     Kein OptionsFlowWithReload: Das Neuladen übernimmt der Update-Listener, der auch auf Ereignisse reagiert.
     """
@@ -334,3 +344,101 @@ class AuditSubentryFlow(ConfigSubentryFlow):
         return self.async_show_form(step_id="user", description_placeholders={"missing": ""},
                                     data_schema=vol.Schema({vol.Required(CONF_AUDIT, default=free[0]):
                                                             _audit_selector(free, False)}))
+
+
+def _select(key: str, options: tuple[str, ...] | list[str], multiple: bool = False) -> selector.SelectSelector:
+    return selector.SelectSelector(selector.SelectSelectorConfig(
+        options=list(options), translation_key=key, multiple=multiple, mode=selector.SelectSelectorMode.DROPDOWN))
+
+
+def _optional(key: str, data: dict[str, Any]):
+    value = data.get(key)
+    return vol.Optional(key, description={"suggested_value": value} if value not in (None, "", []) else None)
+
+
+class PersonSubentryFlow(ConfigSubentryFlow):
+    """Person im Haushalt: Alter, Anwesenheit und Duschgewohnheiten (Warmwasserbedarf, Spezifikation 6.6).
+
+    Zwei Schritte: zuerst Person und Muster, dann – nur wenn nötig – die Angaben zum Muster (z. B. Wechselwochen bei
+    Kindern, die abwechselnd in zwei Haushalten wohnen). Leere Gewohnheiten ersetzt das Audit durch typische Werte."""
+
+    def __init__(self) -> None:
+        self._data: dict[str, Any] = {}
+
+    def _person_schema(self, data: dict[str, Any]) -> vol.Schema:
+        return vol.Schema({
+            vol.Required(CONF_PERSON_NAME, default=data.get(CONF_PERSON_NAME, "")): selector.TextSelector(),
+            _optional(CONF_BIRTH_YEAR, data): selector.NumberSelector(selector.NumberSelectorConfig(
+                min=1900, max=2100, step=1, mode=selector.NumberSelectorMode.BOX)),
+            vol.Required(CONF_PRESENCE, default=data.get(CONF_PRESENCE, "always")): _select(CONF_PRESENCE,
+                                                                                            PRESENCE_MODES),
+            _optional(CONF_SHOWERS_PER_WEEK, data): _number(28, 0.5, ""),
+            _optional(CONF_BATHS_PER_WEEK, data): _number(14, 0.5, ""),
+            vol.Required(CONF_SHOWER_TIME, default=data.get(CONF_SHOWER_TIME, "varied")): _select(CONF_SHOWER_TIME,
+                                                                                                SHOWER_TIMES),
+        })
+
+    def _presence_schema(self, data: dict[str, Any]) -> vol.Schema:
+        fields = {
+            CONF_WEEKS_PRESENT: vol.Required(CONF_WEEKS_PRESENT, default=data.get(CONF_WEEKS_PRESENT, 1)),
+            CONF_WEEKS_ABSENT: vol.Required(CONF_WEEKS_ABSENT, default=data.get(CONF_WEEKS_ABSENT, 1)),
+            CONF_ROTATION_START: vol.Required(CONF_ROTATION_START, default=data.get(CONF_ROTATION_START)
+                                              or dt_util.now().date().isoformat()),
+            CONF_WEEKDAYS: vol.Required(CONF_WEEKDAYS, default=data.get(CONF_WEEKDAYS, ["sat", "sun"])),
+            CONF_EVERY_N_WEEKS: vol.Required(CONF_EVERY_N_WEEKS, default=data.get(CONF_EVERY_N_WEEKS, 1)),
+            CONF_SHARE_PCT: vol.Required(CONF_SHARE_PCT, default=data.get(CONF_SHARE_PCT, 50)),
+        }
+        weeks = selector.NumberSelector(selector.NumberSelectorConfig(min=0, max=12, step=1,
+                                                                      mode=selector.NumberSelectorMode.BOX))
+        selectors = {CONF_WEEKS_PRESENT: weeks, CONF_WEEKS_ABSENT: weeks, CONF_ROTATION_START: selector.DateSelector(),
+                     CONF_WEEKDAYS: _select(CONF_WEEKDAYS, WEEKDAYS, multiple=True),
+                     CONF_EVERY_N_WEEKS: selector.NumberSelector(selector.NumberSelectorConfig(
+                         min=1, max=4, step=1, mode=selector.NumberSelectorMode.BOX)),
+                     CONF_SHARE_PCT: _number(100, 1, "%")}
+        return vol.Schema({fields[k]: selectors[k] for k in PRESENCE_FIELDS[data.get(CONF_PRESENCE, "always")]})
+
+    def _clean(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Nur die Felder des gewählten Musters behalten; Zahlen als int, wo sie ganzzahlig sind."""
+        keep = {CONF_PERSON_NAME, CONF_BIRTH_YEAR, CONF_PRESENCE, CONF_SHOWERS_PER_WEEK, CONF_BATHS_PER_WEEK,
+                CONF_SHOWER_TIME, *PRESENCE_FIELDS[data.get(CONF_PRESENCE, "always")]}
+        out = {k: v for k, v in data.items() if k in keep and v not in (None, "")}
+        for k in (CONF_BIRTH_YEAR, CONF_WEEKS_PRESENT, CONF_WEEKS_ABSENT, CONF_EVERY_N_WEEKS):
+            if k in out:
+                out[k] = int(out[k])
+        return out
+
+    async def _person(self, step_id: str, user_input: dict[str, Any] | None, next_step: str):
+        if user_input is None:
+            return self.async_show_form(step_id=step_id, data_schema=self._person_schema(self._data))
+        # Geleerte optionale Felder fehlen in user_input: dann „typisch fürs Alter“, nicht der alte Wert
+        for k in (CONF_BIRTH_YEAR, CONF_SHOWERS_PER_WEEK, CONF_BATHS_PER_WEEK):
+            self._data.pop(k, None)
+        self._data.update(user_input)
+        if PRESENCE_FIELDS[self._data[CONF_PRESENCE]]:
+            return self.async_show_form(step_id=next_step, data_schema=self._presence_schema(self._data))
+        return None
+
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        return await self._person("user", user_input, "presence") or self._create()
+
+    async def async_step_presence(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        self._data.update(user_input or {})
+        return self._create()
+
+    def _create(self) -> SubentryFlowResult:
+        data = self._clean(self._data)
+        return self.async_create_entry(title=data[CONF_PERSON_NAME], data=data)
+
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        if user_input is None:
+            self._data = dict(self._get_reconfigure_subentry().data)
+        return await self._person("reconfigure", user_input, "reconfigure_presence") or self._update()
+
+    async def async_step_reconfigure_presence(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        self._data.update(user_input or {})
+        return self._update()
+
+    def _update(self) -> SubentryFlowResult:
+        data = self._clean(self._data)
+        return self.async_update_and_abort(self._get_entry(), self._get_reconfigure_subentry(),
+                                           title=data[CONF_PERSON_NAME], data=data)

@@ -139,12 +139,14 @@ def _dhw_temperature(r: CheckResult, _: dict) -> Action:
         return Action(OWNER, "Warmwasser-Solltemperatur senken.", f"Speicher höchstens 60 °C{_today(r, '.0f')}", [
             "Am Bedienteil die Warmwasser-Solltemperatur suchen und auf 55–60 °C stellen.",
             _EVENT_STEP])
-    return Action(OWNER, "Warmwasser-Solltemperatur auf mindestens 50 °C stellen.",
-                  f"Speicher mindestens 50 °C{_today(r, '.0f')}", [
-                      "Am Bedienteil die Warmwasser-Solltemperatur suchen und so einstellen, dass der Speicher nach "
-                      "dem Laden mindestens 50 °C zeigt (manche Steuerungen hören 1–2 K unter dem Sollwert auf).",
+    interval = r.details.get("interval_days") or 7
+    return Action(OWNER, "Den Speicher regelmäßig auf 60 °C aufheizen lassen (Legionellenschaltung).",
+                  f"mindestens alle {num(interval, 'g')} Tage 60 °C", [
+                      "Am Bedienteil die Legionellenschaltung suchen (oft „Legionellen“ oder „Antilegionella“), "
+                      f"einschalten, Intervall {num(interval, 'g')} Tage, Uhrzeit am Nachmittag.",
+                      "Alternativ die Warmwasser-Solltemperatur so einstellen, dass der Speicher nach dem Laden "
+                      "mindestens 50 °C zeigt; das kostet etwa 1,4 % Strom je Kelvin beim Warmwasser.",
                       "Gibt es eine Zirkulationsleitung, verlangen die Regeln 60 °C; dann mit dem Fachbetrieb klären.",
-                      "Jedes Kelvin mehr kostet etwa 1,4 % Strom beim Warmwasser – Hygiene geht vor.",
                       _EVENT_STEP])
 
 
@@ -215,12 +217,18 @@ _ACTIONS: dict[str, Callable[[CheckResult, dict], Action]] = {
         "Läuft eine Zirkulationspumpe dauernd? Dann eine Zeitschaltung oder einen Taster vorsehen.",
         "Kann warmes Wasser im Rohr nach oben steigen und abkühlen (Schwerkraftzirkulation)? Dann einen "
         "Thermosiphon oder eine Rückschlagklappe einbauen lassen."]),
-    "W5": _fixed(OWNER, "Warmwasser zur wärmsten Tageszeit laden.",
+    "W5": _fixed(OWNER, "Warmwasser zu einer wärmeren Tageszeit laden, passend zu euren Duschzeiten.",
                  lambda r: f"Einbuße unter {num(10, 'g')} %{_today(r, '.0f')}", [
-                     "Am Bedienteil das Zeitprogramm für Warmwasser öffnen.",
-                     "Laden nur zwischen etwa 12 und 17 Uhr erlauben; vorher prüfen, ob der Speicher bis zum Abend "
-                     "und zum nächsten Morgen reicht.",
+                     "Zuerst in W6 nachsehen, wie viele Duschen ein voller Speicher hergibt.",
+                     "Am Bedienteil im Zeitprogramm für Warmwasser die kalten Nacht- und Frühstunden sperren; das "
+                     "Fenster so legen, dass der Speicher bis zum nächsten großen Duschen reicht (z. B. später "
+                     "Vormittag bis Nachmittag).",
+                     "Eine Woche beobachten: Reicht das Wasser nicht, das Fenster wieder breiter machen.",
                      _EVENT_STEP]),
+    "W6": _fixed(OWNER, "Das Wasser steht im Speicher länger als 72 Stunden.", steps=[
+        "Die Legionellenschaltung einschalten (alle 7 Tage 60 °C), solange so wenig gezapft wird.",
+        "Bei längerer Abwesenheit vor dem ersten Duschen einmal auf 60 °C aufheizen.",
+        "Bleibt der Verbrauch dauerhaft klein, beim nächsten Tausch einen kleineren Speicher wählen."]),
     "K1": _fixed(OWNER, "Die Wärme ist teurer als mit dem früheren Brennstoff.", steps=[
         "Zuerst die gelben Punkte der Audits Effizienz, Vorlauf und Leistung angehen.",
         "Strompreis vergleichen: Wärmepumpentarife sind oft günstiger als Haushaltsstrom.",
