@@ -36,6 +36,11 @@ const TEXT = {
     who: { owner: "Selbst", installer: "Fachbetrieb", none: "Nichts nötig" },
     target: "Ziel",
     steps: { show: (n) => `▸ So geht's (${n} Schritte)`, hide: "▾ Schritte ausblenden" },
+    impact: { save: (eur, kwh) => `Bringt ≈ ${eur} €/Jahr` + (kwh ? ` (≈ ${kwh} kWh Strom)` : ""),
+      cost: (eur, kwh) => `Kostet ≈ ${eur} €/Jahr` + (kwh ? ` (≈ ${kwh} kWh Strom)` : ""),
+      kwhOnly: (kwh, save) => `${save ? "Spart" : "Kostet"} ≈ ${kwh} kWh Strom im Jahr`, basis: "Grobe Schätzung" },
+    conflict: "Zielkonflikt",
+    priorities: { title: "Was am meisten bringt", note: "Grobe Schätzungen aus Hochrechnung und Faustwerten; zum Sortieren, nicht als Versprechen." },
     ctl: { via: "Über die Schnittstelle einstellbar", apply: "Übernehmen", done: "eingestellt",
       adminOnly: "ein Admin kann das hier übernehmen",
       confirm: (p, f) => `${p.label}: ${f(p.current)} → ${f(p.value)}${p.unit ? " " + p.unit : ""}\n\n`
@@ -86,6 +91,11 @@ const TEXT = {
     who: { owner: "Yourself", installer: "Installer", none: "Nothing needed" },
     target: "Target",
     steps: { show: (n) => `▸ How to (${n} steps)`, hide: "▾ Hide steps" },
+    impact: { save: (eur, kwh) => `Saves ≈ €${eur}/year` + (kwh ? ` (≈ ${kwh} kWh electricity)` : ""),
+      cost: (eur, kwh) => `Costs ≈ €${eur}/year` + (kwh ? ` (≈ ${kwh} kWh electricity)` : ""),
+      kwhOnly: (kwh, save) => `${save ? "Saves" : "Costs"} ≈ ${kwh} kWh electricity per year`, basis: "Rough estimate" },
+    conflict: "Trade-off",
+    priorities: { title: "What helps most", note: "Rough estimates from the projection and rules of thumb; for ranking, not a promise." },
     ctl: { via: "Adjustable via the interface", apply: "Apply", done: "set",
       adminOnly: "an admin can apply this here",
       confirm: (p, f) => `${p.label}: ${f(p.current)} → ${f(p.value)}${p.unit ? " " + p.unit : ""}\n\n`
@@ -222,7 +232,7 @@ class AirWaterAuditCard extends HTMLElement {
     const verdict = st?.state ?? c.verdict;
     const action = at.action ? this._action(c, at.action, t) : "";
     // Anzeigename ohne Gerätenamen und Prüf-ID: „Audit: Effizienz E3 Gütegrad“ → „Gütegrad“
-    const name = (at.friendly_name || c.key).replace(new RegExp(`^.*?\\b${c.check_id}\\s+`), "");
+    const name = this._checkName(c, at);
     const rows = c.check_id === "E1" ? at.details?.days ?? [] : [];
     const open = rows.length && this._open.has(c.check_id);
     const toggle = rows.length ? `<div><span class="toggle" role="button" tabindex="0" data-days="${esc(c.check_id)}">${open ? t.days.hide : t.days.show(rows.length)}</span></div>` : "";
@@ -259,6 +269,8 @@ class AirWaterAuditCard extends HTMLElement {
     const hass = this._hass;
     let html = `<b>${esc(t.who[a.who] ?? a.who)}:</b> ${esc(a.text)}`;
     if (a.target) html += `<div class="target">${t.target}: <b>${esc(a.target)}</b></div>`;
+    if (a.impact) html += `<div class="impact" title="${esc(t.impact.basis + ": " + a.impact.basis)}">${esc(this._impact(a.impact, t))}</div>`;
+    for (const x of a.conflicts ?? []) html += `<div class="conflict"><b>${t.conflict}:</b> ${esc(x)}</div>`;
     for (const p of a.controls ?? []) {
       const key = `${c.check_id}|${p.role}`;
       this._ctl.set(key, { p });
@@ -281,6 +293,32 @@ class AirWaterAuditCard extends HTMLElement {
       if (open) html += `<ol class="steps">${a.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>`;
     }
     return html;
+  }
+
+  // Wirkung einer Aktion als Satz; Beträge ohne Vorzeichen, die Richtung steckt im Verb.
+  _impact(m, t) {
+    const loc = this._hass.locale?.language || this._hass.language;
+    const n = (v) => Math.abs(v).toLocaleString(loc, { maximumFractionDigits: 0 });
+    if (m.eur_year != null) return (m.eur_year >= 0 ? t.impact.save : t.impact.cost)(n(m.eur_year), m.kwh_year != null ? n(m.kwh_year) : null);
+    return t.impact.kwhOnly(n(m.kwh_year), m.kwh_year >= 0);
+  }
+
+  // Aktionen aller gezeigten Audits mit Ersparnis, nach Euro (ersatzweise kWh) sortiert.
+  _priorities(t) {
+    const hass = this._hass;
+    const items = this._entities.flatMap((e) => hass.states[e]?.attributes?.checks ?? []).map((c) => {
+      const at = hass.states[c.entity_id]?.attributes ?? {};
+      const m = at.action?.impact;
+      return m && ((m.eur_year ?? m.kwh_year) > 0) ? { c, at, m } : null;
+    }).filter(Boolean).sort((x, y) => (y.m.eur_year ?? y.m.kwh_year / 4) - (x.m.eur_year ?? x.m.kwh_year / 4));
+    if (!items.length) return "";
+    const li = items.slice(0, 5).map(({ c, at, m }) =>
+      `<li><b>${esc(c.check_id)} ${esc(this._checkName(c, at))}:</b> ${esc(this._impact(m, t))} – ${esc(at.action.text)}</li>`).join("");
+    return `<div class="prio"><div class="rtitle">${t.priorities.title}</div><ol>${li}</ol><div class="meta">${t.priorities.note}</div></div>`;
+  }
+
+  _checkName(c, at) {
+    return (at.friendly_name || c.key).replace(new RegExp(`^.*?\\b${c.check_id}\\s+`), "");
   }
 
   _fmtCtl(v) {
@@ -441,6 +479,9 @@ class AirWaterAuditCard extends HTMLElement {
         .meta, .heat { color: var(--secondary-text-color); font-size: .9em; }
         .meta { margin-bottom: 6px; }
         .heat { margin-top: 4px; }
+        .impact { margin-top: 4px; font-weight: 500; cursor: help; }
+        .conflict { margin-top: 4px; color: var(--secondary-text-color); font-size: .9em; }
+        .prio { margin: 8px 0 12px; } .prio ol { margin: 4px 0; padding-left: 20px; }
         .scroll { overflow-x: auto; }
         /* Feste Spaltenbreiten: alle Audits nutzen dieselben Spalten, nichts springt beim Aktualisieren. */
         table { width: 100%; min-width: 960px; table-layout: fixed; border-collapse: collapse; font-size: .92em; }
@@ -502,6 +543,7 @@ class AirWaterAuditCard extends HTMLElement {
       <ha-card>
         ${meta}
         ${this._readiness(t)}
+        ${this._priorities(t)}
         <div class="scroll"><table>
           <colgroup><col class="id"><col class="name"><col class="verdict"><col class="action"><col class="num"><col class="text"><col class="origin"></colgroup>
           <thead><tr>${t.columns.map((c) => `<th>${c}</th>`).join("")}</tr></thead>

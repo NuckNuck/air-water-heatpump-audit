@@ -23,6 +23,15 @@ PRICE_TIMING_TOLERANCE = 1.03  # K4: gezahlter Mittelpreis bis 3 % über dem Zei
 # K5: Sperren und Dimmen. Seit 2024 (§ 14a EnWG, BNetzA BK6-22-300) gibt es keine feste Höchstdauer mehr, nur eine
 # Mindestleistung von 4,2 kW; bewertet wird deshalb nur, ob danach der Heizstab nachheizt (teuer, derived).
 AFTER_LOCK_S = 2 * 3600
+# K2: Effizienzklassen des Energieausweises nach Endenergie in kWh/(m²·a), GEG Anlage 10; bei einer Wärmepumpe ist
+# die Endenergie der Strom. Der Ausweis bezieht sich auf die Gebäudenutzfläche, im Ein- und Zweifamilienhaus
+# pauschal 1,2 × Wohnfläche (GEG § 82 Abs. 2; mit beheiztem Keller 1,35).
+ENERGY_CLASSES = (("A+", 30), ("A", 50), ("B", 75), ("C", 100), ("D", 130), ("E", 160), ("F", 200), ("G", 250))
+USEFUL_AREA_FACTOR = 1.2
+
+
+def energy_class(kwh_per_m2: float) -> str:
+    return next((label for label, limit in ENERGY_CLASSES if kwh_per_m2 < limit), "H")
 
 
 def _on(v) -> bool:
@@ -154,8 +163,9 @@ def project_year(rows: list[dict], outdoor: Series, tz: str, year_degree_days: f
 
 
 def check_annual_cost(rows: list[dict], outdoor: Series, costs: dict[str, float | None], master: dict, tz: str,
-                      since: float) -> CheckResult:
-    """K2: Hochrechnung aufs Jahr über die Gradtage des Standorts, mit Vergleich zum früheren Brennstoff."""
+                      since: float, persons_mean: float | None = None) -> CheckResult:
+    """K2: Hochrechnung aufs Jahr über die Gradtage des Standorts, mit Vergleich zum früheren Brennstoff. Mit
+    Wohnfläche und Personen dazu Verbrauch je m² (mit Klasse des Energieausweises) und Kosten je Person."""
     key = ("K2", "annual_cost")
     prog = progress(len(rows), PROJECTION_MIN_DAYS, "days", FULL_DAYS, since)
     year_dd = master.get("heating_degree_days")
@@ -186,6 +196,16 @@ def check_annual_cost(rows: list[dict], outdoor: Series, costs: dict[str, float 
         details["reference_cost_eur"] = round(ref_cost)
         text += (f" Mit dem früheren Brennstoff ≈ {num(round(ref_cost, -1), ',.0f')} €, "
                  f"{'Ersparnis' if ref_cost >= cost else 'Mehrkosten'} ≈ {num(round(abs(ref_cost - cost), -1), ',.0f')} €.")
+    area = master.get("living_area_m2")
+    if area:
+        heat_m2, el_m2 = year["heat_kwh"] / float(area), year["electricity_kwh"] / float(area)
+        label = energy_class(year["electricity_kwh"] / (USEFUL_AREA_FACTOR * float(area)))
+        details |= {"heat_kwh_m2": round(heat_m2), "electricity_kwh_m2": round(el_m2), "energy_class": label}
+        text += (f" Je m² Wohnfläche ≈ {num(heat_m2, '.0f')} kWh Wärme und ≈ {num(el_m2, '.0f')} kWh Strom im Jahr; "
+                 f"im Energieausweis (Strom als Endenergie, Nutzfläche 1,2 × Wohnfläche) etwa Klasse {label}.")
+    if persons_mean:
+        details["cost_per_person_eur"] = round(cost / persons_mean)
+        text += f" Je Person (Ø {num(persons_mean, '.1f')}) ≈ {num(round(cost / persons_mean, -1), ',.0f')} € im Jahr."
     for k in ("electricity_kwh", "heat_kwh"):
         details[k] = round(details[k])
     return CheckResult(*key, INFO, round(cost), "€/a", text, SOURCED, details, progress=prog)

@@ -70,13 +70,14 @@ CONF_HOUSEHOLD_PRICE = "household_price"
 CONF_REFERENCE_FUEL_PRICE = "reference_fuel_price"
 CONF_REFERENCE_EFFICIENCY = "reference_efficiency"
 CONF_COLD_WATER_C = "cold_water_c"
+CONF_LIVING_AREA_M2 = "living_area_m2"
 CONF_DHW_DISINFECTION_INTERVAL_DAYS = "dhw_disinfection_interval_days"
 # Abschnitte des Options-Formulars; gespeichert werden die Optionen flach.
 OPTION_SECTIONS: dict[str, tuple[str, ...]] = {
     "plant": (CONF_HYDRAULIC_SEPARATION, CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_CAPACITY_MIN_TABLE, CONF_IMMERSION_HEATER_KW,
               CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW),
     "dhw": (CONF_DHW_TANK_VOLUME_L, CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS),
-    "site": (CONF_HEATING_HOURS, CONF_HEATING_DEGREE_DAYS, CONF_ROOM_TEMP_TARGET),
+    "site": (CONF_HEATING_HOURS, CONF_HEATING_DEGREE_DAYS, CONF_ROOM_TEMP_TARGET, CONF_LIVING_AREA_M2),
     "cost": (CONF_TARIFF_PRICE, CONF_TARIFF_BASE_FEE, CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE,
              CONF_REFERENCE_EFFICIENCY),
     "evaluation": (CONF_WINDOW_DAYS, CONF_DATA_SINCE, CONF_DATA_SOURCE),
@@ -85,7 +86,7 @@ OPTION_SECTIONS: dict[str, tuple[str, ...]] = {
 OPTIONAL_OPTIONS = (CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_CAPACITY_MIN_TABLE, CONF_HEATING_HOURS,
                     CONF_IMMERSION_HEATER_KW, CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW, CONF_DATA_SINCE,
                     CONF_DHW_TANK_VOLUME_L, CONF_HEATING_DEGREE_DAYS, CONF_TARIFF_PRICE, CONF_TARIFF_BASE_FEE,
-                    CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY)
+                    CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY, CONF_LIVING_AREA_M2)
 HYDRAULIC_SEPARATIONS = ["unknown", "none", "series_buffer", "parallel_buffer", "hydraulic_separator"]
 # auto: InfluxDB 2, wenn die HA-Integration InfluxDB eingerichtet ist, sonst Recorder
 DATA_SOURCES = ["auto", "influxdb", "recorder"]
@@ -113,13 +114,14 @@ DEFAULT_OPTIONS = {
     # Jahresnutzungsgrad der früheren Heizung, bezogen auf den abgerechneten Brennwert: Feldmittel Gas-Brennwertkessel
     # 0,86 (DBU-Feldtest, 60 Anlagen); nur wirksam, wenn auch ein Brennstoffpreis eingetragen ist
     CONF_REFERENCE_EFFICIENCY: 0.86,
+    CONF_LIVING_AREA_M2: None,  # K2: Verbrauch je m² und Klasse des Energieausweises
     CONF_COLD_WATER_C: 10.0,  # Kaltwasser im Jahresmittel (W6)
     CONF_DHW_DISINFECTION_INTERVAL_DAYS: 7,  # W2: Abstand der Aufheizungen auf 60 °C, wenn der Speicher kühler ist
 }
 MASTER_KEYS = (CONF_HYDRAULIC_SEPARATION, CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_ROOM_TEMP_TARGET, CONF_CAPACITY_MIN_TABLE,
                CONF_HEATING_HOURS, CONF_DHW_TANK_VOLUME_L, CONF_HEATING_DEGREE_DAYS, CONF_TARIFF_PRICE,
                CONF_TARIFF_BASE_FEE, CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY,
-               CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS)
+               CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS, CONF_LIVING_AREA_M2)
 
 # Ereignisse (Spezifikation 1.5) als Untereinträge des Config Entry
 SUBENTRY_EVENT = "event"

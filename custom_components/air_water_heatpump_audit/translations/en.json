@@ -149,12 +149,14 @@
             "data": {
               "heating_hours": "Heating hours per year",
               "room_temp_target": "Target room temperature",
-              "heating_degree_days": "Heating degree days per year"
+              "heating_degree_days": "Heating degree days per year",
+              "living_area_m2": "Living area"
             },
             "data_description": {
               "heating_hours": "Hours with outdoor temperature below the heating limit (15 °C) at the site. Used to project starts per year (C1).",
               "room_temp_target": "Desired temperature in the reference room (T6).",
-              "heating_degree_days": "Long-term average of heating degree days (base 20/15 °C) at the site. For the annual projection (K2)."
+              "heating_degree_days": "Long-term average of heating degree days (base 20/15 °C) at the site. For the annual projection (K2).",
+              "living_area_m2": "For consumption per m² and the energy certificate class (K2)."
             }
           },
           "cost": {

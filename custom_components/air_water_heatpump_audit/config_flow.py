@@ -27,7 +27,7 @@ from .audit_core.audits import BY_ID, REGISTRY
 from .const import (CONF_AUDIT, CONF_AUDITS, CONF_IMPORT_TIMELINE_FROM, LEGACY_DOMAIN, SUBENTRY_AUDIT, audit_title,
                     language, migrate_roles)
 from .const import (CONF_BATHS_PER_WEEK, CONF_BIRTH_YEAR, CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS,
-                    CONF_EVERY_N_WEEKS, CONF_PERSON_NAME, CONF_PRESENCE, CONF_ROTATION_START, CONF_SHARE_PCT,
+                    CONF_EVERY_N_WEEKS, CONF_LIVING_AREA_M2, CONF_PERSON_NAME, CONF_PRESENCE, CONF_ROTATION_START, CONF_SHARE_PCT,
                     CONF_SHOWER_TIME, CONF_SHOWERS_PER_WEEK, CONF_WEEKDAYS, CONF_WEEKS_ABSENT, CONF_WEEKS_PRESENT,
                     PRESENCE_FIELDS, SUBENTRY_PERSON)
 from .const import (CONF_BOOSTER_HEATER_2_KW, CONF_BOOSTER_HEATER_KW, CONF_CAPACITY_MIN_TABLE,
@@ -231,6 +231,7 @@ def _option_selectors() -> dict[str, Any]:
             min=0, max=8760, step=1, unit_of_measurement="h", mode=selector.NumberSelectorMode.BOX)),
         CONF_DHW_TANK_VOLUME_L: _number(5000, 1, "l"),
         CONF_COLD_WATER_C: _number(25, 0.5, "°C"),
+        CONF_LIVING_AREA_M2: _number(2000, 1, "m²"),
         CONF_DHW_DISINFECTION_INTERVAL_DAYS: selector.NumberSelector(selector.NumberSelectorConfig(
             min=1, max=60, step=1, unit_of_measurement="d", mode=selector.NumberSelectorMode.BOX)),
         CONF_HEATING_DEGREE_DAYS: _number(8000, 1, "Kd"),

@@ -128,10 +128,18 @@ Stromzähler der Wärmepumpe im Energie-Dashboard, wird dessen Preis vorgeschlag
 | Prüfung | Was wird geprüft? |
 |---|---|
 | K1 Wärmepreis | Was eine Kilowattstunde Wärme in der letzten Woche gekostet hat, im Vergleich zum früheren Brennstoff (z. B. Gas). Grün bis 10 % teurer (Messgenauigkeit). |
-| K2 Kosten pro Jahr | Strom und Kosten aufs Jahr hochgerechnet, mit der Ersparnis gegenüber dem früheren Brennstoff (nur Info). Braucht die Gradtage des Wohnorts und 14 Tage. |
+| K2 Kosten pro Jahr | Strom und Kosten aufs Jahr hochgerechnet, mit der Ersparnis gegenüber dem früheren Brennstoff (nur Info). Mit der Wohnfläche dazu der Verbrauch je m² und die ungefähre Klasse im Energieausweis, mit den Personen die Kosten je Person. Braucht die Gradtage des Wohnorts und 14 Tage. |
 | K3 Wärmepumpentarif | Ob sich ein eigener Wärmepumpentarif mit zweitem Zähler gegenüber Haushaltsstrom lohnt. |
 | K4 Strompreis dynamisch | Nur bei dynamischem Tarif: ob die Wärmepumpe bevorzugt in teuren Stunden läuft. |
 | K5 Sperrzeiten | Nur mit Sperrsignal des Netzbetreibers: wie oft und wie lange gesperrt oder gedimmt wird; gelb, wenn währenddessen oder danach der Heizstab nachheizt. |
+
+
+### Was bringt eine Aktion?
+
+Bei jeder gelben oder roten Prüfung steht, was die vorgeschlagene Aktion ungefähr im Jahr bringt oder kostet, in
+kWh Strom und Euro, und mit welcher anderen Prüfung sie im Zielkonflikt steht (z. B. „mehr Hygiene kostet Strom“).
+Oben in der Karte stehen die bis zu fünf Aktionen mit der größten Ersparnis. Grundlage ist die Hochrechnung aufs Jahr
+(ab 14 Tagen, braucht die Gradtage) und Ihr Strompreis; es sind grobe Schätzungen zum Sortieren.
 
 ### Wann gibt es ein Ergebnis?
 
@@ -281,7 +289,7 @@ bewertbar – Stammdaten fehlen“.
 - **Warmwasser:** Inhalt des Speichers (Typenschild), Kaltwassertemperatur (ohne genaueren Wert 10 °C) und wie oft
   die Legionellenschaltung den Speicher auf 60 °C aufheizt.
 - **Standort und Komfort:** Heizstunden pro Jahr am Wohnort (aus der Klimakarte des Bundesverbands Wärmepumpe),
-  Gradtage pro Jahr (z. B. aus dem Gradtagzahlen-Rechner des IWU) und die gewünschte Raumtemperatur.
+  Gradtage pro Jahr (z. B. aus dem Gradtagzahlen-Rechner des IWU), die gewünschte Raumtemperatur und die Wohnfläche.
 - **Kosten:** Arbeitspreis und zusätzlicher Grundpreis des Wärmepumpenstroms, Preis des Haushaltsstroms, Preis und
   Nutzungsgrad der früheren Heizung zum Vergleich. Für Gas den Preis je abgerechneter kWh inklusive Grundpreis-Anteil
   eintragen; der vorgeschlagene Nutzungsgrad 0,86 ist das Mittel von Gas-Brennwertkesseln im Feld.

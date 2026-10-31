@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .. import cost as k1
+from .. import household as hh
 from ..context import HEATER_ROLES, Context
 from ..registry import SECTION, AuditSpec, CheckSpec, TimelineSpec
 from ..result import HINT, OK
@@ -23,8 +24,9 @@ def _scale(master: dict) -> dict:
 
 
 def _annual(ctx: Context):
+    persons = hh.persons_mean(ctx.persons, hh.local_dates(ctx.section_start, ctx.end, ctx.tz)) if ctx.persons else None
     return k1.check_annual_cost(ctx.daily_rows, ctx.outdoor_daily, ctx.day_costs, ctx.master, ctx.tz,
-                                ctx.section_start)
+                                ctx.section_start, persons)
 
 
 def _heaters(ctx: Context):
@@ -39,7 +41,7 @@ AUDIT = AuditSpec(
            "heartbeat", "controller_heat_today", "compressor_running", "pump_running", "defrost"),
     required_roles=("electricity_meter", "flow_temp", "return_temp", "flow_rate"),
     master_keys=("tariff_price", "tariff_base_fee", "household_price", "reference_fuel_price",
-                 "reference_efficiency", "heating_degree_days"),
+                 "reference_efficiency", "heating_degree_days", "living_area_m2", "household"),
     names={"de": "Kosten", "en": "Cost"},
     checks=(
         CheckSpec("K1", "heat_price", lambda ctx: k1.check_heat_price(ctx.daily_rows, ctx.day_costs, ctx.master,
