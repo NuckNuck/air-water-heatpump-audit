@@ -268,7 +268,7 @@ class AirWaterAuditOptionsFlow(OptionsFlow):
             for key in keys:
                 if key in OPTIONAL_OPTIONS:
                     value = current.get(key)
-                    fields[vol.Optional(key, description={"suggested_value": value} if value else None)] = selectors[key]
+                    fields[vol.Optional(key, description={"suggested_value": value} if value is not None else None)] = selectors[key]
                 else:
                     fields[vol.Required(key, default=current[key])] = selectors[key]
             schema[vol.Required(name)] = section(vol.Schema(fields), {"collapsed": name == "evaluation"})
