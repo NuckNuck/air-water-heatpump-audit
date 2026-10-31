@@ -87,7 +87,7 @@ Rollen mit Text-Zustand: `controller_date`. Alle anderen werden als Zahl gelesen
 
 ### 1.4 Stammdaten
 
-Options Flow in vier Abschnitten. Leere optionale Felder heißen „unbekannt“; die abhängige Prüfung ist dann
+Options Flow in Abschnitten, dazu die Personen im Haushalt als Untereinträge (6.6). Leere optionale Felder heißen „unbekannt“; die abhängige Prüfung ist dann
 `not_assessable` mit dem Grund „Stammdaten fehlen“, nie ein Ersatzwert eines anderen Geräts.
 
 | Abschnitt | Key | Bedeutung | Genutzt von |
@@ -97,7 +97,9 @@ Options Flow in vier Abschnitten. Leere optionale Felder heißen „unbekannt“
 | Anlage | `circuit_flow_max_lpm` | größter Förderstrom der Heizkreispumpe laut Datenblatt; T3 kappt die Mischungsbilanz darauf | T3 |
 | Anlage | `capacity_min_table` | kleinste Heizleistung (kW) je Vorlauftemperatur und Außentemperatur, YAML, linear interpoliert | C4 |
 | Anlage | `immersion_heater_kw`, `booster_heater_kw`, `booster_heater_2_kw` | Leistung von Heizstab und Zusatzheizungen | C5, W3 |
-| Anlage | `dhw_tank_volume_l` | Nenninhalt des Warmwasserspeichers | W4 |
+| Warmwasser | `dhw_tank_volume_l` | Nenninhalt des Warmwasserspeichers | W4, W6 |
+| Warmwasser | `cold_water_c` | Kaltwassertemperatur im Jahresmittel, Vorgabe 10 °C | W6 |
+| Warmwasser | `dhw_disinfection_interval_days` | Abstand der Aufheizung auf 60 °C, Vorgabe 7 Tage | W2 |
 | Standort und Komfort | `heating_hours` | Heizstunden pro Jahr am Standort (BWP-KK) | C1 |
 | Standort und Komfort | `heating_degree_days` | langjähriges Mittel der Gradtagzahl G20/15 am Standort (Kd/a) | K2 |
 | Standort und Komfort | `room_temp_target` | gewünschte Raumtemperatur | T6 |

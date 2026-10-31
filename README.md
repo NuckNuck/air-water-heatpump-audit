@@ -114,10 +114,11 @@ Ladung ist die Zeit, in der das Umschaltventil auf Warmwasser steht.
 | Prüfung | Was wird geprüft? |
 |---|---|
 | W1 Gütegrad Warmwasser | Wie effizient die Wärmepumpe beim Warmwasser arbeitet, mit denselben Grenzen wie beim Heizen; dazu die Arbeitszahl. Braucht einen Stromzähler mit Nachkommastellen. |
-| W2 Speichertemperatur | Wie warm der Speicher nach dem Laden ist. Gelb unter 50 °C – die Untergrenze der technischen Regeln für Ein- und Zweifamilienhäuser; eine Legionellenschaltung gleicht das laut Umweltbundesamt nicht sicher aus. Gelb auch über 60 °C, weil das nur Strom kostet. |
-| W3 Aufheizen auf 60 °C | Wie oft die Legionellenschaltung läuft und wie viel der Heizstab dabei braucht. Gelb bei mehr als zweimal pro Woche; keine Aufheizung ist in Ordnung, vorgeschrieben ist sie im Einfamilienhaus nicht. |
+| W2 Speichertemperatur | Wie warm der Speicher nach dem Laden ist. Grün von 50 bis 60 °C. Darunter grün, solange der Speicher regelmäßig auf 60 °C aufgeheizt wird (Abstand einstellbar, Vorgabe 7 Tage), sonst gelb. Gelb auch über 60 °C, weil das nur Strom kostet. |
+| W3 Aufheizen auf 60 °C | Wie oft die Legionellenschaltung läuft und wie viel der Heizstab dabei braucht. Gelb bei mehr als zweimal pro Woche. Ob eine fehlende Aufheizung ein Problem ist, bewertet W2. |
 | W4 Speicherverlust | Wie viel Wärme der Speicher nachts verliert, umgerechnet auf die Klassen des Energielabels. Grün bis Klasse D (die Schätzung ist etwa eine Klasse unsicher). Braucht den Speicherinhalt. |
-| W5 Ladezeitpunkt | Ob zu einer kalten Tageszeit geladen wird; gelb, wenn ein Ladefenster am Nachmittag mindestens 10 % des Warmwasserstroms sparen würde. |
+| W5 Ladezeitpunkt | Ob zu einer kalten Tageszeit geladen wird; gelb, wenn Laden zur wärmsten Tageszeit mindestens 10 % des Warmwasserstroms sparen würde. Mit den Duschzeiten des Haushalts sagt der Text, ob ein Ladefenster passt. |
+| W6 Zapfmenge und Austausch | Wie viel Warmwasser der Haushalt am Tag braucht (als Duschwasser 40 °C), wie oft der Speicherinhalt ausgetauscht wird und wie viele Liter ein voller Speicher bei 45, 50 und 55 °C hergibt. Gelb, wenn das Wasser länger als 72 Stunden im Speicher steht. Mit den Personen des Haushalts kommt der übliche Bedarf zum Vergleich dazu. |
 
 ### Audit 5 – Kosten: Was kostet die Wärme, lohnt der Tarif?
 
@@ -275,8 +276,10 @@ bewertbar – Stammdaten fehlen“.
 
 - **Anlage:** Art der Verbindung zwischen Wärmepumpe und Heizkreis (direkt, Pufferspeicher, Weiche), Mindestdurchfluss
   der Wärmepumpe, größter Förderstrom der Heizkreispumpe, kleinste Heizleistung laut Datenblatt, Leistung von
-  Heizstab und Zusatzheizung, Inhalt des Warmwasserspeichers (alles aus Datenblatt, Typenschild oder
-  Installationshandbuch – im Zweifel den Installateur fragen).
+  Heizstab und Zusatzheizung (alles aus Datenblatt, Typenschild oder Installationshandbuch – im Zweifel den
+  Installateur fragen).
+- **Warmwasser:** Inhalt des Speichers (Typenschild), Kaltwassertemperatur (ohne genaueren Wert 10 °C) und wie oft
+  die Legionellenschaltung den Speicher auf 60 °C aufheizt.
 - **Standort und Komfort:** Heizstunden pro Jahr am Wohnort (aus der Klimakarte des Bundesverbands Wärmepumpe),
   Gradtage pro Jahr (z. B. aus dem Gradtagzahlen-Rechner des IWU) und die gewünschte Raumtemperatur.
 - **Kosten:** Arbeitspreis und zusätzlicher Grundpreis des Wärmepumpenstroms, Preis des Haushaltsstroms, Preis und
@@ -284,6 +287,14 @@ bewertbar – Stammdaten fehlen“.
   eintragen; der vorgeschlagene Nutzungsgrad 0,86 ist das Mittel von Gas-Brennwertkesseln im Feld.
 - **Auswertung:** wie viele Tage zurück gerechnet wird, ab wann Daten gelten (z. B. ab Einbau der Schnittstelle) und
   ob InfluxDB oder die normale Aufzeichnung genutzt wird („auto“ wählt selbst).
+
+### Personen im Haushalt
+
+Für das Audit Warmwasser: **Einstellungen → Geräte & Dienste → Luft-Wasser-Wärmepumpen-Audit → ⋮ → Person
+hinzufügen**. Je Person Name, Geburtsjahr, wann sie hier wohnt und wann sie meistens duscht. Für Kinder, die
+abwechselnd bei beiden Eltern leben, gibt es Wechselwochen (z. B. eine Woche hier, eine Woche dort, ab einem
+Startdatum) oder bestimmte Tage (z. B. jedes zweite Wochenende). Duschen und Bäder pro Woche können leer bleiben;
+dann rechnet das Audit mit typischen Werten für das Alter.
 
 ### Karte auf dem Dashboard anzeigen
 
