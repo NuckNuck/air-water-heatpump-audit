@@ -38,7 +38,7 @@ Quellen stehen als Kurzschlüssel in Klammern, das Verzeichnis folgt in Abschnit
 | `hint` | gelb | auffällig, beobachten oder prüfen |
 | `warn` | rot | klar außerhalb, Handlungsbedarf |
 | `info` | blau | Kennzahl ohne Bewertungsmaßstab, oder unplausibel gut (Messhinweis) |
-| `not_assessable` | grau | Mindestmenge nicht erreicht, Eingang oder Stammdatum fehlt |
+| `not_assessable` | grau | Startmenge nicht erreicht, Eingang oder Stammdatum fehlt |
 
 Gesamturteil eines Audits = schlechtestes Urteil seiner bewerteten Prüfungen; `info` zählt nicht mit. Sind alle
 Prüfungen `not_assessable`, ist auch das Audit `not_assessable`.
@@ -184,6 +184,19 @@ Termin nach hinten.
 In der Tabelle füllt sich der Marker einer `not_assessable`-Prüfung mit `progress` von links in der Farbe von
 `ok` (Anteil vorhanden ÷ nötig, abgerundet); ohne `progress` (Eingang fehlt) bleibt er grau. Sobald die Prüfung
 bewertbar ist, zeigt der Marker ihr Urteil.
+
+**Vorläufige Urteile (F239, seit 0.17.0):** Jede Prüfung urteilt schon ab der **Startmenge**, einem Drittel ihrer
+Mindestmenge, aufgerundet (`result.early()`): 7 Tage → 3, 14 Tage → 5, 20 Zyklen → 7, 7 Ladungen → 3, 3 h Heizbetrieb
+aus 3 Zyklen → 1 h aus 1 Zyklus. Zeitspannen in Stunden brauchen mindestens 24 h (7 Tage → 56 h). Ausnahmen: D4 und
+T2 (Fühler-Offsets) behalten ihre eigene Untergrenze, denn mit ihnen rechnen andere Prüfungen; W3 urteilt erst nach
+einer vollen Woche, sonst fehlt die wöchentliche Aufheizung womöglich nur zufällig. Bis `progress` die volle Menge
+erreicht, trägt das Urteil `provisional`; die Karte zeigt den Marker blasser mit „vorläufig · x von y …“. Die
+Datenreife bezieht sich weiter auf die volle Mindestmenge. Gemittelt wird nur ab dem Ereignis (1.5).
+
+**Stand vor dem Ereignis:** Ist eine Prüfung vorläufig oder `not_assessable` und hat ihr Audit ein Ereignis, rechnet
+der Runner dasselbe Audit für den Abschnitt davor (Fenster bis zum Ereignis) und hängt das Urteil als `before` an
+(Urteil, Wert, Text, Zeitraum, `provisional`). War dieser Abschnitt kürzer als 1 h oder dort nur vorläufig bewertet,
+sucht er bis zu drei Abschnitte zurück und nimmt das erste belastbare Urteil, sonst das vorläufige.
 
 ---
 

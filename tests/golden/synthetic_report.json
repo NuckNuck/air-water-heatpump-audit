@@ -4,6 +4,16 @@
    "checks": [
     {
      "action": null,
+     "before": {
+      "end": 1768118400.0,
+      "event": null,
+      "provisional": true,
+      "start": 1767567600.0,
+      "text": "150 Starts in 153,0 h → Obergrenze 5.882 Starts/Jahr (WPQS: ⅓ ≤ 2.000, 90 % < 5.500).",
+      "unit": "1/a",
+      "value": 5882,
+      "verdict": "hint"
+     },
      "check_id": "C1",
      "details": {},
      "key": "starts_per_year",
@@ -16,13 +26,15 @@
       "since": 1768118400.0,
       "unit": "hours"
      },
-     "text": "86 Starts in 87,0 h → Obergrenze 5.931 Starts/Jahr (WPQS: ⅓ ≤ 2.000, 90 % < 5.500). Bewertung ab 14 Tagen.",
+     "provisional": false,
+     "text": "86 Starts in 87,0 h → Obergrenze 5.931 Starts/Jahr (WPQS: ⅓ ≤ 2.000, 90 % < 5.500). Vorläufiges Urteil ab 112 h, belastbar ab 14 Tagen.",
      "unit": "1/a",
      "value": 5931,
      "verdict": "not_assessable"
     },
     {
      "action": null,
+     "before": null,
      "check_id": "C2",
      "details": {},
      "key": "max_starts_per_hour",
@@ -35,6 +47,7 @@
       "since": 1768118400.0,
       "unit": "hours"
      },
+     "provisional": false,
      "text": "Höchstens 1 Start in einer Stunde. Herstellergrenzen 6–12/h (WPQS S. 98, Danfoss).",
      "unit": "1/h",
      "value": 1,
@@ -42,6 +55,7 @@
     },
     {
      "action": null,
+     "before": null,
      "check_id": "C3",
      "details": {
       "durations_min": [
@@ -135,7 +149,15 @@
      },
      "key": "short_cycles",
      "origin": "descriptive",
-     "progress": null,
+     "progress": {
+      "basis": "rate",
+      "have": 83,
+      "lag_h": 0.0,
+      "need": 20,
+      "since": 1768118400.0,
+      "unit": "cycles"
+     },
+     "provisional": false,
      "text": "0 von 83 Heizzyklen kürzer als 10 min, 0 kürzer als 3 min.",
      "unit": "%",
      "value": 0.0,
@@ -143,6 +165,7 @@
     },
     {
      "action": null,
+     "before": null,
      "check_id": "C4",
      "details": {
       "days": [
@@ -185,6 +208,7 @@
       "since": 1768118400.0,
       "unit": "days"
      },
+     "provisional": false,
      "text": "14.01.2026: Last 3,9 kW über kleinster Stufe 3,5 kW (Verhältnis 1,13) → häufiges Takten wäre nicht durch die Last erklärt.",
      "unit": "",
      "value": 1.13,
@@ -192,6 +216,16 @@
     },
     {
      "action": null,
+     "before": {
+      "end": 1768118400.0,
+      "event": null,
+      "provisional": true,
+      "start": 1767567600.0,
+      "text": "Heizstab ≈ 0,2 kWh von 137 kWh Zählerstrom.",
+      "unit": "%",
+      "value": 0.18,
+      "verdict": "ok"
+     },
      "check_id": "C5",
      "details": {
       "heater_kwh": 0.0,
@@ -211,13 +245,15 @@
       "since": 1768118400.0,
       "unit": "hours"
      },
-     "text": "Heizstab 0,0 kWh; Bewertung ab 7 Tagen.",
-     "unit": "",
-     "value": null,
-     "verdict": "not_assessable"
+     "provisional": true,
+     "text": "Heizstab ≈ 0,0 kWh von 96 kWh Zählerstrom.",
+     "unit": "%",
+     "value": 0.0,
+     "verdict": "ok"
     },
     {
      "action": null,
+     "before": null,
      "check_id": "C6",
      "details": {
       "events": [
@@ -346,6 +382,7 @@
      "key": "defrost",
      "origin": "derived",
      "progress": null,
+     "provisional": false,
      "text": "29 Abtauungen in 72,5 h Verdichterlauf. Über 5 °C außen: 4 Abtauungen in 16,7 h Lauf (0,2/h).",
      "unit": "1/h Lauf",
      "value": 0.4,
@@ -353,6 +390,7 @@
     },
     {
      "action": null,
+     "before": null,
      "check_id": "C7",
      "details": {
       "histogram_pct": {
@@ -363,6 +401,7 @@
      "key": "modulation",
      "origin": "descriptive",
      "progress": null,
+     "provisional": false,
      "text": "0 % der Laufzeit bei ≤ 20 Hz.",
      "unit": "%",
      "value": 0.0,
@@ -384,6 +423,7 @@
       "text": "Langzeitdaten einrichten, sonst fehlen die Vergleiche über Wochen und Monate.",
       "who": "owner"
      },
+     "before": null,
      "check_id": "D1",
      "details": {
       "long_term_days": null,
@@ -392,6 +432,7 @@
      "key": "history_depth",
      "origin": "derived",
      "progress": null,
+     "provisional": false,
      "text": "Nur Recorder mit 10 Tagen Rohdaten. Für Monatsvergleiche Aufbewahrung erhöhen; dafür Datenträger (USB-SSD) statt Speicherkarte/Stick.",
      "unit": "d",
      "value": 10,
@@ -399,6 +440,7 @@
     },
     {
      "action": null,
+     "before": null,
      "check_id": "D2",
      "details": {
       "gaps": [
@@ -411,6 +453,7 @@
      "key": "coverage",
      "origin": "derived",
      "progress": null,
+     "provisional": false,
      "text": "1 Lücke > 180 s, zusammen 21 min.",
      "unit": "%",
      "value": 99.9,
@@ -418,6 +461,7 @@
     },
     {
      "action": null,
+     "before": null,
      "check_id": "D3",
      "details": {
       "heat_uncertainty_pct": 10.2,
@@ -432,6 +476,7 @@
      "key": "resolution",
      "origin": "physical",
      "progress": null,
+     "provisional": false,
      "text": "Auflösung Vorlauf 0,5 K, Rücklauf 0,5 K, Durchfluss 1 l/min, Außentemperatur 0,1 K. Mittlere Spreizung bei laufendem Verdichter 4,9 K → Wärme je Einzelwert bis ±10 %; über Tage gemittelt gleicht sich das aus.",
      "unit": "",
      "value": {
@@ -444,6 +489,7 @@
     },
     {
      "action": null,
+     "before": null,
      "check_id": "D4",
      "details": {
       "per_window": [
@@ -1627,6 +1673,7 @@
       "since": 1767567600.0,
       "unit": "windows"
      },
+     "provisional": false,
      "text": "Mittel Vorlauf − Rücklauf in 233 Fenstern ohne Verdichter: +0,50 K.",
      "unit": "K",
      "value": 0.5,
@@ -1634,6 +1681,7 @@
     },
     {
      "action": null,
+     "before": null,
      "check_id": "D5",
      "details": {
       "days": [
@@ -1694,6 +1742,7 @@
       "since": 1767567600.0,
       "unit": "days"
      },
+     "provisional": false,
      "text": "Steuerung 216,5 kWh gegen Zähler 206,2 kWh an 9 Tagen.",
      "unit": "",
      "value": 1.05,
@@ -1701,6 +1750,7 @@
     },
     {
      "action": null,
+     "before": null,
      "check_id": "D6",
      "details": {
       "offsets_min": [
@@ -1718,6 +1768,7 @@
      "key": "controller_day_boundary",
      "origin": "sourced",
      "progress": null,
+     "provisional": false,
      "text": "Datum der Steuerung wechselt +2 min gegen lokale Mitternacht (9 Wechsel).",
      "unit": "min",
      "value": 2.0,
@@ -1725,11 +1776,13 @@
     },
     {
      "action": null,
+     "before": null,
      "check_id": "D8",
      "details": {},
      "key": "meter_resolution",
      "origin": "physical",
      "progress": null,
+     "provisional": false,
      "text": "Zählerstände in Schritten von 0,1 kWh.",
      "unit": "kWh",
      "value": 0.1,
@@ -1737,6 +1790,7 @@
     },
     {
      "action": null,
+     "before": null,
      "check_id": "D9",
      "details": {
       "restarts": [
@@ -1749,6 +1803,7 @@
      "key": "restart_artifacts",
      "origin": "derived",
      "progress": null,
+     "provisional": false,
      "text": "1 Neustart im Zeitraum; Zustandswechsel ±30 s darum werden verworfen.",
      "unit": "1/d",
      "value": 0.1,
@@ -1756,6 +1811,7 @@
     },
     {
      "action": null,
+     "before": null,
      "check_id": "D10",
      "details": {
       "days": [
@@ -1831,6 +1887,7 @@
       "since": 1767567600.0,
       "unit": "days"
      },
+     "provisional": false,
      "text": "Außenfühler im Mittel +0,8 K gegen Wetterdienst (10 Tage).",
      "unit": "K",
      "value": 0.8,
@@ -1844,6 +1901,7 @@
    "checks": [
     {
      "action": null,
+     "before": null,
      "check_id": "E1",
      "details": {
       "days": [
@@ -1892,6 +1950,7 @@
       "since": 1768118400.0,
       "unit": "days"
      },
+     "provisional": false,
      "text": "14.01.2026: Arbeitszahl 3,7 (roh 4,2) aus 97,6 kWh Wärme und 26 kWh Strom bei 2,8 °C außen.",
      "unit": "",
      "value": 3.68,
@@ -1899,8 +1958,24 @@
     },
     {
      "action": null,
+     "before": {
+      "end": 1768118400.0,
+      "event": null,
+      "provisional": true,
+      "start": 1767567600.0,
+      "text": "05.01.2026 bis 10.01.2026: Arbeitszahl 3,6 (roh 4,2). Feldtest-Mittel bei 3 °C außen: 2,8 (Fraunhofer, Monatswerte von 22 Wärmepumpen; ein Mittelwert, keine Grenze).",
+      "unit": "",
+      "value": 3.63,
+      "verdict": "info"
+     },
      "check_id": "E2",
-     "details": {},
+     "details": {
+      "electricity_kwh": 79.4,
+      "field_cop": 2.7800000000000002,
+      "heat_kwh": 292.8,
+      "heat_raw_kwh": 332.7,
+      "outdoor_mean": 2.7999999999999994
+     },
      "key": "weekly_cop",
      "origin": "sourced",
      "progress": {
@@ -1911,15 +1986,29 @@
       "since": 1768118400.0,
       "unit": "days"
      },
-     "text": "3 gültige Tage, nötig 7.",
+     "provisional": true,
+     "text": "12.01.2026 bis 14.01.2026: Arbeitszahl 3,7 (roh 4,2). Feldtest-Mittel bei 3 °C außen: 2,8 (Fraunhofer, Monatswerte von 22 Wärmepumpen; ein Mittelwert, keine Grenze).",
      "unit": "",
-     "value": null,
-     "verdict": "not_assessable"
+     "value": 3.69,
+     "verdict": "info"
     },
     {
      "action": null,
+     "before": {
+      "end": 1768118400.0,
+      "event": null,
+      "provisional": true,
+      "start": 1767567600.0,
+      "text": "Gütegrad 0,37 (Feldtest Luft/Wasser 0,32–0,44, Mittel 0,39). Für ihre Temperaturen arbeitet die Wärmepumpe normal.",
+      "unit": "",
+      "value": 0.375,
+      "verdict": "ok"
+     },
      "check_id": "E3",
-     "details": {},
+     "details": {
+      "electricity_kwh": 79.4,
+      "ideal_kwh": 30.09
+     },
      "key": "carnot_efficiency",
      "origin": "derived",
      "progress": {
@@ -1930,13 +2019,24 @@
       "since": 1768118400.0,
       "unit": "days"
      },
-     "text": "3 gültige Tage, nötig 7.",
+     "provisional": true,
+     "text": "Gütegrad 0,38 (Feldtest Luft/Wasser 0,32–0,44, Mittel 0,39). Für ihre Temperaturen arbeitet die Wärmepumpe normal.",
      "unit": "",
-     "value": null,
-     "verdict": "not_assessable"
+     "value": 0.379,
+     "verdict": "ok"
     },
     {
      "action": null,
+     "before": {
+      "end": 1768118400.0,
+      "event": null,
+      "provisional": true,
+      "start": 1767567600.0,
+      "text": "5 % der Wärme gingen ins Warmwasser (Feldtest-Mittel übers Jahr 19 %; im Sommer mehr, im Winter weniger).",
+      "unit": "%",
+      "value": 4.8,
+      "verdict": "info"
+     },
      "check_id": "E4",
      "details": {},
      "key": "dhw_share",
@@ -1949,19 +2049,21 @@
       "since": 1768118400.0,
       "unit": "days"
      },
-     "text": "3 gültige Tage, nötig 7.",
-     "unit": "",
-     "value": null,
-     "verdict": "not_assessable"
+     "provisional": true,
+     "text": "4 % der Wärme gingen ins Warmwasser (Feldtest-Mittel übers Jahr 19 %; im Sommer mehr, im Winter weniger).",
+     "unit": "%",
+     "value": 3.8,
+     "verdict": "info"
     }
    ],
    "dq": "high",
-   "verdict": "info"
+   "verdict": "ok"
   },
   "flow_temperature": {
    "checks": [
     {
      "action": null,
+     "before": null,
      "check_id": "T1",
      "details": {
       "cop_loss_pct": [
@@ -1983,6 +2085,7 @@
       "since": 1768118400.0,
       "unit": "heating_hours"
      },
+     "provisional": false,
      "text": "Im Heizbetrieb liegt der Vorlauf der Wärmepumpe im Mittel 1,5 K über dem Vorlauf im Heizkreis. Die Wärmepumpe arbeitet damit wärmer als nötig, das kostet grob 3–4 % Effizienz. Fühlerunterschied aus T2 (+0,5 K) abgezogen, die Fühler sind abgeglichen.",
      "unit": "K",
      "value": 1.5,
@@ -1990,6 +2093,7 @@
     },
     {
      "action": null,
+     "before": null,
      "check_id": "T2",
      "details": {
       "robust": true,
@@ -2005,6 +2109,7 @@
       "since": 1767567600.0,
       "unit": "windows"
      },
+     "provisional": false,
      "text": "Die beiden Vorlauffühler stimmen überein (im Mittel +0,5 K in 233 Verdichterpausen, innerhalb der Fühlertoleranz).",
      "unit": "K",
      "value": 0.5,
@@ -2012,6 +2117,7 @@
     },
     {
      "action": null,
+     "before": null,
      "check_id": "T3",
      "details": {
       "circuit_spread_k": 4.5,
@@ -2028,6 +2134,7 @@
       "since": 1768118400.0,
       "unit": "heating_hours"
      },
+     "provisional": false,
      "text": "Der Rücklauf der Wärmepumpe ist wärmer als der des Heizkreises: Die Wärmepumpe fördert mehr Wasser als der Heizkreis, ein Teil ihres Vorlaufs fließt direkt zurück.",
      "unit": "",
      "value": null,
@@ -2035,6 +2142,7 @@
     },
     {
      "action": null,
+     "before": null,
      "check_id": "T4",
      "details": {
       "flow_lpm": 16.0,
@@ -2053,6 +2161,7 @@
       "since": 1768118400.0,
       "unit": "heating_hours"
      },
+     "provisional": false,
      "text": "Spreizung der Wärmepumpe im Heizbetrieb 5,0 K (Feldmittel bei Bestandsanlagen 5,5 K). Durchfluss 16,0 l/min (Herstellerminimum 14,3 l/min).",
      "unit": "K",
      "value": 5.0,
@@ -2060,6 +2169,7 @@
     },
     {
      "action": null,
+     "before": null,
      "check_id": "T5",
      "details": {
       "circuit_minus_setpoint_k": 0.5,
@@ -2076,13 +2186,36 @@
       "since": 1768118400.0,
       "unit": "heating_hours"
      },
+     "provisional": false,
      "text": "Soll-Vorlauf im Mittel 33,9 °C. Die Wärmepumpe liefert +2,5 K dazu, im Heizkreis kommen +0,5 K an. Die Steuerung regelt offenbar auf den Heizkreis-Fühler; den Aufschlag trägt die Wärmepumpe.",
      "unit": "K",
      "value": 2.5,
      "verdict": "info"
     },
     {
-     "action": null,
+     "action": {
+      "conflicts": [
+       "Nur so weit senken, wie alle Räume warm bleiben; werden einzelne Räume zu kühl, fehlt der hydraulische Abgleich."
+      ],
+      "steps": [
+       "Am Bedienteil der Wärmepumpe die Parallelverschiebung der Heizkurve um 1 K senken.",
+       "Hier im Zeitstrahl „Ereignis hinzufügen“ wählen, damit die Audits ab der Änderung neu rechnen. Art: „Heizkurve geändert“.",
+       "Eine Woche beobachten. Ist es dann noch zu warm, noch einmal 1 K; wird es zu kühl, 1 K zurück."
+      ],
+      "target": "Parallelverschiebung 1 K niedriger als heute (Soll-Vorlauf im Mittel ≈ 32,9 statt 33,9 °C)",
+      "text": "Die Räume sind wärmer als nötig: Heizkurve um 1 K absenken.",
+      "who": "owner"
+     },
+     "before": {
+      "end": 1768118400.0,
+      "event": null,
+      "provisional": false,
+      "start": 1767567600.0,
+      "text": "Der Raum war an 6 von 6 Heiztagen mindestens 1 K wärmer als das Ziel 21 °C (kältester Tag 22,3 °C). Die Heizkurve hat Reserve: um 1 K absenken und ein bis zwei Tage beobachten.",
+      "unit": "°C",
+      "value": 22.3,
+      "verdict": "hint"
+     },
      "check_id": "T6",
      "details": {
       "days": [
@@ -2099,7 +2232,8 @@
         22.3
        ]
       ],
-      "target_c": 21.0
+      "target_c": 21.0,
+      "warm_days": 3
      },
      "key": "heating_curve_headroom",
      "origin": "derived",
@@ -2111,14 +2245,15 @@
       "since": 1768118400.0,
       "unit": "heating_days"
      },
-     "text": "3 Heiztage mit Raumtemperatur, nötig 5.",
-     "unit": "",
-     "value": null,
-     "verdict": "not_assessable"
+     "provisional": true,
+     "text": "Der Raum war an 3 von 3 Heiztagen mindestens 1 K wärmer als das Ziel 21 °C (kältester Tag 22,3 °C). Die Heizkurve hat Reserve: um 1 K absenken und ein bis zwei Tage beobachten.",
+     "unit": "°C",
+     "value": 22.3,
+     "verdict": "hint"
     }
    ],
    "dq": "high",
-   "verdict": "ok"
+   "verdict": "hint"
   }
  },
  "cycles": [
@@ -3022,6 +3157,14 @@
      "need": 1,
      "reached": true,
      "unit": "hours"
+    },
+    {
+     "check_id": "C3",
+     "eta": 1768193869.879518,
+     "have": 83,
+     "need": 20,
+     "reached": true,
+     "unit": "cycles"
     },
     {
      "check_id": "C4",

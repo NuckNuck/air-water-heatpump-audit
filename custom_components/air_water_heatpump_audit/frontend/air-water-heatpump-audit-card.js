@@ -54,6 +54,9 @@ const TEXT = {
       hydraulic_balancing: "Hydraulischer Abgleich", pump_setting: "Pumpe verstellt",
       dhw_setting: "Warmwasser-Einstellung", hardware: "Umbau an der Anlage", other: "Sonstiges" },
     section: (sec, fmt, kind) => `Bewertet ab ${fmt(sec.start)}: ${kind}${sec.note ? ` – ${sec.note}` : ""}`,
+    prov: { label: "vorläufig", tip: "Urteil mit weniger als der vollen Datenmenge; es wird mit jedem Tag belastbarer.",
+      before: "davor", period: (a, b) => `${a} bis ${b}`, beforeProv: "(damals vorläufig)",
+      verdicts: { ok: "grün", hint: "gelb", warn: "rot", info: "Info" } },
     missing: "Entität nicht gefunden",
     waiting: "Noch keine Auswertung (erste Rechnung nach dem Start von Home Assistant).",
     help: { what: "Was wird geprüft", rating: "Bewertung", source: "Grundlage", label: "Erklärung zu dieser Prüfung" },
@@ -77,7 +80,8 @@ const TEXT = {
       units: { days: "vollen Tagen", heating_days: "Heiztagen", hours: "Stunden", heating_hours: "h Heizbetrieb",
         cycles: "Zyklen", windows: "Messfenstern", charges: "Ladungen", nights: "ruhigen Nächten" },
       note: "Hochrechnung: Fällt ein Tag durch (Datenlücke, zu wenig Strom), rückt der Termin nach hinten. "
-        + "Ein neues Ereignis startet alle Audits außer der Datenbasis neu.",
+        + "Ein neues Ereignis startet alle Audits außer der Datenbasis neu; ab einem Drittel der Datenmenge urteilen "
+        + "sie vorläufig.",
     },
   },
   en: {
@@ -109,6 +113,9 @@ const TEXT = {
       hydraulic_balancing: "Hydraulic balancing", pump_setting: "Pump setting changed",
       dhw_setting: "Hot water setting", hardware: "Hardware change", other: "Other" },
     section: (sec, fmt, kind) => `Assessed from ${fmt(sec.start)}: ${kind}${sec.note ? ` – ${sec.note}` : ""}`,
+    prov: { label: "preliminary", tip: "Verdict with less than the full amount of data; it firms up day by day.",
+      before: "before", period: (a, b) => `${a} to ${b}`, beforeProv: "(preliminary at the time)",
+      verdicts: { ok: "green", hint: "yellow", warn: "red", info: "info" } },
     missing: "Entity not found",
     waiting: "No evaluation yet (first run after Home Assistant has started).",
     help: { what: "What is checked", rating: "Rating", source: "Basis", label: "About this check" },
@@ -132,7 +139,7 @@ const TEXT = {
       units: { days: "full days", heating_days: "heating days", hours: "hours", heating_hours: "h of heating",
         cycles: "cycles", windows: "measuring windows", charges: "charges", nights: "quiet nights" },
       note: "Projection: if a day drops out (data gap, too little electricity), the date moves back. "
-        + "A new event restarts all audits except the data basis.",
+        + "A new event restarts all audits except the data basis; from a third of the data they give preliminary verdicts.",
     },
   },
 };
@@ -241,7 +248,7 @@ class AirWaterAuditCard extends HTMLElement {
     return `<tr>
       <td class="id">${esc(c.check_id)}</td>
       <td>${esc(name)}${help}</td>
-      <td>${this._pill(verdict, st, at.progress, t)}</td>
+      <td>${this._pill(verdict, st, at.progress, t)}${this._provisional(at, t)}</td>
       <td class="action">${action}</td>
       <td class="num">${esc(formatValue(at.value, at.unit, hass.language))}</td>
       <td class="text">${esc(at.text)}${toggle}</td>
@@ -254,7 +261,8 @@ class AirWaterAuditCard extends HTMLElement {
     const hass = this._hass;
     const label = esc(st ? hass.formatEntityState(st) : verdict);
     if (verdict !== "not_assessable" || !prog?.need) {
-      return `<span class="pill" style="background:${COLORS[verdict] ?? COLORS.not_assessable}">${label}</span>`;
+      const cls = st?.attributes?.provisional ? "pill prov" : "pill";
+      return `<span class="${cls}" style="background:${COLORS[verdict] ?? COLORS.not_assessable}">${label}</span>`;
     }
     const pct = Math.max(0, Math.min(100, Math.floor((100 * prog.have) / prog.need)));
     const loc = hass.locale?.language || hass.language;
@@ -262,6 +270,29 @@ class AirWaterAuditCard extends HTMLElement {
     const tip = `${pct} % – ${t.ready.of(num(prog.have), num(prog.need), t.ready.units[prog.unit] ?? prog.unit)}`;
     return `<span class="pill" title="${esc(tip)}" style="background:linear-gradient(to right, ${COLORS.ok} ${pct}%, `
       + `${COLORS.not_assessable} ${pct}%)">${label}</span>`;
+  }
+
+  // Vorläufiges Urteil (Datenmenge) und das letzte Urteil vor dem Ereignis, unter dem Urteils-Marker (F239).
+  _provisional(at, t) {
+    const hass = this._hass;
+    const loc = hass.locale?.language || hass.language;
+    const num = (v) => Number(v).toLocaleString(loc, { maximumFractionDigits: 1 });
+    let html = "";
+    const prog = at.progress;
+    if (at.provisional && prog?.need) {
+      const of = t.ready.of(num(prog.have), num(prog.need), t.ready.units[prog.unit] ?? prog.unit);
+      html += `<div class="sub-verdict" title="${esc(t.prov.tip)}">${esc(t.prov.label)} · ${esc(of)}</div>`;
+    }
+    const b = at.before;
+    if (b) {
+      const date = (iso) => new Date(iso).toLocaleDateString(loc, { day: "2-digit", month: "2-digit" });
+      const tip = `${t.prov.period(date(b.start), date(b.end))}: ${b.text}${b.provisional ? " " + t.prov.beforeProv : ""}`;
+      const value = b.value != null ? " " + formatValue(b.value, b.unit, hass.language) : "";
+      html += `<div class="sub-verdict" title="${esc(tip)}">${esc(t.prov.before)}: `
+        + `<span class="pill small${b.provisional ? " prov" : ""}" style="background:${COLORS[b.verdict] ?? COLORS.not_assessable}">`
+        + `${esc(t.prov.verdicts[b.verdict] ?? b.verdict)}</span>${esc(value)}</div>`;
+    }
+    return html;
   }
 
   // Aktion: wer und was, Zielwert, aufklappbare Schritte, Vorschläge für Stellgrößen der Schnittstelle.
@@ -509,6 +540,9 @@ class AirWaterAuditCard extends HTMLElement {
         .muted { color: var(--secondary-text-color); }
         td.origin { color: var(--secondary-text-color); overflow-wrap: normal; white-space: nowrap; }
         .pill { color: #fff; border-radius: 10px; padding: 1px 8px; white-space: nowrap; font-size: .9em; }
+        .pill.prov { opacity: .7; outline: 1px dashed currentColor; outline-offset: -3px; }
+        .pill.small { padding: 0 6px; font-size: .85em; }
+        .sub-verdict { margin-top: 3px; font-size: .85em; color: var(--secondary-text-color); white-space: nowrap; cursor: help; }
         .msg { color: var(--secondary-text-color); }
         .q { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; margin-left: 3px;
           border-radius: 50%; font-size: 11px; font-weight: 600; line-height: 1; cursor: help; vertical-align: 1px;

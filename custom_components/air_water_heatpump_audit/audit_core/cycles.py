@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from . import days
 from .data_basis import check_coverage
 from .heat import CapacityTable, energy_kwh, min_capacity_kw, time_mean
-from .result import (DERIVED, DESCRIPTIVE, ELAPSED, FULL_DAYS, HINT, INFO, NOT_ASSESSABLE, OK, PHYSICAL, RATE, SOURCED,
+from .result import (DERIVED, DESCRIPTIVE, ELAPSED, early, FULL_DAYS, HINT, INFO, NOT_ASSESSABLE, OK, PHYSICAL, RATE, SOURCED,
                      WARN, CheckResult, count, grade, num, progress)
 from .series import Interval, Series, intersect, intervals_where, overlaps, subtract, total, weighted_values
 
@@ -107,9 +107,10 @@ def check_short_cycles(cycles: list[Cycle], min_cycles: int = 20, since: float =
     heating = [c for c in cycles if c.kind == HEATING and c.closed]
     details = {"heating_cycles": len(heating), "durations_min": [round(c.duration / 60, 1) for c in heating]}
     prog = progress(len(heating), min_cycles, "cycles", RATE, since)
-    if len(heating) < min_cycles:
+    if len(heating) < early(min_cycles):
         return CheckResult("C3", "short_cycles", NOT_ASSESSABLE,
-                           text=f"{count(len(heating), 'abgeschlossener Heizzyklus', 'abgeschlossene Heizzyklen')}, nötig {min_cycles}.", origin=DESCRIPTIVE,
+                           text=f"{count(len(heating), 'abgeschlossener Heizzyklus', 'abgeschlossene Heizzyklen')}, "
+                                f"vorläufiges Urteil ab {early(min_cycles):.0f}.", origin=DESCRIPTIVE,
                            details=details, progress=prog)
     short = sum(1 for c in heating if c.duration < SHORT_CYCLE_S)
     very_short_cycles = [c for c in heating if c.duration < VERY_SHORT_CYCLE_S]
@@ -123,7 +124,8 @@ def check_short_cycles(cycles: list[Cycle], min_cycles: int = 20, since: float =
     text = f"{short} von {len(heating)} Heizzyklen kürzer als 10 min, {very_short} kürzer als 3 min"
     if very_short:
         text += f" (an {count(len(very_short_days), 'Tag', 'Tagen')})"
-    return CheckResult("C3", "short_cycles", verdict, round(share, 1), "%", text + ".", DESCRIPTIVE, details)
+    return CheckResult("C3", "short_cycles", verdict, round(share, 1), "%", text + ".", DESCRIPTIVE, details,
+                       progress=prog)
 
 
 def check_starts_per_year(cycles: list[Cycle], start: float, end: float, heating_hours: float | None,
@@ -138,9 +140,10 @@ def check_starts_per_year(cycles: list[Cycle], start: float, end: float, heating
     projection = round(n / hours * heating_hours) if hours else 0
     text = (f"{n} Starts in {num(hours, '.1f')} h → Obergrenze {num(projection, ',')} Starts/Jahr "
             f"(WPQS: ⅓ ≤ 2.000, 90 % < 5.500).")
-    if hours < min_days * 24:
+    if hours < early(min_days * 24, 24):
         return CheckResult("C1", "starts_per_year", NOT_ASSESSABLE, projection, "1/a",
-                           text + f" Bewertung ab {num(min_days, 'g')} Tagen.", SOURCED, progress=prog)
+                           text + f" Vorläufiges Urteil ab {num(early(min_days * 24, 24), '.0f')} h, belastbar ab "
+                           f"{num(min_days, 'g')} Tagen.", SOURCED, progress=prog)
     return CheckResult("C1", "starts_per_year", starts_per_year_verdict(projection), projection, "1/a", text, SOURCED,
                        progress=prog)
 
@@ -166,9 +169,10 @@ def check_backup_heater(heaters: dict[str, Series], power_kw: dict[str, float | 
     heater_kwh = sum(hours[k] * float(power_kw.get(k) or 0.0) for k in hours)
     details = {"on_hours": hours, "heater_kwh": round(heater_kwh, 2)}
     prog = progress((end - start) / 3600, min_days * 24, "hours", ELAPSED, start)
-    if (end - start) < min_days * 86400 or not electricity_kwh:
+    if (end - start) < early(min_days * 24, 24) * 3600 or not electricity_kwh:
         return CheckResult("C5", "backup_heater_share", NOT_ASSESSABLE,
-                           text=f"Heizstab {num(heater_kwh, '.1f')} kWh; Bewertung ab {num(min_days, 'g')} Tagen.",
+                           text=f"Heizstab {num(heater_kwh, '.1f')} kWh; vorläufiges Urteil ab "
+                                f"{num(early(min_days * 24, 24), '.0f')} h, belastbar ab {num(min_days, 'g')} Tagen.",
                            origin=DERIVED,
                            details=details, progress=prog)
     share = 100 * heater_kwh / electricity_kwh

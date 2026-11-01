@@ -11,7 +11,7 @@ from .cycles import Cycle
 from .data_basis import resolution
 from .heat import time_mean
 from .result import (DERIVED, DESCRIPTIVE, FULL_DAYS, HINT, INFO, NOT_ASSESSABLE, OK, PHYSICAL, RATE, SOURCED, WARN,
-                     CheckResult, count, grade, num, progress)
+                     CheckResult, count, early, grade, num, progress)
 from .series import (Interval, Series, combine, intersect, intervals_where, normalize, subtract, total,
                      weighted_values)
 
@@ -100,9 +100,11 @@ def heating_progress(windows: list[Interval], used: int, since: float) -> dict:
 
 
 def _heating_gate(windows: list[Interval], used: int) -> str | None:
-    if total(windows) < MIN_HEATING_S or used < MIN_HEATING_CYCLES:
-        return (f"{num(total(windows) / 3600, '.1f')} h stationärer Heizbetrieb aus {count(used, 'Zyklus', 'Zyklen')}, nötig "
-                f"{num(MIN_HEATING_S / 3600, '.0f')} h aus {MIN_HEATING_CYCLES} Zyklen.")
+    """Text für „nicht bewertbar“ unterhalb der Startmenge (vorläufig ab early(), Entscheid F239); sonst None."""
+    need_h, need_cycles = early(MIN_HEATING_S / 3600), early(MIN_HEATING_CYCLES)
+    if total(windows) < need_h * 3600 or used < need_cycles:
+        return (f"{num(total(windows) / 3600, '.1f')} h stationärer Heizbetrieb aus {count(used, 'Zyklus', 'Zyklen')}, "
+                f"vorläufiges Urteil ab {num(need_h, '.0f')} h aus {count(int(need_cycles), 'Zyklus', 'Zyklen')}.")
     return None
 
 
@@ -313,9 +315,10 @@ def check_heating_curve_headroom(room: Series, target: float | None, heating: li
                 means.append((days.label(a, tz), round(m, 1)))
     details = {"days": means, "target_c": target}
     prog = progress(len(means), MIN_ROOM_DAYS, "heating_days", FULL_DAYS, start)
-    if len(means) < MIN_ROOM_DAYS:
+    if len(means) < early(MIN_ROOM_DAYS):
         return CheckResult("T6", "heating_curve_headroom", NOT_ASSESSABLE,
-                           text=f"{count(len(means), 'Heiztag', 'Heiztage')} mit Raumtemperatur, nötig {MIN_ROOM_DAYS}.", origin=DERIVED,
+                           text=f"{count(len(means), 'Heiztag', 'Heiztage')} mit Raumtemperatur, vorläufiges Urteil "
+                                f"ab {early(MIN_ROOM_DAYS):.0f}.", origin=DERIVED,
                            details=details, progress=prog)
     values = [m for _, m in means]
     lowest = min(values)

@@ -107,7 +107,7 @@ CHECK_HELP: dict[str, dict[str, str]] = {
                    "ungünstig eingestellte Wärmepumpe hin.",
            "rating": f"Grün bis {num(c3.STARTS_PER_YEAR_OK, ',')} pro Jahr, darüber Gelb (90 % der Anlagen im "
                      f"Feldtest unter {num(c3.STARTS_PER_YEAR_HINT, ',')}). Höchstens Gelb, weil hochgerechnet. "
-                     "Bewertet ab 14 Tagen.",
+                     "Bewertet ab 14 Tagen, vorläufig ab 5.",
            "source": "Fraunhofer ISE, Feldtest WP-QS."},
     "C2": {"what": "Die meisten Verdichterstarts innerhalb einer Stunde.",
            "rating": "Grün bis 6, Gelb bis 12, Rot darüber.",
@@ -150,7 +150,7 @@ CHECK_HELP: dict[str, dict[str, str]] = {
                    "Heizstab dabei braucht.",
            "rating": f"Gelb bei mehr als {w1.DISINFECTION_MAX_PER_WEEK}-mal pro Woche: kostet Strom ohne weiteren "
                      "Hygienegewinn. Keine Aufheizung ist kein Mangel – im Einfamilienhaus ist sie nicht "
-                     "vorgeschrieben. Ab 14 Tagen.",
+                     "vorgeschrieben. Ab 14 Tagen, vorläufig ab 7.",
            "source": "Abgeleitet; DVGW und Umweltbundesamt schreiben keine Legionellenschaltung vor."},
     "W4": {"what": "Wie viel Wärme der Speicher nachts verliert, ohne dass Wasser gezapft wird, umgerechnet auf die "
                    "Prüfbedingung des Energielabels (65 °C im Speicher, 20 °C Raum).",

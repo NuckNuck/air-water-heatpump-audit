@@ -5,7 +5,7 @@ from __future__ import annotations
 from . import days
 from .heat import time_mean
 from .result import (DERIVED, FULL_DAYS, INFO, NOT_ASSESSABLE, OK, HINT, RATE, WARN, PHYSICAL, SOURCED, CheckResult,
-                     count, grade, num, progress)
+                     count, early, grade, num, progress)
 from .series import (Interval, Series, clip, combine, dedupe, intersect, intervals_where, normalize, subtract,
                      total, value_at, weighted_values)
 
@@ -178,8 +178,10 @@ def check_meter_vs_controller(meter: Series, controller_consumed: list[Series], 
                      "controller_kwh": round(sum(float(x) for x in ctrl), 2)})
     # Der Wert der Steuerung für einen Tag steht erst am Mittag danach: ein Tag wird 12 h nach seiner Mitternacht zählbar.
     prog = progress(len(rows), min_days, "days", FULL_DAYS, start, lag_h=12)
-    if len(rows) < min_days:
-        return CheckResult("D5", "meter_vs_controller", NOT_ASSESSABLE, text=f"{count(len(rows), 'vergleichbarer Tag', 'vergleichbare Tage')}, nötig {min_days}.",
+    if len(rows) < early(min_days):
+        return CheckResult("D5", "meter_vs_controller", NOT_ASSESSABLE,
+                           text=f"{count(len(rows), 'vergleichbarer Tag', 'vergleichbare Tage')}, vorläufiges Urteil "
+                                f"ab {early(min_days):.0f}.",
                            origin=DERIVED, details={"days": rows}, progress=prog)
     meter_sum = sum(r["meter_kwh"] for r in rows)
     ctrl_sum = sum(r["controller_kwh"] for r in rows)
@@ -224,8 +226,9 @@ def check_outdoor_sensor(outdoor: Series, reference: Series, defrost: Series, st
             rows.append({"day": days.label(a, tz), "own": round(own, 2), "reference": round(ref, 2),
                          "diff": round(own - ref, 2)})
     prog = progress(len(rows), min_days, "days", FULL_DAYS, start)
-    if len(rows) < min_days:
-        return CheckResult("D10", "outdoor_sensor", NOT_ASSESSABLE, text=f"{count(len(rows), 'Tag', 'Tage')}, nötig {min_days}.",
+    if len(rows) < early(min_days):
+        return CheckResult("D10", "outdoor_sensor", NOT_ASSESSABLE,
+                           text=f"{count(len(rows), 'Tag', 'Tage')}, vorläufiges Urteil ab {early(min_days):.0f}.",
                            origin=DERIVED, details={"days": rows}, progress=prog)
     bias = sum(r["diff"] for r in rows) / len(rows)
     return CheckResult("D10", "outdoor_sensor", grade(abs(bias), 1.5, 3.0), round(bias, 2), "K",

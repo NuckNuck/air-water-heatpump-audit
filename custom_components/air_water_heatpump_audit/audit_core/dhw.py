@@ -15,7 +15,7 @@ from . import household as hh
 from .data_basis import heartbeat_gaps
 from .efficiency import KELVIN, MIN_LIFT_K, carnot_verdict
 from .heat import RHO_CP_KJ_PER_L_K, energy_kwh, time_mean
-from .result import (DERIVED, ELAPSED, HINT, INFO, NOT_ASSESSABLE, OK, PHYSICAL, RATE, SOURCED, WARN, CheckResult,
+from .result import (DERIVED, ELAPSED, early, HINT, INFO, NOT_ASSESSABLE, OK, PHYSICAL, RATE, SOURCED, WARN, CheckResult,
                      count, num, progress)
 from .series import Interval, Series, clip, combine, intervals_where, overlaps, subtract, total, value_at
 
@@ -146,9 +146,9 @@ def check_dhw_efficiency(charges: list[Charge], dq: str, offset_robust: bool, me
     if meter_step is None or meter_step > 0.1:
         return CheckResult(*key, NOT_ASSESSABLE, text="Der Stromzähler ist zu grob für einzelne Ladungen "
                            "(nötig 0,1 kWh oder feiner, siehe D8).", origin=DERIVED)
-    if len(metered) < MIN_CHARGES:
+    if len(metered) < early(MIN_CHARGES):
         return CheckResult(*key, NOT_ASSESSABLE, text=f"{count(len(metered), 'Ladung', 'Ladungen')} mit Zählerwerten, "
-                           f"nötig {MIN_CHARGES}.", origin=DERIVED, progress=prog)
+                           f"vorläufiges Urteil ab {early(MIN_CHARGES):.0f}.", origin=DERIVED, progress=prog)
     if dq == "low":
         return CheckResult(*key, NOT_ASSESSABLE, text="Datenqualität niedrig (Audit 0), kein Urteil.", origin=DERIVED,
                            progress=prog)
@@ -206,9 +206,10 @@ def check_dhw_temperature(charges: list[Charge], since: float, end: float, setpo
     key = ("W2", "dhw_temperature")
     normal = [c.tank_after for c in charges if c.tank_after is not None]
     prog = progress(len(normal), MIN_CHARGES, "charges", RATE, since)
-    if len(normal) < MIN_CHARGES:
+    if len(normal) < early(MIN_CHARGES):
         return CheckResult(*key, NOT_ASSESSABLE, text=f"{count(len(normal), 'Ladung', 'Ladungen')} mit "
-                           f"Speichertemperatur, nötig {MIN_CHARGES}.", origin=SOURCED, progress=prog)
+                           f"Speichertemperatur, vorläufiges Urteil ab {early(MIN_CHARGES):.0f}.", origin=SOURCED,
+                           progress=prog)
     temp = _median(normal)
     target = time_mean(setpoint, [(since, end)]) if setpoint else None
     interval = interval_days or DISINFECTION_INTERVAL_DAYS
@@ -265,9 +266,11 @@ def check_disinfection(charges: list[Charge], heater: list[Interval], heater_kw:
     details = {"count": len(found), "times": [c.start for c in found], "heater_hours": round(heater_h, 2),
                "heater_kwh": None if heater_kwh is None else round(heater_kwh, 2)}
     prog = progress((end - since) / 3600, 14 * 24, "hours", ELAPSED, since)
-    if weeks < 2:
+    # Vorläufig erst nach einer vollen Woche: Bei wöchentlicher Aufheizung fehlt sie sonst womöglich nur zufällig.
+    if weeks < 1:
         return CheckResult(*key, NOT_ASSESSABLE, len(found), "", f"{count(len(found), 'Aufheizung', 'Aufheizungen')} "
-                           "auf 60 °C bisher; bewertet ab 14 Tagen.", DERIVED, details, progress=prog)
+                           "auf 60 °C bisher; vorläufiges Urteil ab 7 Tagen, belastbar ab 14.", DERIVED, details,
+                           progress=prog)
     temps = [c.tank_after for c in charges if c.tank_after is not None]
     if temps and _median(temps) >= DISINFECTION_C - SENSOR_TOLERANCE_K:
         return CheckResult(*key, OK, None, "", "Der Speicher wird bei jeder Ladung auf 60 °C geladen; ob das zu warm "
@@ -322,9 +325,10 @@ def erp_class(loss_w: float, volume_l: float) -> str:
 
 
 def standby_w(windows: list[tuple[float, float, float, float]], volume_l: float | None) -> tuple[float, float] | None:
-    """(Bereitschaftsverlust in W, mittlere Speichertemperatur) aus den ruhigen Nachtfenstern."""
+    """(Bereitschaftsverlust in W, mittlere Speichertemperatur) aus den ruhigen Nachtfenstern; vorläufig schon ab
+    der Startmenge."""
     hours = sum(b - a for a, b, _, _ in windows) / 3600
-    if not volume_l or len(windows) < MIN_QUIET_WINDOWS or hours < MIN_QUIET_H:
+    if not volume_l or len(windows) < early(MIN_QUIET_WINDOWS) or hours < early(MIN_QUIET_H):
         return None
     drop = sum(t0 - t1 for _, _, t0, t1 in windows)
     tank_mean = sum((t0 + t1) / 2 * (b - a) for a, b, t0, t1 in windows) / (hours * 3600)
@@ -341,9 +345,10 @@ def check_standby_loss(windows: list[tuple[float, float, float, float]], volume_
     if not volume_l:
         return CheckResult(*key, NOT_ASSESSABLE, text="Stammdaten fehlen: Inhalt des Warmwasserspeichers.",
                            origin=PHYSICAL)
-    if len(windows) < MIN_QUIET_WINDOWS or hours < MIN_QUIET_H:
+    if len(windows) < early(MIN_QUIET_WINDOWS) or hours < early(MIN_QUIET_H):
         return CheckResult(*key, NOT_ASSESSABLE, text=f"{count(len(windows), 'ruhige Nacht', 'ruhige Nächte')} "
-                           f"({num(hours, '.0f')} h), nötig {MIN_QUIET_WINDOWS} und {num(MIN_QUIET_H, 'g')} h.",
+                           f"({num(hours, '.0f')} h), vorläufiges Urteil ab {early(MIN_QUIET_WINDOWS):.0f} und "
+                           f"{num(early(MIN_QUIET_H), 'g')} h.",
                            origin=PHYSICAL, progress=prog)
     loss_w, tank_mean = standby_w(windows, volume_l)
     delta = tank_mean - ERP_AMBIENT_C
@@ -426,9 +431,9 @@ def check_dhw_timing(charges: list[Charge], outdoor: Series, since: float, tz: s
         if cop_now and cop_best:
             rows.append((c.heat_kwh, 1 - cop_now / cop_best, best - actual, days.label(c.start, tz)))
     prog = progress(len(rows), MIN_CHARGES, "charges", RATE, since)
-    if len(rows) < MIN_CHARGES:
+    if len(rows) < early(MIN_CHARGES):
         return CheckResult(*key, NOT_ASSESSABLE, text=f"{count(len(rows), 'Ladung', 'Ladungen')} mit Außentemperatur, "
-                           f"nötig {MIN_CHARGES}.", origin=DERIVED, progress=prog)
+                           f"vorläufiges Urteil ab {early(MIN_CHARGES):.0f}.", origin=DERIVED, progress=prog)
     heat = sum(r[0] for r in rows)
     loss = round(100 * sum(r[0] * r[1] for r in rows) / heat, 1)  # Urteil mit dem angezeigten Wert
     colder = sum(r[0] * r[2] for r in rows) / heat

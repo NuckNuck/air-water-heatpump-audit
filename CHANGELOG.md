@@ -18,6 +18,12 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 - Stammdatum **Wohnfläche**: K2 nennt Wärme und Strom je m² und die ungefähre Klasse im Energieausweis; mit den
   Personen im Haushalt auch die Kosten je Person.
 
+- **Vorläufige Urteile** (#11): Nach einem Ereignis (und beim Start) urteilt jede Prüfung schon ab einem Drittel
+  ihrer Mindestmenge, z. B. nach 3 statt 7 Tagen. Die Karte zeigt solche Urteile blasser mit „vorläufig · 3 von 7
+  vollen Tagen“. D4 und T2 behalten ihre Grenze, W3 urteilt nach einer Woche.
+- **Stand vor dem Ereignis** (#11): Ist eine Prüfung vorläufig oder noch grau, steht darunter das Urteil aus dem
+  Abschnitt vor der Änderung („davor: grün 0,31“), so sieht man gleich, ob die Änderung etwas bringt.
+
 ### Behoben
 - Der **Zeitstrahl** zeigt keine leeren Tage vor dem ersten Messwert mehr; auch bereits gespeicherte leere Tage
   fallen weg (#9).

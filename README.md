@@ -37,6 +37,9 @@ Jede Prüfung bekommt eine Ampel:
 - ⚪ **Grau** – noch nicht bewertbar (zu wenig Daten oder ein Messwert fehlt). Fehlen nur Daten, füllt sich der
   Marker mit dem Datenstand von links grün; beim Überfahren steht, wie viel schon da ist.
 
+Ab einem Drittel der nötigen Daten urteilt eine Prüfung **vorläufig**: Der Marker ist blasser und gestrichelt, darunter
+steht z. B. „vorläufig · 3 von 7 vollen Tagen“. Mit jedem Tag wird das Urteil belastbarer.
+
 Zu jeder gelben oder roten Prüfung zeigt die Karte, **wer** etwas tun kann (Sie selbst oder der Fachbetrieb), **was**
 zu tun ist und **welcher Wert** am Gerät eingestellt werden sollte. Hinter jeder Prüfung steht ein **„?“** mit einer
 Erklärung in einfachen Worten: was gemessen wird, ab wann es gelb oder rot wird und woher diese Grenze stammt.
@@ -153,6 +156,9 @@ man mit der Maus über den Balken fährt oder auf das **?** daneben tippt.
 Wenn an der Anlage etwas geändert wird – Heizkurve, Pumpenstufe, Heizkörperventile, hydraulischer Abgleich –, trägt
 man das als **Ereignis** ein. Alle Audits außer der Datenbasis rechnen dann ab diesem Zeitpunkt neu, damit
 nie „vorher“ und „nachher“ vermischt werden. So sieht man schwarz auf weiß, ob die Änderung etwas gebracht hat.
+Damit nach einer Änderung nicht tagelang alles grau ist, urteilen die Prüfungen schon mit wenigen Daten vorläufig.
+Solange ein Urteil vorläufig oder noch offen ist, steht darunter das Urteil von **davor**, z. B. „davor: grün 0,31“;
+beim Überfahren steht der Zeitraum.
 
 ### Zeitstrahl
 
