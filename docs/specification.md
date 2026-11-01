@@ -124,7 +124,7 @@ Abschnitte; Audits mit Mehrtageswerten mitteln nie über einen Trenner hinweg.
 - **Audit 0** prüft die Daten und nutzt das ganze Fenster.
 - **Audits 1–5** rechnen ab dem letzten Ereignis im Fenster (`section_start`). Jede Ereignisart setzt sie zurück.
 - **Ausnahmen:** D4 und T2 (Fühlerabgleich) nutzen das ganze Fenster, denn Ereignisse ändern die Anlage, nicht die
-  Fühler. Der Zeitstrahl speichert Tageswerte über das ganze Fenster.
+  Fühler. Der Zeitstrahl speichert Tageswerte über das ganze Fenster; Tage vor dem ersten Messwert entfallen.
 - Kein aktives Nachfragen: Die Integration fordert keine Ereignisse an.
 
 ### 1.6 Geltungsbereich: Luft-Wasser-Wärmepumpen
