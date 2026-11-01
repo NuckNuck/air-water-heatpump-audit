@@ -7,7 +7,9 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
-## [0.17.0] – in Arbeit
+## [0.17.0] – 2026-11-01
+
+Enthält auch alle Änderungen aus 0.16.0 (nicht einzeln veröffentlicht, siehe unten).
 
 ### Neu
 - **Wirkung je Aktion**: Gelbe und rote Prüfungen nennen, was ihre Aktion ungefähr im Jahr bringt oder kostet
@@ -28,7 +30,7 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 - Der **Zeitstrahl** zeigt keine leeren Tage vor dem ersten Messwert mehr; auch bereits gespeicherte leere Tage
   fallen weg (#9).
 
-## [0.16.0] – in Arbeit
+## [0.16.0] – nur als Pre-Release, enthalten in 0.17.0
 
 ### Neu
 - **Personen im Haushalt** als Untereinträge: Geburtsjahr, Duschen und Bäder pro Woche (leer = typisch fürs Alter),
@@ -194,7 +196,8 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 - Erster öffentlicher Stand (damals „WP-Audit“, Entwicklungsversion).
 
-[Unveröffentlicht]: https://github.com/NuckNuck/air-water-heatpump-audit/compare/v0.11.0...HEAD
+[Unveröffentlicht]: https://github.com/NuckNuck/air-water-heatpump-audit/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/NuckNuck/air-water-heatpump-audit/releases/tag/v0.17.0
 [0.11.0]: https://github.com/NuckNuck/air-water-heatpump-audit/releases/tag/v0.11.0
 [0.10.2]: https://github.com/NuckNuck/air-water-heatpump-audit/releases/tag/v0.10.2
 [0.10.1]: https://github.com/NuckNuck/air-water-heatpump-audit/releases/tag/v0.10.1
