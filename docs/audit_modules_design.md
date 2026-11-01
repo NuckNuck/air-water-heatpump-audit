@@ -108,7 +108,9 @@ zyklusfrei, jede genutzte Rolle ist in `ROLE_KEYS` des Frameworks bekannt.
 1. Zugeschaltete Audits aus der Registry holen.
 2. Benötigte Rollen und Grundgrößen bestimmen; der Coordinator lädt nur diese Rollen (weniger Recorder-/Influx-Last).
 3. Je Audit `checks` ausführen, Datenreife (`progress`), Aktionen und Urteil (`overall` über `counts_for_verdict`).
-4. Zeitstrahl: je Audit `daily_point` über das ganze Fenster.
+   Urteile unter der vollen Mindestmenge markiert `mark_provisional`; für vorläufige und offene Prüfungen rechnet
+   `attach_before` dasselbe Audit bis zum Ereignis und hängt das Urteil davor an (Spezifikation 1.9).
+4. Zeitstrahl: je Audit `daily_point` über das ganze Fenster; Tage vor dem ersten Messwert entfallen.
 
 Das Ergebnis behält die heutige Form (`audits.<id>`, `readiness.<id>`, `timeline`), enthält aber nur zugeschaltete
 Audits. Ein Golden-Test vergleicht den Bericht vor und nach dem Umbau mit allen vier Audits: identisch bis auf

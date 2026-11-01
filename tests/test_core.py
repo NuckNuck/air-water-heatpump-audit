@@ -391,10 +391,11 @@ class FlowTemperatureTest(unittest.TestCase):
         self.assertIn("Eingang fehlt", r.text)
 
     def test_buffer_loss_gate(self):
-        heating, used = self.t2.heating_windows(self.cycles[:1], [], [], [], [], 0, self.end)
+        heating, used = self.t2.heating_windows([], [], [], [], [], 0, self.end)
         r = self.t2.check_buffer_flow_loss([(0, 38.0)], [(0, 33.0)], "parallel_buffer", heating, used,
                                            self.offset([], []), 0, self.end)
         self.assertEqual(r.verdict, NOT_ASSESSABLE)
+        self.assertIn("vorläufiges Urteil ab 1 h aus 1 Zyklus", r.text)
 
     def test_sensor_offset_in_pauses(self):
         # in den Pausen 0,5 K Unterschied, im Heizbetrieb 5 K
@@ -572,9 +573,10 @@ class EfficiencyTest(unittest.TestCase):
         self.assertEqual(method, e1.GAP_LOAD)
 
     def test_too_few_days(self):
-        rows = self.rows()[:3]
+        # vorläufig ab drei Tagen (Entscheid F239), darunter nicht bewertbar
         for check in (e1.check_weekly_cop, e1.check_dhw_share):
-            self.assertEqual(check(rows).verdict, NOT_ASSESSABLE)
+            self.assertEqual(check(self.rows()[:2]).verdict, NOT_ASSESSABLE)
+            self.assertEqual(check(self.rows()[:3]).verdict, INFO)
 
 
 from audit_core.actions import INSTALLER, NONE, OWNER, attach_actions
@@ -831,6 +833,33 @@ class RegistryTest(unittest.TestCase):
                          tz="Europe/Berlin", audits=audits)
         return __import__("json").loads(__import__("json").dumps(rep, sort_keys=True, default=str))
 
+    def test_provisional_verdict_with_state_before_event(self):
+        """F239: Nach dem Ereignis urteilt E3 schon vorläufig; darunter steht das Urteil aus dem Abschnitt davor."""
+        e3 = next(c for c in self.run_with(["efficiency"])["audits"]["efficiency"]["checks"] if c["check_id"] == "E3")
+        self.assertTrue(e3["provisional"])
+        self.assertEqual(e3["verdict"], OK)
+        self.assertEqual((e3["before"]["verdict"], e3["before"]["end"]), (OK, self.syn.EVENTS[0]["time"]))
+        self.assertEqual(e3["before"]["start"], self.syn.START)
+        # ohne Ereignis kein Vergleich
+        from audit_core.runner import run_audits
+        rep = run_audits(self.series, self.syn.START, self.syn.END, recorder_keep_days=10, long_term_days=None,
+                         heater_kw=self.syn.HEATER_KW, master=self.syn.MASTER, events=[], controls={},
+                         tz="Europe/Berlin", audits=["efficiency"])
+        self.assertTrue(all(c["before"] is None for c in rep["audits"]["efficiency"]["checks"]))
+
+    def test_early_and_mark_provisional(self):
+        from audit_core.result import CheckResult, early, mark_provisional, progress
+        self.assertEqual((early(7), early(14), early(20), early(1), early(168, 24), early(5, 24)), (3, 5, 7, 1, 56, 5))
+        r = CheckResult("X1", "x", OK, progress=progress(3, 7, "days", "full_days", 0))
+        mark_provisional(r)
+        self.assertTrue(r.provisional)
+        r.progress["have"] = 7
+        mark_provisional(r)
+        self.assertFalse(r.provisional)
+        r = CheckResult("X1", "x", NOT_ASSESSABLE, progress=progress(1, 7, "days", "full_days", 0))
+        mark_provisional(r)
+        self.assertFalse(r.provisional)
+
     def test_golden_report_unchanged(self):
         """Vergleichsbericht der synthetischen Anlage, erzeugt vor dem Umbau (tests/golden)."""
         golden = __import__("pathlib").Path(__file__).with_name("golden") / "synthetic_report.json"
@@ -892,7 +921,8 @@ class DhwTest(unittest.TestCase):
         from audit_core import dhw as w1
         charges = [self.charge(d) for d in range(8)]
         self.assertEqual(w1.check_dhw_efficiency(charges, "high", True, 1.0, 0).verdict, NOT_ASSESSABLE)
-        self.assertEqual(w1.check_dhw_efficiency(charges[:6], "high", True, 0.001, 0).verdict, NOT_ASSESSABLE)
+        self.assertEqual(w1.check_dhw_efficiency(charges[:2], "high", True, 0.001, 0).verdict, NOT_ASSESSABLE)
+        self.assertEqual(w1.check_dhw_efficiency(charges[:3], "high", True, 0.001, 0).verdict, OK)
         r = w1.check_dhw_efficiency(charges, "high", True, 0.001, 0)
         self.assertEqual((r.verdict, r.value, r.details["cop"]), (OK, 0.367, 3.0))
         low = [self.charge(d, ideal=0.3) for d in range(8)]
@@ -981,7 +1011,10 @@ class DhwTest(unittest.TestCase):
         self.assertEqual((r.verdict, r.value, r.details["heater_kwh"]), (HINT, 3.0, 6.0))
         r = w1.check_disinfection(daily + found[:2], heater, 3.0, 0, end)
         self.assertEqual(r.verdict, OK)
-        self.assertEqual(w1.check_disinfection(found, heater, 3.0, 0, 10 * 24 * H).verdict, NOT_ASSESSABLE)
+        self.assertEqual(w1.check_disinfection(found, heater, 3.0, 0, 6 * 24 * H).verdict, NOT_ASSESSABLE)
+        r = w1.check_disinfection(found, heater, 3.0, 0, 10 * 24 * H)  # vorläufig nach einer Woche
+        self.assertNotEqual(r.verdict, NOT_ASSESSABLE)
+        self.assertLess(r.progress["have"], r.progress["need"])
 
     def test_quiet_windows_skip_charges_and_draws(self):
         from audit_core import dhw as w1
@@ -1004,7 +1037,8 @@ class DhwTest(unittest.TestCase):
         leaky = [(a, b, t0, t0 - 2.0) for a, b, t0, _ in windows]
         self.assertEqual(w1.check_standby_loss(leaky, 200, 0).verdict, HINT)
         self.assertEqual(w1.check_standby_loss(windows, None, 0).verdict, NOT_ASSESSABLE)
-        self.assertEqual(w1.check_standby_loss(windows[:3], 200, 0).verdict, NOT_ASSESSABLE)
+        self.assertEqual(w1.check_standby_loss(windows[:1], 200, 0).verdict, NOT_ASSESSABLE)
+        self.assertEqual(w1.check_standby_loss(windows[:2], 200, 0).verdict, OK)
         self.assertEqual(w1.erp_class(40.0, 200), "A")
 
     def test_timing_against_warmest_hours(self):
@@ -1127,7 +1161,8 @@ class CostTest(unittest.TestCase):
         expensive = {k: v * 2.5 for k, v in costs.items()}
         self.assertEqual(k1.check_heat_price(rows, expensive, self.MASTER, 0).verdict, HINT)
         self.assertEqual(k1.check_heat_price(rows, costs, {"tariff_price": 0.25}, 0).verdict, INFO)
-        self.assertEqual(k1.check_heat_price(rows[:6], costs, self.MASTER, 0).verdict, NOT_ASSESSABLE)
+        self.assertEqual(k1.check_heat_price(rows[:2], costs, self.MASTER, 0).verdict, NOT_ASSESSABLE)
+        self.assertEqual(k1.check_heat_price(rows[:3], costs, self.MASTER, 0).verdict, OK)
         self.assertEqual(k1.check_heat_price(rows, {}, self.MASTER, 0).verdict, NOT_ASSESSABLE)
 
     def test_projection_splits_base_load_and_degree_days(self):

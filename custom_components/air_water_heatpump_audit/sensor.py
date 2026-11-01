@@ -133,8 +133,18 @@ class AuditSensor(_Base):
         return attrs
 
 
+def _before(b: dict | None) -> dict | None:
+    """Letztes Urteil vor dem Ereignis (F239) mit ISO-Zeiten für die Karte."""
+    if not b:
+        return None
+    event = b.get("event")
+    return {"verdict": b["verdict"], "value": b["value"], "unit": b["unit"], "text": b["text"],
+            "provisional": b["provisional"], "start": _iso(b["start"]), "end": _iso(b["end"]),
+            "event_kind": event.get("kind") if event else None}
+
+
 class CheckSensor(_Base):
-    _unrecorded_attributes = frozenset({"action", "details", "help", "text", "progress"})
+    _unrecorded_attributes = frozenset({"action", "details", "help", "text", "progress", "before"})
 
     def __init__(self, coordinator: AirWaterAuditCoordinator, audit: str, check_id: str, key: str,
                  device: DeviceInfo) -> None:
@@ -163,7 +173,8 @@ class CheckSensor(_Base):
         return {"check_id": r["check_id"], "audit": self._audit, "value": r["value"], "unit": r["unit"],
                 "text": r["text"], "origin": r["origin"], "details": r["details"],
                 "action": r.get("action"), "help": CHECK_HELP.get(r["check_id"]),
-                "progress": r.get("progress")}
+                "progress": r.get("progress"), "provisional": r.get("provisional", False),
+                "before": _before(r.get("before"))}
 
 
 class TimelineSensor(_Entity):

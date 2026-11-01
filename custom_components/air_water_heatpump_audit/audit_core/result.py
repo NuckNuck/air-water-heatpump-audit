@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import asdict, dataclass, field
 
 OK, HINT, WARN, INFO, NOT_ASSESSABLE = "ok", "hint", "warn", "info", "not_assessable"
@@ -11,6 +12,10 @@ SOURCED, DERIVED, PHYSICAL, DESCRIPTIVE = "sourced", "derived", "physical", "des
 
 # Zählweise der Datenmenge einer Prüfung (readiness.py): volle Kalendertage, verstrichene Zeit, gezählte Vorkommnisse
 FULL_DAYS, ELAPSED, RATE = "full_days", "elapsed", "rate"
+
+# Vorläufiges Urteil ab einem Drittel der Mindestmenge (Entscheid F239): Nach einem Ereignis soll nicht wochenlang
+# „nicht bewertbar“ stehen. Bis die volle Menge da ist, trägt das Urteil `provisional`.
+PROVISIONAL_SHARE = 1 / 3
 
 
 @dataclass
@@ -25,6 +30,8 @@ class CheckResult:
     details: dict = field(default_factory=dict)
     action: dict | None = None  # {who, text} bei Gelb/Rot, siehe actions.py
     progress: dict | None = None  # Datenmenge für die Datenreife, siehe progress()
+    provisional: bool = False  # Urteil mit weniger als der vollen Mindestmenge, siehe mark_provisional()
+    before: dict | None = None  # letztes Urteil vor dem Ereignis, siehe runner.attach_before()
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -38,6 +45,17 @@ def progress(have: float, need: float, unit: str, basis: str, since: float, lag_
     since: ab wann gezählt wird; lag_h: um so viele Stunden später wird ein voller Tag erst zählbar (D5).
     """
     return {"have": round(have, 2), "need": need, "unit": unit, "basis": basis, "since": since, "lag_h": lag_h}
+
+
+def early(need: float, floor: float = 1) -> float:
+    """Startmenge für ein vorläufiges Urteil: ein Drittel der Mindestmenge, aufgerundet, mindestens floor."""
+    return min(need, max(floor, math.ceil(need * PROVISIONAL_SHARE)))
+
+
+def mark_provisional(r: CheckResult) -> None:
+    """Ein Urteil, dessen Prüfung die volle Mindestmenge noch nicht hat, ist vorläufig."""
+    p = r.progress
+    r.provisional = bool(p) and r.verdict != NOT_ASSESSABLE and p["have"] < p["need"]
 
 
 def overall(results: list[CheckResult]) -> str:

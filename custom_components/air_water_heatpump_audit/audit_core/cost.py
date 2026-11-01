@@ -12,7 +12,7 @@ from bisect import bisect_right
 from . import days
 from .efficiency import HEATING_LIMIT_C, ROOM_BASE_C, WEEK_DAYS
 from .heat import time_mean
-from .result import (DERIVED, ELAPSED, FULL_DAYS, HINT, INFO, NOT_ASSESSABLE, OK, SOURCED, CheckResult, count, num,
+from .result import (DERIVED, ELAPSED, FULL_DAYS, early, HINT, INFO, NOT_ASSESSABLE, OK, SOURCED, CheckResult, count, num,
                      progress)
 from .series import Interval, Series, clip, intervals_where, total, value_at
 
@@ -74,7 +74,16 @@ def reference_heat_price(master: dict) -> float | None:
 
 
 def _week(rows: list[dict]) -> list[dict] | None:
-    return rows[-WEEK_DAYS:] if len(rows) >= WEEK_DAYS else None
+    """Die letzten 7 gültigen Tage; vorläufig schon ab early(7) Tagen."""
+    return rows[-WEEK_DAYS:] if len(rows) >= early(WEEK_DAYS) else None
+
+
+def _elapsed_gate(since: float, end: float) -> str | None:
+    """K4, K5: Text für „noch nicht bewertbar“, solange keine early(7 Tage) vergangen sind; sonst None."""
+    need_h = early(WEEK_DAYS * 24, 24)
+    if end - since < need_h * 3600:
+        return f"Vorläufiges Urteil ab {num(need_h, '.0f')} h, belastbar ab {WEEK_DAYS} Tagen."
+    return None
 
 
 def _missing_price(key: tuple[str, str]) -> CheckResult:
@@ -89,14 +98,14 @@ def check_heat_price(rows: list[dict], costs: dict[str, float | None], master: d
     week = _week(rows)
     if week is None:
         return CheckResult(*key, NOT_ASSESSABLE, text=f"{count(len(rows), 'gültiger Tag', 'gültige Tage')}, "
-                           f"nötig {WEEK_DAYS}.", origin=DERIVED, progress=prog)
+                           f"vorläufiges Urteil ab {early(WEEK_DAYS):.0f}.", origin=DERIVED, progress=prog)
     week_costs = [costs.get(r["day"]) for r in week]
     if any(c is None for c in week_costs):
         return _missing_price(key)
     heat = sum(r["heat_kwh"] for r in week)
     if heat <= 0:
-        return CheckResult(*key, NOT_ASSESSABLE, text="Keine Wärme in der Woche.", origin=DERIVED, progress=prog)
-    base = float(master.get("tariff_base_fee") or 0) * WEEK_DAYS / 365
+        return CheckResult(*key, NOT_ASSESSABLE, text="Keine Wärme im Zeitraum.", origin=DERIVED, progress=prog)
+    base = float(master.get("tariff_base_fee") or 0) * len(week) / 365
     cost = sum(week_costs) + base
     price = cost / heat
     reference = reference_heat_price(master)
@@ -115,7 +124,7 @@ def check_heat_price(rows: list[dict], costs: dict[str, float | None], master: d
                  "Etwa gleich teuer, im Rahmen der Messgenauigkeit der Wärme.")
     else:
         verdict = HINT
-        text += ("In dieser Woche teurer als der Vergleich. Im Winter ist die Arbeitszahl niedriger; dauerhaft "
+        text += ("In diesem Zeitraum teurer als der Vergleich. Im Winter ist die Arbeitszahl niedriger; dauerhaft "
                  "teurer heißt: Tarif und Effizienz (Audit 1) prüfen.")
     return CheckResult(*key, verdict, round(100 * price, 1), "ct/kWh", text, DERIVED, details, progress=prog)
 
@@ -171,9 +180,9 @@ def check_annual_cost(rows: list[dict], outdoor: Series, costs: dict[str, float 
     year_dd = master.get("heating_degree_days")
     if not year_dd:
         return CheckResult(*key, NOT_ASSESSABLE, text="Stammdaten fehlen: Gradtage des Standorts.", origin=SOURCED)
-    if len(rows) < PROJECTION_MIN_DAYS:
-        return CheckResult(*key, NOT_ASSESSABLE, text=f"{count(len(rows), 'gültiger Tag', 'gültige Tage')}, nötig "
-                           f"{PROJECTION_MIN_DAYS}.", origin=SOURCED, progress=prog)
+    if len(rows) < early(PROJECTION_MIN_DAYS):
+        return CheckResult(*key, NOT_ASSESSABLE, text=f"{count(len(rows), 'gültiger Tag', 'gültige Tage')}, "
+                           f"vorläufiges Urteil ab {early(PROJECTION_MIN_DAYS):.0f}.", origin=SOURCED, progress=prog)
     year = project_year(rows, outdoor, tz, float(year_dd))
     day_costs = [costs.get(r["day"]) for r in rows]
     if year is None:
@@ -249,8 +258,8 @@ def check_price_timing(meter: Series, price: Series, since: float, end: float) -
                            origin=DERIVED)
     since = max(since, price[0][0])  # erst ab dem ersten aufgezeichneten Preis
     prog = progress((end - since) / 3600, WEEK_DAYS * 24, "hours", ELAPSED, since)
-    if end - since < WEEK_DAYS * 86400:
-        return CheckResult(*key, NOT_ASSESSABLE, text=f"Bewertet ab {WEEK_DAYS} Tagen.", origin=DERIVED, progress=prog)
+    if gate := _elapsed_gate(since, end):
+        return CheckResult(*key, NOT_ASSESSABLE, text=gate, origin=DERIVED, progress=prog)
     cost = energy_cost(meter, price, since, end)
     m_a, m_b = value_at(meter, since), value_at(meter, end)
     mean = time_mean(price, [(since, end)])
@@ -276,9 +285,8 @@ def check_grid_lock(lock: Series, heaters: list[Interval], since: float, end: fl
     if not lock:
         return CheckResult(*key, NOT_ASSESSABLE, text="Eingang fehlt: Sperrsignal des Netzbetreibers.", origin=DERIVED)
     prog = progress((end - since) / 3600, WEEK_DAYS * 24, "hours", ELAPSED, since)
-    if end - since < WEEK_DAYS * 86400:
-        return CheckResult(*key, NOT_ASSESSABLE, text=f"Bewertet ab {WEEK_DAYS} Tagen.", origin=DERIVED,
-                           progress=prog)
+    if gate := _elapsed_gate(since, end):
+        return CheckResult(*key, NOT_ASSESSABLE, text=gate, origin=DERIVED, progress=prog)
     locks = intervals_where(lock, _on, since, end)
     n_days = (end - since) / 86400
     longest = max((b - a for a, b in locks), default=0) / 3600

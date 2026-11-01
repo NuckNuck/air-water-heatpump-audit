@@ -11,7 +11,8 @@ from bisect import bisect_left
 
 from .data_basis import heartbeat_gaps
 from .heat import energy_kwh, time_mean
-from .result import DERIVED, DESCRIPTIVE, HINT, INFO, NOT_ASSESSABLE, OK, SOURCED, WARN, CheckResult, count, num
+from .result import (DERIVED, DESCRIPTIVE, HINT, INFO, NOT_ASSESSABLE, OK, SOURCED, WARN, CheckResult, count, early,
+                     num)
 from .series import Interval, Series, combine, intervals_where, subtract, total, value_at
 
 KELVIN = 273.15
@@ -176,7 +177,8 @@ def check_daily_cop(rows: list[dict], offset_robust: bool, meter_step: float | N
 
 
 def _week(rows: list[dict]) -> list[dict] | None:
-    return rows[-WEEK_DAYS:] if len(rows) >= WEEK_DAYS else None
+    """Die letzten 7 gültigen Tage; vorläufig schon ab early(7) Tagen."""
+    return rows[-WEEK_DAYS:] if len(rows) >= early(WEEK_DAYS) else None
 
 
 def field_cop(outdoor: float | None) -> float | None:
@@ -197,7 +199,7 @@ def check_weekly_cop(rows: list[dict]) -> CheckResult:
     week = _week(rows)
     if week is None:
         return CheckResult("E2", "weekly_cop", NOT_ASSESSABLE,
-                           text=f"{count(len(rows), 'gültiger Tag', 'gültige Tage')}, nötig {WEEK_DAYS}.", origin=SOURCED)
+                           text=f"{count(len(rows), 'gültiger Tag', 'gültige Tage')}, vorläufiges Urteil ab {early(WEEK_DAYS):.0f}.", origin=SOURCED)
     electricity, heat, heat_raw = _sum(week, "electricity_kwh"), _sum(week, "heat_kwh"), _sum(week, "heat_raw_kwh")
     cop, outdoor = heat / electricity, _week_outdoor(week)
     text = (f"{days.display(week[0]['day'])} bis {days.display(week[-1]['day'])}: Arbeitszahl {num(cop, '.1f')} "
@@ -230,7 +232,7 @@ def check_carnot_efficiency(rows: list[dict], dq: str, offset_robust: bool) -> C
     week = _week(rows)
     if week is None:
         return CheckResult("E3", "carnot_efficiency", NOT_ASSESSABLE,
-                           text=f"{count(len(rows), 'gültiger Tag', 'gültige Tage')}, nötig {WEEK_DAYS}.", origin=DERIVED)
+                           text=f"{count(len(rows), 'gültiger Tag', 'gültige Tage')}, vorläufiges Urteil ab {early(WEEK_DAYS):.0f}.", origin=DERIVED)
     if dq == "low":
         return CheckResult("E3", "carnot_efficiency", NOT_ASSESSABLE,
                            text="Datenqualität niedrig (Audit 0), kein Urteil.", origin=DERIVED)
@@ -259,10 +261,10 @@ def check_dhw_share(rows: list[dict]) -> CheckResult:
     week = _week(rows)
     if week is None:
         return CheckResult("E4", "dhw_share", NOT_ASSESSABLE,
-                           text=f"{count(len(rows), 'gültiger Tag', 'gültige Tage')}, nötig {WEEK_DAYS}.", origin=SOURCED)
+                           text=f"{count(len(rows), 'gültiger Tag', 'gültige Tage')}, vorläufiges Urteil ab {early(WEEK_DAYS):.0f}.", origin=SOURCED)
     heat = _sum(week, "heat_kwh")
     if heat <= 0:
-        return CheckResult("E4", "dhw_share", NOT_ASSESSABLE, text="Keine Wärme in der Woche.", origin=SOURCED)
+        return CheckResult("E4", "dhw_share", NOT_ASSESSABLE, text="Keine Wärme im Zeitraum.", origin=SOURCED)
     share = 100 * _sum(week, "dhw_heat_kwh") / heat
     return CheckResult("E4", "dhw_share", INFO, round(share, 1), "%",
                        f"{num(share, '.0f')} % der Wärme gingen ins Warmwasser (Feldtest-Mittel übers Jahr "
