@@ -18,6 +18,10 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 - Stammdatum **Wohnfläche**: K2 nennt Wärme und Strom je m² und die ungefähre Klasse im Energieausweis; mit den
   Personen im Haushalt auch die Kosten je Person.
 
+### Behoben
+- Der **Zeitstrahl** zeigt keine leeren Tage vor dem ersten Messwert mehr; auch bereits gespeicherte leere Tage
+  fallen weg (#9).
+
 ## [0.16.0] – in Arbeit
 
 ### Neu

@@ -15,12 +15,25 @@ if TYPE_CHECKING:
     from .registry import AuditSpec
 
 KEEP_DAYS = 400  # so viele Tage hält die Integration gespeichert, auch wenn die Rohdaten älter sind
+_DAY_KEYS = ("day", "start", "end")
+
+
+def _has_data(entry: dict) -> bool:
+    """Mindestens ein Audit hat an diesem Tag einen Wert; Abdeckung 0 % zählt nicht."""
+    return any(isinstance(p, dict) and p.get("value") for k, p in entry.items() if k not in _DAY_KEYS)
+
+
+def trim_leading_empty(days_: list[dict]) -> list[dict]:
+    """Tage vor dem ersten Tag mit Daten weglassen (z. B. vor dem Einbau); Lücken danach bleiben sichtbar."""
+    first = next((i for i, d in enumerate(days_) if _has_data(d)), len(days_))
+    return days_[first:]
 
 
 def daily_points(ctx: Context, audits: list[AuditSpec]) -> list[dict]:
     """Ein Eintrag je vollem lokalen Tag im Fenster, darin je Audit mit Zeitstrahl ein Punkt {value, verdict, …}.
 
-    Die Punkte rechnen über das ganze Fenster (Grundgrößen `…_window`), unabhängig vom letzten Ereignis.
+    Die Punkte rechnen über das ganze Fenster (Grundgrößen `…_window`), unabhängig vom letzten Ereignis. Tage vor
+    dem ersten Messwert entfallen.
     """
     out = []
     for a, b in ctx.full_days():
@@ -29,10 +42,11 @@ def daily_points(ctx: Context, audits: list[AuditSpec]) -> list[dict]:
         for spec in audits:
             entry[spec.audit_id] = spec.timeline.point(ctx, a, b, label)
         out.append(entry)
-    return out
+    return trim_leading_empty(out)
 
 
 def merge(stored: list[dict], fresh: list[dict], keep_days: int = KEEP_DAYS) -> list[dict]:
-    """Gespeicherte Tage um neu gerechnete ergänzen; ein neu gerechneter Tag ersetzt den gespeicherten."""
+    """Gespeicherte Tage um neu gerechnete ergänzen; ein neu gerechneter Tag ersetzt den gespeicherten. Leere Tage
+    vor dem ersten Messwert fallen auch aus dem Speicher."""
     by_day = {d["day"]: d for d in stored} | {d["day"]: d for d in fresh}
-    return [by_day[k] for k in sorted(by_day)][-keep_days:]
+    return trim_leading_empty([by_day[k] for k in sorted(by_day)])[-keep_days:]

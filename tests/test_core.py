@@ -735,10 +735,19 @@ class TimelineTest(unittest.TestCase):
         self.assertEqual(scale("capacity", None)["bands"], [])
 
     def test_merge_keeps_old_days_and_replaces_recomputed(self):
-        old = [{"day": "2026-01-01", "x": 1}, {"day": "2026-01-02", "x": 1}]
-        new = [{"day": "2026-01-02", "x": 2}, {"day": "2026-01-03", "x": 2}]
-        self.assertEqual([d["x"] for d in tl.merge(old, new)], [1, 2, 2])
+        day = lambda d, x: {"day": d, "data_basis": {"value": 100.0, "x": x}}
+        old = [day("2026-01-01", 1), day("2026-01-02", 1)]
+        new = [day("2026-01-02", 2), day("2026-01-03", 2)]
+        self.assertEqual([d["data_basis"]["x"] for d in tl.merge(old, new)], [1, 2, 2])
         self.assertEqual(len(tl.merge(old, new, keep_days=2)), 2)
+
+    def test_merge_drops_empty_days_before_first_data(self):
+        empty = lambda d: {"day": d, "start": 0, "end": 0, "data_basis": {"value": 0.0}, "efficiency": None}
+        full = lambda d: {"day": d, "data_basis": {"value": 96.0}, "efficiency": {"value": 0.3}}
+        stored = [empty("2026-01-01"), empty("2026-01-02"), full("2026-01-03")]
+        merged = tl.merge(stored, [empty("2026-01-04"), full("2026-01-05")])
+        self.assertEqual([d["day"] for d in merged], ["2026-01-03", "2026-01-04", "2026-01-05"])
+        self.assertEqual(tl.merge([empty("2026-01-01")], []), [])
 
 
 class HelpTest(unittest.TestCase):

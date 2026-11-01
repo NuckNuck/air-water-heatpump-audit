@@ -159,7 +159,8 @@ nie „vorher“ und „nachher“ vermischt werden. So sieht man schwarz auf we
 Eine zweite Karte zeigt je Tag einen Wert pro Audit (Gütegrad, Pufferverlust, Starts pro Tag, Gütegrad Warmwasser,
 Wärmepreis, Datenabdeckung) mit
 denselben Ampelgrenzen, dazu die Ereignisse als senkrechte Linien. Die Tageswerte speichert die Integration selbst,
-sie bleiben also auch erhalten, wenn Home Assistant die alten Rohdaten löscht.
+sie bleiben also auch erhalten, wenn Home Assistant die alten Rohdaten löscht. Der Zeitstrahl beginnt mit dem
+ersten Tag, an dem Messwerte ankamen; Lücken danach bleiben sichtbar.
 
 ## Was brauche ich?
 
