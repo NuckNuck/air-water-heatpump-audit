@@ -136,6 +136,28 @@ Stromzähler der Wärmepumpe im Energie-Dashboard, wird dessen Preis vorgeschlag
 | K4 Strompreis dynamisch | Nur bei dynamischem Tarif: ob die Wärmepumpe bevorzugt in teuren Stunden läuft. |
 | K5 Sperrzeiten | Nur mit Sperrsignal des Netzbetreibers: wie oft und wie lange gesperrt oder gedimmt wird; gelb, wenn währenddessen oder danach der Heizstab nachheizt. |
 
+#### Vergleich mit anderen Heizsystemen
+
+Im Zeitstrahl zeigt das Audit Kosten zum eigenen Wärmepreis gestrichelte Linien für andere Heizsysteme: Heizöl,
+Erdgas, Holzpellets, Fernwärme, Stromdirektheizung. Gerechnet wird Brennstoffpreis ÷ Nutzungsgrad, in ct je kWh
+Wärme (Werte und Quellen: [Spezifikation 7.3](docs/specification.md#73-wärmepreise-anderer-heizsysteme-zeitstrahl)).
+Die Preise holt das Audit nicht selbst. Es nimmt jeden Sensor, der das Attribut `heating_system` trägt, z. B. aus
+einer Preis-Integration oder einem eigenen Sensor für den Heizölpreis des örtlichen Händlers. Mit der Home-Assistant-
+Integration [Scrape](https://www.home-assistant.io/integrations/scrape/) geht das ohne Programmieren:
+
+```yaml
+# configuration.yaml – Scrape-Sensor anlegen (Einstellungen → Geräte & Dienste → Scrape), dann:
+homeassistant:
+  customize:
+    sensor.heizoel_haendler:
+      heating_system: heating_oil       # heating_oil, natural_gas, wood_pellets, district_heating, direct_electric
+      source: Händler vor Ort
+      source_kind: local                # official, association, commercial, local
+```
+
+Der Sensor braucht eine Einheit, z. B. `€/100 L` für Heizöl, `ct/kWh` für Gas, `€/t` für Pellets. Abschalten lässt
+sich der Vergleich in den Anlagendaten, Abschnitt Kosten.
+
 
 ### Was bringt eine Aktion?
 
@@ -299,7 +321,8 @@ bewertbar – Stammdaten fehlen“.
   Gradtage pro Jahr (z. B. aus dem Gradtagzahlen-Rechner des IWU), die gewünschte Raumtemperatur und die Wohnfläche.
 - **Kosten:** Arbeitspreis und zusätzlicher Grundpreis des Wärmepumpenstroms, Preis des Haushaltsstroms, Preis und
   Nutzungsgrad der früheren Heizung zum Vergleich. Für Gas den Preis je abgerechneter kWh inklusive Grundpreis-Anteil
-  eintragen; der vorgeschlagene Nutzungsgrad 0,86 ist das Mittel von Gas-Brennwertkesseln im Feld.
+  eintragen; der vorgeschlagene Nutzungsgrad 0,86 ist das Mittel von Gas-Brennwertkesseln im Feld. Dazu der
+  Schalter, ob der Zeitstrahl die Wärmepreise anderer Heizsysteme zeigt (Standard: an).
 - **Auswertung:** wie viele Tage zurück gerechnet wird, ab wann Daten gelten (z. B. ab Einbau der Schnittstelle) und
   ob InfluxDB oder die normale Aufzeichnung genutzt wird („auto“ wählt selbst).
 

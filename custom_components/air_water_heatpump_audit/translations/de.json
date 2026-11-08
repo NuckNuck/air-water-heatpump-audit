@@ -167,14 +167,16 @@
               "tariff_base_fee": "Grundpreis Wärmepumpenzähler",
               "household_price": "Arbeitspreis Haushaltsstrom",
               "reference_fuel_price": "Preis früherer Brennstoff",
-              "reference_efficiency": "Nutzungsgrad frühere Heizung"
+              "reference_efficiency": "Nutzungsgrad frühere Heizung",
+              "compare_heating_systems": "Wärmepreise anderer Heizsysteme vergleichen"
             },
             "data_description": {
               "tariff_price": "Preis je kWh für den Strom der Wärmepumpe (K1, K2).",
               "tariff_base_fee": "Nur der zusätzliche Grundpreis pro Jahr für einen eigenen Wärmepumpenzähler; ohne eigenen Zähler leer lassen.",
               "household_price": "Zum Vergleich: lohnt der eigene Wärmepumpentarif (K3)?",
               "reference_fuel_price": "Zum Vergleich, z. B. Gas: Kosten je kWh inklusive Grundpreis-Anteil (K1, K2).",
-              "reference_efficiency": "Anteil des abgerechneten Brennstoffs, der als Wärme ankommt. Gas-Brennwertkessel erreichen im Feld im Mittel 0,86, bezogen auf den Brennwert, nach dem Gas abgerechnet wird."
+              "reference_efficiency": "Anteil des abgerechneten Brennstoffs, der als Wärme ankommt. Gas-Brennwertkessel erreichen im Feld im Mittel 0,86, bezogen auf den Brennwert, nach dem Gas abgerechnet wird.",
+              "compare_heating_systems": "Zeigt im Kosten-Zeitstrahl gestrichelte Linien für Heizöl, Erdgas, Holzpellets, Fernwärme und Stromdirektheizung. Die Preise kommen aus Preis-Sensoren mit dem Attribut heating_system, z. B. aus einer Preis-Integration oder einem Scrape-Sensor (README)."
             }
           },
           "evaluation": {

@@ -44,6 +44,13 @@ def migrate_roles(data: dict) -> dict:
     return {ROLE_RENAMES.get(k, k): v for k, v in data.items()}
 
 
+# Preis-Sensoren anderer Heizsysteme (audit_core.heating_prices): Attribute des Vertrags
+PRICE_ATTR_SYSTEM = "heating_system"
+PRICE_ATTR_SOURCE = "source"
+PRICE_ATTR_SOURCE_KIND = "source_kind"
+PRICE_ATTR_AS_OF = "as_of"
+PRICE_ROLE_PREFIX = "price_reference:"  # Schlüssel der Zeitreihen beim Laden, damit sie keine Rolle verdecken
+
 # Rollen mit Text-Zustand; alle anderen werden als Zahl gelesen (on/off → 1/0).
 TEXT_ROLES = {"controller_date"}
 # Bei einer weather-Entität wird dieses Attribut statt des Zustands gelesen.
@@ -69,6 +76,7 @@ CONF_TARIFF_BASE_FEE = "tariff_base_fee"
 CONF_HOUSEHOLD_PRICE = "household_price"
 CONF_REFERENCE_FUEL_PRICE = "reference_fuel_price"
 CONF_REFERENCE_EFFICIENCY = "reference_efficiency"
+CONF_COMPARE_HEATING_SYSTEMS = "compare_heating_systems"
 CONF_COLD_WATER_C = "cold_water_c"
 CONF_LIVING_AREA_M2 = "living_area_m2"
 CONF_DHW_DISINFECTION_INTERVAL_DAYS = "dhw_disinfection_interval_days"
@@ -79,7 +87,7 @@ OPTION_SECTIONS: dict[str, tuple[str, ...]] = {
     "dhw": (CONF_DHW_TANK_VOLUME_L, CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS),
     "site": (CONF_HEATING_HOURS, CONF_HEATING_DEGREE_DAYS, CONF_ROOM_TEMP_TARGET, CONF_LIVING_AREA_M2),
     "cost": (CONF_TARIFF_PRICE, CONF_TARIFF_BASE_FEE, CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE,
-             CONF_REFERENCE_EFFICIENCY),
+             CONF_REFERENCE_EFFICIENCY, CONF_COMPARE_HEATING_SYSTEMS),
     "evaluation": (CONF_WINDOW_DAYS, CONF_DATA_SINCE, CONF_DATA_SOURCE),
 }
 # Optionale Stammdaten: leer heißt „unbekannt“, die abhängige Prüfung ist dann nicht bewertbar.
@@ -114,6 +122,8 @@ DEFAULT_OPTIONS = {
     # Jahresnutzungsgrad der früheren Heizung, bezogen auf den abgerechneten Brennwert: Feldmittel Gas-Brennwertkessel
     # 0,86 (DBU-Feldtest, 60 Anlagen); nur wirksam, wenn auch ein Brennstoffpreis eingetragen ist
     CONF_REFERENCE_EFFICIENCY: 0.86,
+    # Kosten-Zeitstrahl: Wärmepreise anderer Heizsysteme aus Preis-Sensoren (Attribut `heating_system`)
+    CONF_COMPARE_HEATING_SYSTEMS: True,
     CONF_LIVING_AREA_M2: None,  # K2: Verbrauch je m² und Klasse des Energieausweises
     CONF_COLD_WATER_C: 10.0,  # Kaltwasser im Jahresmittel (W6)
     CONF_DHW_DISINFECTION_INTERVAL_DAYS: 7,  # W2: Abstand der Aufheizungen auf 60 °C, wenn der Speicher kühler ist

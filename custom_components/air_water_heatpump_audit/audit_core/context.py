@@ -24,6 +24,7 @@ from . import household as hh
 from . import impact
 from . import efficiency as e1
 from . import flow_temp as t2
+from . import heating_prices as hp
 from .result import HINT, NOT_ASSESSABLE, OK, CheckResult
 from .series import Interval, Series, clip, intervals_where
 
@@ -69,7 +70,8 @@ def data_quality(coverage: CheckResult, offset: CheckResult, meter: CheckResult)
 class Context:
     def __init__(self, s: dict[str, Series], start: float, end: float, *, recorder_keep_days: float | None,
                  long_term_days: float | None, heater_kw: dict[str, float | None], master: dict | None,
-                 events: list[dict] | None, controls: dict[str, dict] | None, tz: str) -> None:
+                 events: list[dict] | None, controls: dict[str, dict] | None, tz: str,
+                 price_refs: list[dict] | None = None) -> None:
         self.s = {k: s.get(k) or [] for k in ROLE_KEYS}
         self.start, self.end = start, end
         self.section_start, self.event = section_start(events or [], start, end)
@@ -77,6 +79,11 @@ class Context:
         self.recorder_keep_days, self.long_term_days = recorder_keep_days, long_term_days
         self.heater_kw = heater_kw
         self.master = master or {}
+        # Preis-Sensoren anderer Heizsysteme ({id, system, unit, name, source, source_kind, as_of, series});
+        # None = Vergleich abgeschaltet. Die Angaben ohne Zeitreihe stehen für die Zeitstrahl-Skala in den Stammdaten.
+        self.price_refs = None if price_refs is None else [r for r in price_refs if hp.usable(r)]
+        if self.price_refs is not None:
+            self.master = self.master | {"price_references": [hp.meta(r) for r in self.price_refs]}
         self.controls = controls or {}
         self.tz = tz
 

@@ -623,6 +623,11 @@ if (!customElements.get("air-water-heatpump-audit-card")) {
 // Admins können Ereignisse direkt hier eintragen (Subentry-Flow der Integration, REST-API nur für Admins).
 
 const TL_AUDITS = ["efficiency", "flow_temperature", "capacity", "data_basis"];
+// Vergleichslinien im Kosten-Zeitstrahl: feste Farbe je Heizsystem, keine Ampelfarbe; mehrere Sensoren eines Systems
+// unterscheiden sich im Strichmuster.
+const REF_COLORS = { heating_oil: "#6d4c41", natural_gas: "#1e88e5", wood_pellets: "#8e24aa", district_heating: "#00897b",
+  direct_electric: "#c2185b" };
+const REF_DASHES = ["6 3", "2 3", "10 3 2 3"];
 
 const TL_TEXT = {
   de: {
@@ -645,6 +650,13 @@ const TL_TEXT = {
     verdicts: { ok: "grün", hint: "gelb", warn: "rot", info: "Info", not_assessable: "nicht bewertbar" },
     cop: "Arbeitszahl",
     cost: "Stromkosten",
+    systems: { heating_oil: "Heizöl", natural_gas: "Erdgas", wood_pellets: "Holzpellets", district_heating: "Fernwärme",
+      direct_electric: "Stromdirektheizung" },
+    sourceKinds: { official: "amtlich", association: "Verband", commercial: "Preisportal", local: "lokal" },
+    asOf: "Stand",
+    refsIntro: "Gestrichelt: Wärmepreis anderer Heizsysteme (Brennstoffpreis ÷ Nutzungsgrad), ohne Grundpreis.",
+    noRefs: "Keine Preis-Sensoren für andere Heizsysteme gefunden. Sie kommen aus einer Preis-Integration oder z. B. "
+      + "aus einem Scrape-Sensor mit dem Attribut heating_system (siehe README). Abschalten in den Optionen, Abschnitt Kosten.",
     none: "Noch kein voller Tag ausgewertet. Der erste Tageswert erscheint nach Mitternacht.",
     events: "Ereignisse",
     noEvents: "Noch keine Ereignisse eingetragen.",
@@ -682,6 +694,13 @@ const TL_TEXT = {
     verdicts: { ok: "green", hint: "yellow", warn: "red", info: "info", not_assessable: "not assessable" },
     cop: "COP",
     cost: "electricity cost",
+    systems: { heating_oil: "Heating oil", natural_gas: "Natural gas", wood_pellets: "Wood pellets",
+      district_heating: "District heating", direct_electric: "Direct electric heating" },
+    sourceKinds: { official: "official", association: "association", commercial: "price portal", local: "local" },
+    asOf: "as of",
+    refsIntro: "Dashed: heat price of other heating systems (fuel price ÷ efficiency), without standing charge.",
+    noRefs: "No price sensors for other heating systems found. They come from a price integration or e.g. from a "
+      + "Scrape sensor with the attribute heating_system (see README). Switch off in the options, section Cost.",
     none: "No full day evaluated yet. The first daily value appears after midnight.",
     events: "Events",
     noEvents: "No events recorded yet.",
@@ -862,7 +881,9 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     const plotH = strip ? 16 : 90;
     const axisH = 16;
     const h = top + plotH + axisH;
-    const values = days.map((d) => d[audit]?.value).filter((v) => v !== null && v !== undefined);
+    const refs = this._refStyles(scale.references ?? []);
+    const values = days.flatMap((d) => [d[audit]?.value, ...refs.map((r) => d[audit]?.references?.[r.id])])
+      .filter((v) => v !== null && v !== undefined);
     const lo = scale.min ?? 0;
     let hi = scale.max;
     if (hi === null || hi === undefined) {
@@ -908,6 +929,17 @@ class AirWaterAuditTimelineCard extends HTMLElement {
         path += `${open ? "L" : "M"}${geo.x((d.start + d.end) / 2).toFixed(1)},${y(v).toFixed(1)}`;
         open = true;
       });
+      // Vergleichslinien anderer Heizsysteme unter der eigenen Linie
+      for (const r of refs) {
+        let rp = "", ro = false;
+        days.forEach((d) => {
+          const v = d[audit]?.references?.[r.id];
+          if (v === null || v === undefined) { ro = false; return; }
+          rp += `${ro ? "L" : "M"}${geo.x(d.start).toFixed(1)},${y(v).toFixed(1)}L${geo.x(d.end).toFixed(1)},${y(v).toFixed(1)}`;
+          ro = true;
+        });
+        if (rp) svg += `<path d="${rp}" fill="none" stroke="${r.color}" stroke-width="1.5" stroke-dasharray="${r.dash}"><title>${esc(this._refLabel(r, t))}</title></path>`;
+      }
       svg += `<path d="${path}" fill="none" stroke="var(--primary-text-color)" stroke-opacity=".55" stroke-width="1.5"/>`;
       days.forEach((d, i) => {
         const p = d[audit];
@@ -948,7 +980,40 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     const note = t.notes[audit] && (!["capacity", "cost"].includes(audit) || (scale.bands ?? []).length) ? `<div class="muted">${t.notes[audit]}</div>` : "";
     return `<div class="chart">
       <div class="label"><b>${esc(name)}</b><span class="muted">${esc(metric)} · ${t.latest} ${esc(now)}</span></div>${note}
-      <svg viewBox="0 0 ${geo.width} ${h}" height="${h}" preserveAspectRatio="none">${svg}</svg></div>`;
+      <svg viewBox="0 0 ${geo.width} ${h}" height="${h}" preserveAspectRatio="none">${svg}</svg>${this._refLegend(scale, refs, days, audit, t)}</div>`;
+  }
+
+  // Farbe und Strichmuster je Preis-Sensor
+  _refStyles(references) {
+    const seen = {};
+    return references.map((r) => {
+      const k = seen[r.system] = (seen[r.system] ?? -1) + 1;
+      return { ...r, color: REF_COLORS[r.system] ?? "var(--secondary-text-color)", dash: REF_DASHES[k % REF_DASHES.length] };
+    });
+  }
+
+  _refLabel(r, t) {
+    const parts = [r.source, t.sourceKinds[r.source_kind] ?? r.source_kind].filter(Boolean);
+    if (r.as_of) parts.push(`${t.asOf} ${this._refDate(r.as_of)}`);
+    return `${t.systems[r.system] ?? r.system}${parts.length ? ` (${parts.join(", ")})` : ""}`;
+  }
+
+  _refDate(v) {
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleDateString(this._locale(), { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+
+  // Legende unter dem Kosten-Zeitstrahl; Hinweis, wenn der Vergleich an ist, aber kein Preis-Sensor gefunden wurde
+  _refLegend(scale, refs, days, audit, t) {
+    if (!scale.references) return "";
+    if (!refs.length) return `<div class="muted">${esc(t.noRefs)}</div>`;
+    const items = refs.map((r) => {
+      const last = [...days].reverse().map((d) => d[audit]?.references?.[r.id]).find((v) => v !== null && v !== undefined);
+      const value = last === undefined ? "–" : `${this._fmt(last, scale.decimals)}${this._unit(scale.unit, t)}`;
+      return `<div><svg width="22" height="8"><line x1="0" x2="22" y1="4" y2="4" stroke="${r.color}" stroke-width="2"
+        stroke-dasharray="${r.dash}"/></svg> ${esc(this._refLabel(r, t))}: ${esc(value)}</div>`;
+    }).join("");
+    return `<div class="muted">${esc(t.refsIntro)}${items}</div>`;
   }
 
   _nextMidnight(s) {
@@ -995,6 +1060,12 @@ class AirWaterAuditTimelineCard extends HTMLElement {
         + ` (${t.verdicts[p.verdict] ?? p.verdict ?? "–"})`;
       if (audit === "dhw" && p.cop != null) text += `, ${t.cop} ${this._fmt(p.cop, 1)}`;
       if (audit === "cost" && p.cost_eur != null) text += `, ${t.cost} ${this._fmt(p.cost_eur, 2)} €`;
+      if (audit === "cost" && p.references) {
+        for (const r of sc.references ?? []) {
+          const v = p.references[r.id];
+          if (v != null) text += `; ${t.systems[r.system] ?? r.system} ${this._fmt(v, sc.decimals)}${this._unit(sc.unit, t)}`;
+        }
+      }
       if (audit === "efficiency" && p.cop != null) {
         text += `, ${t.cop} ${this._fmt(p.cop, 1)} = ${this._fmt(p.heat_kwh, 1)} kWh ÷ ${this._fmt(p.electricity_kwh, 0)} kWh`;
         if (p.outdoor_mean != null) text += `, ${this._fmt(p.outdoor_mean, 1)} °C`;

@@ -167,14 +167,16 @@
               "tariff_base_fee": "Heat pump meter standing charge",
               "household_price": "Household energy price",
               "reference_fuel_price": "Previous fuel price",
-              "reference_efficiency": "Previous heating efficiency"
+              "reference_efficiency": "Previous heating efficiency",
+              "compare_heating_systems": "Compare heat prices of other heating systems"
             },
             "data_description": {
               "tariff_price": "Price per kWh of heat pump electricity (K1, K2).",
               "tariff_base_fee": "Only the additional standing charge per year for a separate heat pump meter; leave empty without one.",
               "household_price": "For comparison: is the separate heat pump tariff worth it (K3)?",
               "reference_fuel_price": "For comparison, e.g. gas: cost per kWh including the share of the standing charge (K1, K2).",
-              "reference_efficiency": "Share of the billed fuel that arrives as heat. Gas condensing boilers reach 0.86 on average in field tests, based on the gross calorific value that gas is billed by."
+              "reference_efficiency": "Share of the billed fuel that arrives as heat. Gas condensing boilers reach 0.86 on average in field tests, based on the gross calorific value that gas is billed by.",
+              "compare_heating_systems": "Shows dashed lines for heating oil, natural gas, wood pellets, district heating and direct electric heating in the cost timeline. Prices come from price sensors with the attribute heating_system, e.g. from a price integration or a Scrape sensor (README)."
             }
           },
           "evaluation": {

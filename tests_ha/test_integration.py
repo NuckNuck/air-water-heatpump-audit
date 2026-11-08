@@ -446,6 +446,49 @@ async def test_timeline_keeps_stored_days(hass: HomeAssistant, hass_storage):
     assert state.attributes["entry_id"] == entry.entry_id
 
 
+OIL_PRICE = ("sensor.oil_price", "105.3", {"heating_system": "heating_oil", "unit_of_measurement": "€/100 L",
+                                         "source": "EU Weekly Oil Bulletin", "source_kind": "official",
+                                         "as_of": "2026-11-02"})
+GAS_PER_M3 = ("sensor.gas_m3", "1.2", {"heating_system": "natural_gas", "unit_of_measurement": "€/m³"})
+
+
+async def _cost_coordinator(hass: HomeAssistant, **options):
+    """Kosten-Audit einrichten und einmal rechnen (Vertrag: Spezifikation 7.3)."""
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=[AUDIT_SUBENTRY("cost"), AUDIT_SUBENTRY("efficiency")],
+                            data=MAHTANAR, options=DEFAULT_OPTIONS | {"data_since": "2000-01-01 00:00:00"} | options)
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+    assert entry.runtime_data.last_update_success, entry.runtime_data.last_exception
+    return entry.runtime_data
+
+
+async def test_price_sensor_with_heating_system_reaches_cost_timeline(hass: HomeAssistant):
+    hass.states.async_set(*OIL_PRICE)
+    hass.states.async_set("sensor.unrelated", "3", {"unit_of_measurement": "€/kWh"})
+    await async_wait_recording_done(hass)
+    coordinator = await _cost_coordinator(hass)
+    refs = coordinator.data["timeline"]["scales"]["cost"]["references"]
+    assert [(r["id"], r["system"], r["source_kind"]) for r in refs] == [("sensor.oil_price", "heating_oil", "official")]
+
+
+async def test_price_sensor_with_unsupported_unit_is_skipped_with_warning(hass: HomeAssistant, caplog):
+    hass.states.async_set(*GAS_PER_M3)
+    await async_wait_recording_done(hass)
+    coordinator = await _cost_coordinator(hass)
+    assert coordinator.data["timeline"]["scales"]["cost"]["references"] == []
+    assert "sensor.gas_m3" in caplog.text
+
+
+async def test_comparison_option_off_hides_price_sensors(hass: HomeAssistant):
+    hass.states.async_set(*OIL_PRICE)
+    await async_wait_recording_done(hass)
+    coordinator = await _cost_coordinator(hass, compare_heating_systems=False)
+    assert "references" not in coordinator.data["timeline"]["scales"]["cost"]
+
+
 async def test_flow_temperature_sensors(hass: HomeAssistant):
     hass.states.async_set("binary_sensor.heatpump_compressor", "on")
     await async_wait_recording_done(hass)

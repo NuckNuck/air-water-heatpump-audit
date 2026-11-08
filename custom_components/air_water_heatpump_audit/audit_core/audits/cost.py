@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .. import cost as k1
+from .. import heating_prices as hp
 from .. import household as hh
 from ..context import HEATER_ROLES, Context
 from ..registry import SECTION, AuditSpec, CheckSpec, TimelineSpec
@@ -12,15 +13,24 @@ from ..series import intervals_where, normalize
 
 def _point(ctx: Context, a: float, b: float, day: str) -> dict:
     row = next((r for r in ctx.daily_rows_window if r["day"] == day), None)
-    return k1.daily_point(row, ctx.day_costs.get(day), ctx.master)
+    point = k1.daily_point(row, ctx.day_costs.get(day), ctx.master)
+    if ctx.price_refs:
+        # Wärmepreise anderer Heizsysteme an diesem Tag, auch ohne eigenen Wert (Sensor-ID → ct/kWh Wärme)
+        refs = {r["id"]: hp.day_heat_price(r, r["series"], a, b) for r in ctx.price_refs}
+        if refs := {k: v for k, v in refs.items() if v is not None}:
+            point["references"] = refs
+    return point
 
 
 def _scale(master: dict) -> dict:
     """Wärmepreis in ct/kWh; Grenze = Vergleichsbrennstoff mit Messtoleranz wie K1. Ohne Vergleich keine Bänder."""
     reference = k1.reference_heat_price(master)
     limit = round(100 * reference * k1.REFERENCE_TOLERANCE, 1) if reference else None
-    return {"metric": "heat_price", "unit": "ct/kWh", "min": 0, "max": None, "decimals": 1,
-            "bands": [[0, limit, OK], [limit, None, HINT]] if limit else []}
+    out = {"metric": "heat_price", "unit": "ct/kWh", "min": 0, "max": None, "decimals": 1,
+           "bands": [[0, limit, OK], [limit, None, HINT]] if limit else []}
+    if "price_references" in master:  # Vergleich eingeschaltet; leere Liste = kein Preis-Sensor gefunden
+        out["references"] = master["price_references"]
+    return out
 
 
 def _annual(ctx: Context):

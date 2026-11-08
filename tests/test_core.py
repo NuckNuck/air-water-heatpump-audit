@@ -691,6 +691,53 @@ class SectionTest(unittest.TestCase):
 from audit_core import timeline as tl
 
 
+class HeatingPriceContractTest(unittest.TestCase):
+    """Umrechnung Brennstoffpreis → Wärmepreis, Vertrag: Spezifikation 7.3."""
+
+    OIL_KWH_PER_L, PELLETS_KWH_PER_KG = 10.0, 4.8
+
+    def test_oil_per_100_litres_converts_via_energy_content(self):
+        from audit_core import heating_prices as hp
+        self.assertAlmostEqual(hp.fuel_factor("heating_oil", "€/100 L"), 1 / (100 * self.OIL_KWH_PER_L))
+
+    def test_pellets_per_tonne_converts_via_energy_content(self):
+        from audit_core import heating_prices as hp
+        self.assertAlmostEqual(hp.fuel_factor("wood_pellets", "€/t"), 1 / (1000 * self.PELLETS_KWH_PER_KG))
+
+    def test_energy_units_apply_to_every_system(self):
+        from audit_core import heating_prices as hp
+        for system in hp.SYSTEMS:
+            self.assertAlmostEqual(hp.fuel_factor(system, "ct/kWh"), 0.01, msg=system)
+
+    def test_volume_unit_outside_heating_oil_is_rejected(self):
+        from audit_core import heating_prices as hp
+        self.assertIsNone(hp.fuel_factor("natural_gas", "€/L"))
+
+    def test_mass_unit_outside_wood_pellets_is_rejected(self):
+        from audit_core import heating_prices as hp
+        self.assertIsNone(hp.fuel_factor("heating_oil", "€/t"))
+
+    def test_unknown_system_is_rejected(self):
+        from audit_core import heating_prices as hp
+        self.assertIsNone(hp.fuel_factor("coal", "€/kWh"))
+
+    def test_missing_unit_is_rejected(self):
+        from audit_core import heating_prices as hp
+        self.assertIsNone(hp.fuel_factor("district_heating", None))
+
+    def test_heat_price_divides_by_efficiency(self):
+        from audit_core import heating_prices as hp
+        gas_eur_per_kwh = 0.129
+        ref = {"id": "sensor.gas", "system": "natural_gas", "unit": "€/kWh"}
+        price = hp.day_heat_price(ref, [(0, gas_eur_per_kwh)], 0, H)
+        self.assertAlmostEqual(price, 100 * gas_eur_per_kwh / hp.SYSTEMS["natural_gas"]["efficiency"], places=1)
+
+    def test_day_without_price_gives_none(self):
+        from audit_core import heating_prices as hp
+        ref = {"id": "sensor.gas", "system": "natural_gas", "unit": "€/kWh"}
+        self.assertIsNone(hp.day_heat_price(ref, [], 0, H))
+
+
 class TimelineTest(unittest.TestCase):
     """Drei volle Tage, 20 min an / 20 min aus, Puffer kostet 2 K, Ereignis am zweiten Tag."""
 
@@ -711,6 +758,46 @@ class TimelineTest(unittest.TestCase):
         from audit_core.runner import run_audits
         return run_audits(self.s, self.start, self.end, recorder_keep_days=10, long_term_days=None, heater_kw={},
                           master=self.master, events=events)
+
+    # Vertrag: Spezifikation 7.3 (Wärmepreise anderer Heizsysteme im Zeitstrahl)
+    OIL_PER_100L = {"id": "sensor.oil", "system": "heating_oil", "unit": "€/100 L", "source": "EU",
+                    "source_kind": "official", "as_of": "2026-11-03"}
+    GAS_CT = {"id": "sensor.gas", "system": "natural_gas", "unit": "ct/kWh"}
+    GAS_PER_M3 = {"id": "sensor.gas_m3", "system": "natural_gas", "unit": "€/m³"}  # Einheit nicht im Vertrag
+
+    def run_cost(self, price_refs):
+        from audit_core.runner import run_audits
+        return run_audits(self.s, self.start, self.end, recorder_keep_days=10, long_term_days=None, heater_kw={},
+                          master=self.master | {"tariff_price": 0.25}, audits=["cost"], price_refs=price_refs)
+
+    def test_price_sensors_given_scale_lists_only_supported_ones(self):
+        refs = [self.OIL_PER_100L | {"series": [(self.start, 100.0)]},
+                self.GAS_CT | {"series": [(self.start, 12.0)]}, self.GAS_PER_M3 | {"series": [(self.start, 1.2)]}]
+        scale = self.run_cost(refs)["timeline"]["scales"]["cost"]
+        self.assertEqual([(r["id"], r["source_kind"]) for r in scale["references"]],
+                         [("sensor.oil", "official"), ("sensor.gas", None)])
+
+    def test_constant_price_gives_heat_price_per_day(self):
+        oil_eur_per_100l, gas_ct_per_kwh = 100.0, 12.0
+        refs = [self.OIL_PER_100L | {"series": [(self.start, oil_eur_per_100l)]},
+                self.GAS_CT | {"series": [(self.start, gas_ct_per_kwh)]}]
+        day = self.run_cost(refs)["timeline"]["days"][0]["cost"]["references"]
+        # 1 €/L ÷ 10 kWh/L ÷ 0,91 = 11,0 ct; 12 ct ÷ 0,86 = 14,0 ct
+        self.assertEqual(day, {"sensor.oil": 11.0, "sensor.gas": 14.0})
+
+    def test_price_change_at_noon_gives_time_weighted_day_mean(self):
+        noon_day2 = self.start + 36 * H
+        refs = [self.OIL_PER_100L | {"series": [(self.start, 100.0), (noon_day2, 120.0)]}]
+        day2 = self.run_cost(refs)["timeline"]["days"][1]["cost"]["references"]
+        self.assertEqual(day2["sensor.oil"], 12.1)  # halb 1,00 €/L, halb 1,20 €/L → 1,10 €/L ÷ 10 ÷ 0,91
+
+    def test_comparison_off_gives_no_references(self):
+        rep = self.run_cost(None)
+        self.assertNotIn("references", rep["timeline"]["scales"]["cost"])
+        self.assertNotIn("references", rep["timeline"]["days"][0]["cost"])
+
+    def test_comparison_on_without_sensors_gives_empty_list(self):
+        self.assertEqual(self.run_cost([])["timeline"]["scales"]["cost"]["references"], [])
 
     def test_one_point_per_full_day_with_real_values(self):
         tl = self.run_with()["timeline"]

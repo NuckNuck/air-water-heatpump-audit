@@ -7,6 +7,15 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
+## [0.18.0] – in Arbeit
+
+### Neu
+- **Wärmepreise anderer Heizsysteme im Kosten-Zeitstrahl** (#15): gestrichelte Linien für Heizöl, Erdgas,
+  Holzpellets, Fernwärme und Stromdirektheizung, in ct je kWh Wärme (Brennstoffpreis ÷ Nutzungsgrad). Die Preise
+  kommen aus Preis-Sensoren mit dem Attribut `heating_system`, z. B. aus einer Preis-Integration oder einem
+  Scrape-Sensor für den örtlichen Händler (README). Die Tageswerte bleiben im Zeitstrahl gespeichert.
+- Neue Option **Wärmepreise anderer Heizsysteme vergleichen** im Abschnitt Kosten, Standard: an.
+
 ## [0.17.0] – 2026-11-01
 
 Enthält auch alle Änderungen aus 0.16.0 (nicht einzeln veröffentlicht, siehe unten).

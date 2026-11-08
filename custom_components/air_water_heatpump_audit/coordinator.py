@@ -17,9 +17,12 @@ from homeassistant.util import dt as dt_util
 from . import influx_source
 from .audit_core import timeline
 from .audit_core.actions import CONTROL_ROLES
+from .audit_core import heating_prices
 from .audit_core.audits import REGISTRY
 from .audit_core.runner import ROLE_KEYS, roles_for, run_audits
 from .const import (CONF_AUDIT, CONF_IMPORT_TIMELINE_FROM, LEGACY_DOMAIN, SUBENTRY_AUDIT)
+from .const import (CONF_COMPARE_HEATING_SYSTEMS, PRICE_ATTR_AS_OF, PRICE_ATTR_SOURCE, PRICE_ATTR_SOURCE_KIND,
+                    PRICE_ATTR_SYSTEM, PRICE_ROLE_PREFIX)
 from .const import (CONF_BOOSTER_HEATER_2_KW, CONF_BOOSTER_HEATER_KW, CONF_DATA_SINCE, CONF_DATA_SOURCE,
                     CONF_EVENT_KIND, CONF_EVENT_NOTE, CONF_EVENT_TIME, CONF_IMMERSION_HEATER_KW, CONF_WINDOW_DAYS,
                     DEFAULT_OPTIONS, DOMAIN, MASTER_KEYS, SOURCE_INFLUXDB, SOURCE_RECORDER, SUBENTRY_EVENT, SUBENTRY_PERSON,
@@ -32,6 +35,7 @@ type AirWaterAuditConfigEntry = ConfigEntry[AirWaterAuditCoordinator]
 
 TIMELINE_STORE_VERSION = 1
 ROLE_AUDIT_ORDER = [a.audit_id for a in REGISTRY]
+COST_AUDIT = "cost"
 
 
 def timeline_store(hass: HomeAssistant, entry_id: str) -> Store:
@@ -53,6 +57,7 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._influx_since: float | None = None  # ältester Wert in InfluxDB, einmal je Laufzeit ermittelt
         self._store = timeline_store(hass, entry.entry_id)
         self._timeline_days: list[dict] | None = None  # None = noch nicht aus dem Speicher geladen
+        self._warned_prices: set[str] = set()  # Preis-Sensoren, zu denen schon eine Warnung im Log steht
 
     def _option(self, key: str):
         return self.config_entry.options.get(key, DEFAULT_OPTIONS[key])
@@ -81,6 +86,29 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                          "step": a.get("step"), "options": a.get("options"), "unit": a.get("unit_of_measurement")}
         return out
 
+    def _price_refs(self) -> list[dict] | None:
+        """Preis-Sensoren anderer Heizsysteme (Attribut `heating_system`); None = Vergleich aus oder kein Kosten-Audit.
+
+        Sensoren mit unbekanntem System oder unpassender Einheit fallen weg (mit Warnung im Log)."""
+        if not self._option(CONF_COMPARE_HEATING_SYSTEMS) or COST_AUDIT not in self.audits():
+            return None
+        out = []
+        for st in self.hass.states.async_all("sensor"):
+            system = st.attributes.get(PRICE_ATTR_SYSTEM)
+            if system is None:
+                continue
+            ref = {"id": st.entity_id, "system": system, "unit": st.attributes.get("unit_of_measurement"),
+                   "name": st.attributes.get("friendly_name"), "source": st.attributes.get(PRICE_ATTR_SOURCE),
+                   "source_kind": st.attributes.get(PRICE_ATTR_SOURCE_KIND),
+                   "as_of": st.attributes.get(PRICE_ATTR_AS_OF)}
+            if heating_prices.usable(ref):
+                out.append(ref)
+            elif st.entity_id not in self._warned_prices:
+                self._warned_prices.add(st.entity_id)
+                _LOGGER.warning("Preis-Sensor %s übergangen: System %r oder Einheit %r wird nicht unterstützt",
+                                st.entity_id, system, ref["unit"])
+        return sorted(out, key=lambda r: (list(heating_prices.SYSTEMS).index(r["system"]), r["id"]))
+
     def window(self, max_days: float | None = None) -> tuple[float, float]:
         end = dt_util.utcnow()
         days = float(self._option(CONF_WINDOW_DAYS))
@@ -98,7 +126,7 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return load_series(self.hass, roles, dt_util.utc_from_timestamp(start), dt_util.utc_from_timestamp(end))
 
     def _compute(self, series: dict, start: float, end: float, keep_days: float, long_term_days: float | None,
-                 controls: dict[str, dict]) -> dict[str, Any]:
+                 controls: dict[str, dict], price_refs: list[dict] | None = None) -> dict[str, Any]:
         heater_kw = {role: self._option(key) for role, key in (("immersion_heater", CONF_IMMERSION_HEATER_KW),
                                                                 ("booster_heater", CONF_BOOSTER_HEATER_KW),
                                                                 ("booster_heater_2", CONF_BOOSTER_HEATER_2_KW))}
@@ -107,7 +135,9 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                                if sub.subentry_type == SUBENTRY_PERSON]
         return run_audits(series, start, end, recorder_keep_days=keep_days, long_term_days=long_term_days,
                           heater_kw=heater_kw, master=master, events=self._events(), controls=controls,
-                          tz=str(dt_util.get_default_time_zone()), audits=self.audits())
+                          tz=str(dt_util.get_default_time_zone()), audits=self.audits(),
+                          price_refs=None if price_refs is None else [
+                              r | {"series": series.get(PRICE_ROLE_PREFIX + r["id"], [])} for r in price_refs])
 
     def _events(self) -> list[dict[str, Any]]:
         """Ereignisse aus den Untereinträgen; Zeit ohne Zone gilt als lokale Zeit."""
@@ -142,7 +172,9 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return None if self._influx_since is None else (end - self._influx_since) / 86400
 
     async def _async_update_data(self) -> dict[str, Any]:
-        roles = self._roles()
+        price_refs = self._price_refs()
+        # Preis-Sensoren laden wie Rollen; der Präfix hält sie getrennt von den Rollen-Keys
+        roles = self._roles() | {PRICE_ROLE_PREFIX + r["id"]: r["id"] for r in price_refs or []}
         recorder = get_instance(self.hass)
         conn, note = self._influx_connection()
         series: dict = {}
@@ -168,7 +200,7 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._load_recorder, {r: roles[r] for r in from_recorder}, start, end)
         t1 = time.monotonic()
         report = await self.hass.async_add_executor_job(self._compute, series, start, end, recorder.keep_days,
-                                                        long_term_days, self._controls())
+                                                        long_term_days, self._controls(), price_refs)
         report["runtime_s"] = {"load": round(t1 - t0, 2), "audits": round(time.monotonic() - t1, 2)}
         report["timeline"]["days"] = await self._merge_timeline(report["timeline"]["days"])
         report["events"] = sorted(self._events(), key=lambda e: e["time"])

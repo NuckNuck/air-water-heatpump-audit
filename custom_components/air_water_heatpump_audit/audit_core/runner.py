@@ -38,15 +38,18 @@ def roles_for(audit_ids: list[str] | None) -> set[str]:
 def run_audits(s: dict[str, Series], start: float, end: float, *, recorder_keep_days: float | None,
                long_term_days: float | None, heater_kw: dict[str, float | None], master: dict | None = None,
                events: list[dict] | None = None, controls: dict[str, dict] | None = None,
-               tz: str = days.DEFAULT_TZ, audits: list[str] | None = None) -> dict:
+               tz: str = days.DEFAULT_TZ, audits: list[str] | None = None,
+               price_refs: list[dict] | None = None) -> dict:
     """master: Stammdaten (Spezifikation 1.4). events: Änderungen an der Anlage ({time, kind, note}); Audits mit
     `section == "section"` rechnen nur ab dem letzten Ereignis, damit nie über eine Änderung hinweg gemittelt wird.
     controls: heutiger Zustand der Stellgrößen-Rollen (actions.CONTROL_ROLES); daraus entstehen Vorschläge.
     audits: IDs der zugeschalteten Audits, None = alle.
+    price_refs: Preis-Sensoren anderer Heizsysteme für den Kosten-Zeitstrahl (heating_prices), None = abgeschaltet.
     """
     def context(until: float, upto: list[dict] | None, ctl: dict | None) -> Context:
         return Context(s, start, until, recorder_keep_days=recorder_keep_days, long_term_days=long_term_days,
-                       heater_kw=heater_kw, master=master, events=upto, controls=ctl, tz=tz)
+                       heater_kw=heater_kw, master=master, events=upto, controls=ctl, tz=tz,
+                       price_refs=price_refs)
 
     ctx = context(end, events, controls)
     prior: dict[float, Context] = {}  # Ereigniszeit → Lauf bis zu diesem Ereignis, für attach_before()
