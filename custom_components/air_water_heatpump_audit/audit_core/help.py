@@ -175,8 +175,9 @@ CHECK_HELP: dict[str, dict[str, str]] = {
                      "40 l bei 40 °C (DIN EN 15450), Durchfluss 10 l/min (Verbraucherzentrale NRW); Bedarf je Person "
                      "nach BWP-Leitfaden Trinkwassererwärmung."},
     # Audit 5 – Kosten
-    "K1": {"what": "Was eine Kilowattstunde Wärme in der letzten Woche gekostet hat: Strom × Preis ÷ Wärme, mit "
-                   "anteiligem Grundpreis des Wärmepumpenzählers.",
+    "K1": {"what": "Was eine Kilowattstunde Wärme in der letzten Woche gekostet hat: Strom × Preis ÷ Wärme, dazu die "
+                   "festen Kosten (Grundpreis des Wärmepumpentarifs, Messstellenentgelt) verteilt auf die Wärme eines "
+                   "Jahres.",
            "rating": "Grün, wenn sie höchstens 10 % teurer ist als mit dem früheren Brennstoff (Messgenauigkeit der "
                      "Wärme), sonst Gelb. Ohne Vergleichspreis nur zur Information. Im Winter ist sie teurer als im "
                      "Jahresmittel.",
@@ -187,7 +188,7 @@ CHECK_HELP: dict[str, dict[str, str]] = {
                      "wird sie genauer.",
            "source": "Gradtagzahl G20/15 nach VDI 4710."},
     "K3": {"what": "Ob sich der eigene Wärmepumpentarif lohnt: Preisunterschied zum Haushaltsstrom × Jahresstrom, "
-                   "abzüglich Grundpreis des zweiten Zählers.",
+                   "abzüglich Grundpreis und Messstellenentgelt des zweiten Zählers.",
            "rating": "Grün, wenn der Tarif spart, sonst Gelb.",
            "source": "Rechnung aus den Stammdaten und K2."},
     "K4": {"what": "Bei dynamischem Tarif: der im Mittel gezahlte Preis im Vergleich zum mittleren Preis.",

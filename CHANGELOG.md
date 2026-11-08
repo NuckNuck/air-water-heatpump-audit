@@ -15,6 +15,21 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
   kommen aus Preis-Sensoren mit dem Attribut `heating_system`, z. B. aus einer Preis-Integration oder einem
   Scrape-Sensor für den örtlichen Händler (README). Die Tageswerte bleiben im Zeitstrahl gespeichert.
 - Neue Option **Wärmepreise anderer Heizsysteme vergleichen** im Abschnitt Kosten, Standard: an.
+- **Feste Kosten im Wärmepreis** (#17): Grundpreis des Wärmepumpentarifs und neu das Messstellenentgelt des
+  Wärmepumpenzählers, neue Auswahl „eigener Zähler“ oder „Haushaltszähler“. Sie werden über die Jahreswärme verteilt
+  (Hochrechnung K2, sonst frühere Abrechnung) und stecken jetzt auch im Zeitstrahl. Leer heißt „nicht eingetragen“
+  und erzeugt einen Hinweis, 0 ist ein gültiger Wert.
+- **Frühere Heizung** als Stammdaten: System und Jahresverbrauch so, wie er auf der Abrechnung steht; das Audit
+  rechnet ihn in Wärme um. Der eigene Nutzungsgrad gilt für dieses System.
+- **Reparaturmeldung** „Feste Kosten der Wärmepumpe fehlen“ mit kleinem Formular; in der Karte ein Link
+  **⚙ Einstellungen** je Audit und bei fehlenden Stammdaten. Die Anlagendaten öffnen dann direkt den Abschnitt Kosten.
+- Preis-Sensoren können `includes_fixed_charges` und `annual_base_fee` angeben. Die Vergleichslinie
+  Stromdirektheizung kommt aus dem Arbeitspreis des Haushaltsstroms.
+
+### Geändert
+- Nutzungsgrad Holzpellets 0,80 statt 0,85, belegt mit Feldmessungen (65–90 %).
+- K1 rechnet die festen Kosten je kWh über die Jahreswärme statt je Tag; ohne Jahreswärme bleiben sie draußen, der
+  Text sagt das. K3 zieht Grundpreis und Messstellenentgelt ab und ist am Haushaltszähler nur Information.
 
 ## [0.17.0] – 2026-11-01
 

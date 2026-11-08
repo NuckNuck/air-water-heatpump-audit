@@ -141,9 +141,14 @@ Stromzähler der Wärmepumpe im Energie-Dashboard, wird dessen Preis vorgeschlag
 Im Zeitstrahl zeigt das Audit Kosten zum eigenen Wärmepreis gestrichelte Linien für andere Heizsysteme: Heizöl,
 Erdgas, Holzpellets, Fernwärme, Stromdirektheizung. Gerechnet wird Brennstoffpreis ÷ Nutzungsgrad, in ct je kWh
 Wärme (Werte und Quellen: [Spezifikation 7.3](docs/specification.md#73-wärmepreise-anderer-heizsysteme-zeitstrahl)).
-Die Preise holt das Audit nicht selbst. Es nimmt jeden Sensor, der das Attribut `heating_system` trägt, z. B. aus
-einer Preis-Integration oder einem eigenen Sensor für den Heizölpreis des örtlichen Händlers. Mit der Home-Assistant-
-Integration [Scrape](https://www.home-assistant.io/integrations/scrape/) geht das ohne Programmieren:
+Für die frühere Heizung gilt der eigene Nutzungsgrad aus den Anlagendaten. Die Linie für die Stromdirektheizung
+entsteht aus dem Arbeitspreis des Haushaltsstroms, dafür braucht es keinen Sensor.
+
+Die übrigen Preise holt das Audit nicht selbst. Es nimmt jeden Sensor, der das Attribut `heating_system` trägt, z. B.
+aus der Integration [heating-energy-prices](https://github.com/NuckNuck/heating-energy-prices) (amtliche und
+Verbandspreise, eigene Vergleichspreise) oder einem eigenen Sensor für den Heizölpreis des örtlichen Händlers. Mit
+der Home-Assistant-Integration [Scrape](https://www.home-assistant.io/integrations/scrape/) geht das ohne
+Programmieren:
 
 ```yaml
 # configuration.yaml – Scrape-Sensor anlegen (Einstellungen → Geräte & Dienste → Scrape), dann:
@@ -155,8 +160,20 @@ homeassistant:
       source_kind: local                # official, association, commercial, local
 ```
 
-Der Sensor braucht eine Einheit, z. B. `€/100 L` für Heizöl, `ct/kWh` für Gas, `€/t` für Pellets. Abschalten lässt
-sich der Vergleich in den Anlagendaten, Abschnitt Kosten.
+Der Sensor braucht eine Einheit, z. B. `€/100 L` für Heizöl, `ct/kWh` für Gas, `€/t` für Pellets. Enthält der Preis
+schon Grundpreis und Messung, setzt man zusätzlich `includes_fixed_charges: true`; hat ein Angebot einen eigenen
+Grundpreis, kommt er als `annual_base_fee` (€ im Jahr) dazu. Abschalten lässt sich der Vergleich in den Anlagendaten,
+Abschnitt Kosten.
+
+#### Feste Kosten im Wärmepreis
+
+Der eigene Wärmepreis enthält, was die Wärmepumpe zusätzlich kostet: mit eigenem Zähler den Grundpreis des
+Wärmepumpentarifs und das Messstellenentgelt, am Haushaltszähler nichts (der Grundpreis des Haushaltsstroms fällt
+auch ohne Wärmepumpe an). Die festen Kosten werden über die Wärme eines Jahres verteilt, damit Sommertage mit wenig
+Wärme nicht ausschlagen. Die Jahreswärme kommt aus der Hochrechnung (K2), vorher aus dem früheren Jahresverbrauch laut
+Abrechnung. Fehlt beides, steht im Audit „Grundpreis noch nicht eingerechnet“. Fehlt eine Angabe, erscheint unter
+**Einstellungen → Reparaturen** „Feste Kosten der Wärmepumpe fehlen“ mit einem kleinen Formular, und jedes Audit in
+der Karte hat einen Link **⚙ Einstellungen**.
 
 
 ### Was bringt eine Aktion?
@@ -319,8 +336,10 @@ bewertbar – Stammdaten fehlen“.
   die Legionellenschaltung den Speicher auf 60 °C aufheizt.
 - **Standort und Komfort:** Heizstunden pro Jahr am Wohnort (aus der Klimakarte des Bundesverbands Wärmepumpe),
   Gradtage pro Jahr (z. B. aus dem Gradtagzahlen-Rechner des IWU), die gewünschte Raumtemperatur und die Wohnfläche.
-- **Kosten:** Arbeitspreis und zusätzlicher Grundpreis des Wärmepumpenstroms, Preis des Haushaltsstroms, Preis und
-  Nutzungsgrad der früheren Heizung zum Vergleich. Für Gas den Preis je abgerechneter kWh inklusive Grundpreis-Anteil
+- **Kosten:** Arbeitspreis des Wärmepumpenstroms; ob die Wärmepumpe einen eigenen Zähler hat, und dann Grundpreis
+  des Wärmepumpentarifs und Messstellenentgelt (leer = nicht eingetragen, 0 = gibt es nicht); Preis des
+  Haushaltsstroms; frühere Heizung mit Jahresverbrauch laut Abrechnung (z. B. 20.000 kWh Gas oder 2.000 Liter Heizöl),
+  Preis und Nutzungsgrad zum Vergleich. Für Gas den Preis je abgerechneter kWh inklusive Grundpreis-Anteil
   eintragen; der vorgeschlagene Nutzungsgrad 0,86 ist das Mittel von Gas-Brennwertkesseln im Feld. Dazu der
   Schalter, ob der Zeitstrahl die Wärmepreise anderer Heizsysteme zeigt (Standard: an).
 - **Auswertung:** wie viele Tage zurück gerechnet wird, ab wann Daten gelten (z. B. ab Einbau der Schnittstelle) und

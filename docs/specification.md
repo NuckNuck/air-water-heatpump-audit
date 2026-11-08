@@ -105,8 +105,12 @@ Options Flow in Abschnitten, dazu die Personen im Haushalt als Untereinträge (6
 | Standort und Komfort | `room_temp_target` | gewünschte Raumtemperatur | T6 |
 | Standort und Komfort | `living_area_m2` | Wohnfläche | K2 |
 | Kosten | `tariff_price` | Arbeitspreis des Wärmepumpenstroms (€/kWh); Vorschlag aus dem Energie-Dashboard, wenn dort der Zähler der Rolle `electricity_meter` als Netzbezug steht | K1–K3 |
-| Kosten | `tariff_base_fee` | zusätzlicher Grundpreis des Wärmepumpenzählers (€/a) | K1–K3 |
+| Kosten | `heat_pump_meter` | Zähler der Wärmepumpe: `separate_meter` (eigener Zähler mit WP-Tarif) oder `household_meter` (am Haushaltszähler, keine zusätzlichen festen Kosten); leer = nicht angegeben | K1–K3 |
+| Kosten | `tariff_base_fee` | Grundpreis des Wärmepumpentarifs (€/a); leer = nicht eingetragen, 0 = keiner | K1–K3 |
+| Kosten | `meter_fee` | Messstellenentgelt des Wärmepumpenzählers (€/a); leer = nicht eingetragen, 0 = keins | K1–K3 |
 | Kosten | `household_price` | Arbeitspreis des Haushaltsstroms (€/kWh) | K3 |
+| Kosten | `previous_heating_system` | frühere Heizung (`natural_gas`, `heating_oil`, `wood_pellets`, `district_heating`, `direct_electric`, `none` = Neubau); für dieses System gilt `reference_efficiency` | K1, K2, Zeitstrahl |
+| Kosten | `previous_consumption`, `previous_consumption_unit` | früherer Jahresverbrauch so, wie er auf der Abrechnung steht (`kWh`, `MWh`, `L`, `kg`, `t`) | Jahreswärme (7.1) |
 | Kosten | `reference_fuel_price` | Preis des früheren Brennstoffs je abgerechneter kWh, mit Grundpreis-Anteil | K1, K2 |
 | Kosten | `reference_efficiency` | Jahresnutzungsgrad der früheren Heizung, bezogen auf die abgerechnete kWh; Vorgabe 0,86 (Gas-Brennwertkessel, DBU-BW S. 7/39: Mittel 86,2 % auf Hs, n = 60; Gas wird nach Brennwert abgerechnet) | K1, K2 |
 | Auswertung | `window_days` | Auswertefenster in Tagen (Standard 30; mit Recorder wirkt höchstens dessen Aufbewahrung) | alle |
@@ -459,7 +463,18 @@ Ziel: Den gemessenen Strom in Euro umrechnen: Was kostet eine Kilowattstunde Wä
 
 - **Tage:** die gültigen Tage aus Audit 1 (4.1), auch mit aufgefüllten Lücken.
 - **Kosten eines Tages:** Mit `price_signal` jeder Zählerschritt × der Preis zu Beginn des Schritts; sonst Strom ×
-  `tariff_price`. Grundpreis (`tariff_base_fee`) anteilig je Tag (÷ 365).
+  `tariff_price`.
+- **Feste Kosten der Wärmepumpe** (Mehrkosten-Sicht): nur, was die Wärmepumpe zusätzlich kostet. Am Haushaltszähler
+  keine; mit eigenem Zähler `tariff_base_fee` + `meter_fee`. Der Grundpreis des Haushaltsstroms fällt auch ohne
+  Wärmepumpe an und bleibt außen vor. Leere Felder sind „nicht eingetragen“: Die Prüfungstexte nennen sie, und ein
+  fixbares Reparatur-Issue („feste Kosten fehlen“) führt zu einem Formular mit genau diesen Feldern. Ist
+  `heat_pump_meter` leer, aber `tariff_base_fee` eingetragen, gilt der eigene Zähler (Einträge älterer Versionen).
+- **Jahreswärme** für die Verteilung fester Kosten: 1. Hochrechnung K2, 2. frühere Abrechnung
+  (`previous_consumption` in kWh Brennstoff × Nutzungsgrad der früheren Heizung), 3. sonst keine – dann bleiben die
+  festen Kosten draußen, und Text und Zeitstrahl sagen „Grundpreis noch nicht eingerechnet“. Keine Schätzung aus der
+  Wohnfläche.
+- **Wärmepreis** = Stromkosten ÷ Wärme + feste Kosten ÷ Jahreswärme. Der feste Aufschlag je kWh gilt gleich für K1
+  und jeden Tag des Zeitstrahls; je Tag umgelegt (÷ 365) schlüge er an Tagen mit wenig Wärme aus.
 - **Vergleichspreis der Wärme** = `reference_fuel_price` ÷ `reference_efficiency`.
 - **Hochrechnung** (K2): Je Tag Gradtage G = 20 °C − Tagesmittel außen, wenn das Mittel unter 15 °C liegt, sonst 0
   (G20/15, VDI 3807/DWD-GT; Außentemperatur vom Wetterdienst bevorzugt). Ausgleichsgerade Strom bzw. Wärme = a + b·G
@@ -470,14 +485,15 @@ Ziel: Den gemessenen Strom in Euro umrechnen: Was kostet eine Kilowattstunde Wä
 
 | ID | Key | Kennzahl | Gate | Urteil | Herkunft |
 |---|---|---|---|---|---|
-| K1 | `heat_price` | Wärmepreis der letzten 7 gültigen Tage in ct/kWh, mit Grundpreis-Anteil | 7 gültige Tage; Preis | `ok` ≤ Vergleichspreis × 1,10 · `hint` darüber · `info` ohne Vergleichspreis | `derived`: 10 % ≈ Messunsicherheit der Wärme; Nutzungsgrad Gas-Brennwert 0,86 auf Hs (DBU-BW). Wochenwert, im Winter höher als im Jahresmittel |
+| K1 | `heat_price` | Wärmepreis der letzten 7 gültigen Tage in ct/kWh, mit festen Kosten je kWh (7.1) | 7 gültige Tage; Preis | `ok` ≤ Vergleichspreis × 1,10 · `hint` darüber · `info` ohne Vergleichspreis | `derived`: 10 % ≈ Messunsicherheit der Wärme; Nutzungsgrad Gas-Brennwert 0,86 auf Hs (DBU-BW). Wochenwert, im Winter höher als im Jahresmittel |
 | K2 | `annual_cost` | Strom, Kosten und Wärme im Jahr, Ersparnis gegen den Vergleich | 14 gültige Tage; `heating_degree_days` | `info` (Hochrechnung) | `sourced`: Gradtagzahl G20/15 (DWD-GT); Referenz Potsdam 3.666,8 Kd. Mindestens 14 Tage `derived`. Mit `living_area_m2` dazu Wärme und Strom je m² und die Klasse des Energieausweises nach Endenergie (GEG Anlage 10: A+ < 30, A < 50, B < 75, C < 100, D < 130, E < 160, F < 200, G < 250, H darüber; Strom ÷ (1,2 × Wohnfläche) nach GEG § 82 Abs. 2); mit Personen (6.6) die Kosten je Person |
-| K3 | `tariff_benefit` | Ersparnis des eigenen Wärmepumpentarifs: (`household_price` − `tariff_price`) × Jahresstrom aus K2 − `tariff_base_fee` | wie K2; beide Preise; kein `price_signal` | `ok` ≥ 0 · `hint` < 0 | `physical` (Rechnung) |
+| K3 | `tariff_benefit` | Ersparnis des eigenen Wärmepumpentarifs: (`household_price` − `tariff_price`) × Jahresstrom aus K2 − feste Kosten des eigenen Zählers | wie K2; beide Preise; kein `price_signal`; `info` am Haushaltszähler | `ok` ≥ 0 · `hint` < 0 | `physical` (Rechnung) |
 | K4 | `price_timing` | gezahlter Mittelpreis gegen das Zeitmittel von `price_signal` | 7 Tage; Rolle `price_signal` | `ok` ≤ +3 % · `hint` darüber | `derived`: 3 % eigene Festlegung (Zufall einer Woche) |
 | K5 | `grid_lock` | Sperren pro Tag, Dauer, längste Sperre; Heizstab-Stunden während und bis 2 h nach einer Sperre | 7 Tage; Rolle `grid_lock` | `ok` · `hint`, wenn der Heizstab dabei läuft. Anzahl und Dauer nur im Text | `derived`; seit 2024 keine feste Höchstdauer, nur Mindestleistung 4,2 kW (BK6-22-300 Anl. 1 Ziff. 4.5.1; präventiv höchstens 2 h täglich bis Ende 2028, Ziff. 10.5). Die frühere Tarifregel „3 × 2 h“ ist ohne Primärquelle und wird nicht verwendet |
 
-**Gesamturteil Audit 5:** schlechtestes Urteil aus K1, K3–K5; K2 ist Information. Zeitstrahl: Wärmepreis je Tag (ohne
-Grundpreis) mit dem Band von K1.
+**Gesamturteil Audit 5:** schlechtestes Urteil aus K1, K3–K5; K2 ist Information. Zeitstrahl: Wärmepreis je Tag (mit festen
+Kosten je kWh, sobald die Jahreswärme bekannt ist) mit dem Band von K1. Die Skala nennt unter `fixed_costs`, was
+eingerechnet ist (€/a, Jahreswärme, Herkunft) und was fehlt.
 
 ### 7.3 Wärmepreise anderer Heizsysteme (Zeitstrahl)
 
@@ -492,24 +508,29 @@ beliebiger Integrationen (Preis-Plugin, HA-Integration *Scrape*, Vorlage …). V
 | Attribut `source` | Name der Quelle (optional) |
 | Attribut `source_kind` | `official`, `association`, `commercial`, `local` (optional) |
 | Attribut `as_of` | Stand des Preises, ISO-Datum (optional) |
+| Attribut `includes_fixed_charges` | `true`, wenn der Preis Grundpreis und Messung schon enthält, z. B. Eurostat-Haushaltspreise (VO (EU) 2016/1952 Anh. I/II) oder Fernwärme-Mischpreise (optional) |
+| Attribut `annual_base_fee` | feste Kosten des Vergleichs in €/a, z. B. Grundpreis eines eigenen Gasangebots; wird über die Jahreswärme (7.1) verteilt (optional, entfällt bei `includes_fixed_charges`) |
 
 Sensoren mit anderem System oder unpassender Einheit (z. B. Erdgas in €/m³) werden mit einer Warnung im Log
 übergangen. Der Verlauf kommt wie bei einer Rolle aus Recorder bzw. InfluxDB.
 
-**Rechenweg:** Zeitmittel des Preises über den Tag → €/kWh Brennstoff → ÷ Nutzungsgrad = ct/kWh Wärme, ohne Grundpreis
-(wie der Tageswert des Zeitstrahls). Energieinhalt und Nutzungsgrad je System (`audit_core/heating_prices.py`):
+**Rechenweg:** Zeitmittel des Preises über den Tag → €/kWh Brennstoff → ÷ Nutzungsgrad = ct/kWh Wärme, dazu
+`annual_base_fee` ÷ Jahreswärme (ohne Jahreswärme nicht, die Skala meldet dann `fixed_charges: missing_heat`). Für
+das frühere Heizsystem (`previous_heating_system`) gilt `reference_efficiency`, sonst der Wert der Tabelle.
+**Stromdirektheizung** kommt ohne Sensor aus den Stammdaten: `household_price` mit Nutzungsgrad 1 (Arbeitspreis; der
+Grundpreis des Haushaltsstroms fällt ohnehin an). Energieinhalt und Nutzungsgrad je System (`audit_core/heating_prices.py`):
 
 | System | Energieinhalt | Nutzungsgrad | Herkunft |
 |---|---|---|---|
 | Erdgas | abgerechnet in kWh nach Brennwert | 0,86 auf Hs | `derived`: DBU-Feldtest Gas-Brennwert, wie `reference_efficiency` |
 | Heizöl EL | 10 kWh/L (Heizwert) | 0,91 auf Hi | `derived`: wie Gas 0,86 auf Hs, Hs/Hi = 1,06; 10 kWh/L nach Verbraucherzentrale und LfL |
-| Holzpellets | 4,8 kWh/kg (Heizwert) | 0,85 | Energieinhalt C.A.R.M.E.N.; Nutzungsgrad Annahme Pelletkessel im Bestand |
+| Holzpellets | 4,8 kWh/kg (Heizwert) | 0,80 | Energieinhalt C.A.R.M.E.N.; Nutzungsgrad Mitte der Feldmessungen im Bestand: 65–85 % (Carlon et al. 2015, Applied Energy 155, n = 5), 70–85 % (EIFER 2008–2010, n = 9; DBFZ/EIFER KombiOpt 2018: 70–90 %) |
 | Fernwärme | je kWh gelieferter Wärme | 1 | Übergabeverluste vernachlässigt |
 | Stromdirektheizung | je kWh Strom | 1 | `physical` |
 
 Die Tageswerte stehen je Sensor im Punkt des Zeitstrahls (`references`: Sensor-ID → ct/kWh) und bleiben mit dem
 gespeicherten Zeitstrahl erhalten. Die Skala nennt die Sensoren (`references`: id, system, name, source,
-source_kind, as_of, efficiency); eine leere Liste heißt „Vergleich an, aber kein Preis-Sensor gefunden“, die Karte
+source_kind, as_of, efficiency, fixed_charges); eine leere Liste heißt „Vergleich an, aber kein Preis-Sensor gefunden“, die Karte
 zeigt dann einen Hinweis. Ampel und Bänder bleiben am eigenen Vergleichsbrennstoff (K1).
 
 Geplant: Anteil eigener PV-Strom (Rolle für Netzbezug bzw. Eigenverbrauch).
