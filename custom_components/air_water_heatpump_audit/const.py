@@ -49,6 +49,8 @@ PRICE_ATTR_SYSTEM = "heating_system"
 PRICE_ATTR_SOURCE = "source"
 PRICE_ATTR_SOURCE_KIND = "source_kind"
 PRICE_ATTR_AS_OF = "as_of"
+PRICE_ATTR_INCLUDES_FIXED = "includes_fixed_charges"  # Preis enthält Grundpreis/Messung schon (z. B. Eurostat)
+PRICE_ATTR_BASE_FEE = "annual_base_fee"  # feste Kosten des Vergleichs in €/a, über die Jahreswärme verteilt
 PRICE_ROLE_PREFIX = "price_reference:"  # Schlüssel der Zeitreihen beim Laden, damit sie keine Rolle verdecken
 
 # Rollen mit Text-Zustand; alle anderen werden als Zahl gelesen (on/off → 1/0).
@@ -72,10 +74,15 @@ CONF_HEATING_HOURS = "heating_hours"
 CONF_DHW_TANK_VOLUME_L = "dhw_tank_volume_l"
 CONF_HEATING_DEGREE_DAYS = "heating_degree_days"
 CONF_TARIFF_PRICE = "tariff_price"
+CONF_HEAT_PUMP_METER = "heat_pump_meter"
 CONF_TARIFF_BASE_FEE = "tariff_base_fee"
+CONF_METER_FEE = "meter_fee"
 CONF_HOUSEHOLD_PRICE = "household_price"
 CONF_REFERENCE_FUEL_PRICE = "reference_fuel_price"
 CONF_REFERENCE_EFFICIENCY = "reference_efficiency"
+CONF_PREVIOUS_HEATING_SYSTEM = "previous_heating_system"
+CONF_PREVIOUS_CONSUMPTION = "previous_consumption"
+CONF_PREVIOUS_CONSUMPTION_UNIT = "previous_consumption_unit"
 CONF_COMPARE_HEATING_SYSTEMS = "compare_heating_systems"
 CONF_COLD_WATER_C = "cold_water_c"
 CONF_LIVING_AREA_M2 = "living_area_m2"
@@ -86,15 +93,23 @@ OPTION_SECTIONS: dict[str, tuple[str, ...]] = {
               CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW),
     "dhw": (CONF_DHW_TANK_VOLUME_L, CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS),
     "site": (CONF_HEATING_HOURS, CONF_HEATING_DEGREE_DAYS, CONF_ROOM_TEMP_TARGET, CONF_LIVING_AREA_M2),
-    "cost": (CONF_TARIFF_PRICE, CONF_TARIFF_BASE_FEE, CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE,
-             CONF_REFERENCE_EFFICIENCY, CONF_COMPARE_HEATING_SYSTEMS),
+    "cost": (CONF_TARIFF_PRICE, CONF_HEAT_PUMP_METER, CONF_TARIFF_BASE_FEE, CONF_METER_FEE, CONF_HOUSEHOLD_PRICE,
+             CONF_PREVIOUS_HEATING_SYSTEM, CONF_PREVIOUS_CONSUMPTION, CONF_PREVIOUS_CONSUMPTION_UNIT,
+             CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY, CONF_COMPARE_HEATING_SYSTEMS),
     "evaluation": (CONF_WINDOW_DAYS, CONF_DATA_SINCE, CONF_DATA_SOURCE),
 }
 # Optionale Stammdaten: leer heißt „unbekannt“, die abhängige Prüfung ist dann nicht bewertbar.
 OPTIONAL_OPTIONS = (CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_CAPACITY_MIN_TABLE, CONF_HEATING_HOURS,
                     CONF_IMMERSION_HEATER_KW, CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW, CONF_DATA_SINCE,
                     CONF_DHW_TANK_VOLUME_L, CONF_HEATING_DEGREE_DAYS, CONF_TARIFF_PRICE, CONF_TARIFF_BASE_FEE,
-                    CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY, CONF_LIVING_AREA_M2)
+                    CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY, CONF_LIVING_AREA_M2,
+                    CONF_HEAT_PUMP_METER, CONF_METER_FEE, CONF_PREVIOUS_HEATING_SYSTEM, CONF_PREVIOUS_CONSUMPTION,
+                    CONF_PREVIOUS_CONSUMPTION_UNIT)
+HEAT_PUMP_METERS = ["separate_meter", "household_meter"]
+PREVIOUS_HEATING_SYSTEMS = ["natural_gas", "heating_oil", "wood_pellets", "district_heating", "direct_electric", "none"]
+CONSUMPTION_UNITS = ["kWh", "MWh", "L", "kg", "t"]
+# Stammdaten, die feste Kosten der Wärmepumpe bestimmen (Repairs-Issue „feste Kosten fehlen“)
+FIXED_COST_KEYS = (CONF_HEAT_PUMP_METER, CONF_TARIFF_BASE_FEE, CONF_METER_FEE)
 HYDRAULIC_SEPARATIONS = ["unknown", "none", "series_buffer", "parallel_buffer", "hydraulic_separator"]
 # auto: InfluxDB 2, wenn die HA-Integration InfluxDB eingerichtet ist, sonst Recorder
 DATA_SOURCES = ["auto", "influxdb", "recorder"]
@@ -116,11 +131,19 @@ DEFAULT_OPTIONS = {
     CONF_DHW_TANK_VOLUME_L: None,  # Typenschild des Speichers; ohne Wert ist W4 nicht bewertbar
     CONF_HEATING_DEGREE_DAYS: None,  # langjähriges Mittel G20/15 am Standort; ohne Wert keine Jahreshochrechnung
     CONF_TARIFF_PRICE: None,  # Arbeitspreis €/kWh; Vorschlag aus dem Energie-Dashboard (config_flow.energy_price)
-    CONF_TARIFF_BASE_FEE: None,  # zusätzlicher Grundpreis €/Jahr für den Wärmepumpenzähler
+    # Zähler der Wärmepumpe: eigener Zähler mit WP-Tarif oder Haushaltszähler; leer = nicht angegeben (Hinweis)
+    CONF_HEAT_PUMP_METER: None,
+    CONF_TARIFF_BASE_FEE: None,  # Grundpreis des Wärmepumpentarifs €/Jahr; leer = nicht eingetragen, 0 = keiner
+    CONF_METER_FEE: None,  # Messstellenentgelt des Wärmepumpenzählers €/Jahr; leer = nicht eingetragen, 0 = keins
+    # Frühere Heizung: System und Jahresverbrauch laut Abrechnung → Jahreswärme, solange K2 nicht hochrechnen kann
+    CONF_PREVIOUS_HEATING_SYSTEM: None,
+    CONF_PREVIOUS_CONSUMPTION: None,
+    CONF_PREVIOUS_CONSUMPTION_UNIT: None,
     CONF_HOUSEHOLD_PRICE: None,
     CONF_REFERENCE_FUEL_PRICE: None,  # früherer Brennstoff, €/kWh inklusive Grundpreis-Anteil
-    # Jahresnutzungsgrad der früheren Heizung, bezogen auf den abgerechneten Brennwert: Feldmittel Gas-Brennwertkessel
-    # 0,86 (DBU-Feldtest, 60 Anlagen); nur wirksam, wenn auch ein Brennstoffpreis eingetragen ist
+    # Jahresnutzungsgrad der früheren Heizung, bezogen auf die abgerechnete Einheit: Feldmittel Gas-Brennwertkessel
+    # 0,86 (DBU-Feldtest, 60 Anlagen). Gilt für den Vergleichsbrennstoff (K1, K2), für die Umrechnung des früheren
+    # Verbrauchs und für die Vergleichslinie des früheren Heizsystems; alle anderen Systeme nutzen feste Werte.
     CONF_REFERENCE_EFFICIENCY: 0.86,
     # Kosten-Zeitstrahl: Wärmepreise anderer Heizsysteme aus Preis-Sensoren (Attribut `heating_system`)
     CONF_COMPARE_HEATING_SYSTEMS: True,
@@ -131,7 +154,8 @@ DEFAULT_OPTIONS = {
 MASTER_KEYS = (CONF_HYDRAULIC_SEPARATION, CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_ROOM_TEMP_TARGET, CONF_CAPACITY_MIN_TABLE,
                CONF_HEATING_HOURS, CONF_DHW_TANK_VOLUME_L, CONF_HEATING_DEGREE_DAYS, CONF_TARIFF_PRICE,
                CONF_TARIFF_BASE_FEE, CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY,
-               CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS, CONF_LIVING_AREA_M2)
+               CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS, CONF_LIVING_AREA_M2, CONF_HEAT_PUMP_METER,
+               CONF_METER_FEE, CONF_PREVIOUS_HEATING_SYSTEM, CONF_PREVIOUS_CONSUMPTION, CONF_PREVIOUS_CONSUMPTION_UNIT)
 
 # Ereignisse (Spezifikation 1.5) als Untereinträge des Config Entry
 SUBENTRY_EVENT = "event"

@@ -67,6 +67,9 @@ def data_quality(coverage: CheckResult, offset: CheckResult, meter: CheckResult)
     return "high" if misses == 0 else "medium" if misses == 1 else "low"
 
 
+HOUSEHOLD_PRICE_REF = "master:household_price"  # Vergleichslinie Stromdirektheizung aus den Stammdaten
+
+
 class Context:
     def __init__(self, s: dict[str, Series], start: float, end: float, *, recorder_keep_days: float | None,
                  long_term_days: float | None, heater_kw: dict[str, float | None], master: dict | None,
@@ -82,8 +85,13 @@ class Context:
         # Preis-Sensoren anderer Heizsysteme ({id, system, unit, name, source, source_kind, as_of, series});
         # None = Vergleich abgeschaltet. Die Angaben ohne Zeitreihe stehen für die Zeitstrahl-Skala in den Stammdaten.
         self.price_refs = None if price_refs is None else [r for r in price_refs if hp.usable(r)]
-        if self.price_refs is not None:
-            self.master = self.master | {"price_references": [hp.meta(r) for r in self.price_refs]}
+        household = self.master.get("household_price")
+        if self.price_refs is not None and household:
+            # Stromdirektheizung (Entscheid F277): Arbeitspreis des Haushaltsstroms, Nutzungsgrad 1, ohne Sensor
+            self.price_refs.append({"id": HOUSEHOLD_PRICE_REF, "system": "direct_electric", "unit": "€/kWh",
+                                    "name": "Stromdirektheizung (Haushaltsstrom)",
+                                    "source": "Stammdaten: Arbeitspreis Haushaltsstrom", "source_kind": "local",
+                                    "as_of": None, "series": [(0.0, float(household))]})
         self.controls = controls or {}
         self.tz = tz
 
@@ -260,6 +268,27 @@ class Context:
         return {r["day"]: k1.day_cost(r, self.s["electricity_meter"], self.s["price_signal"],
                                       None if price is None else float(price), self.tz)
                 for r in self.daily_rows_window}
+
+    @cached_property
+    def year_projection(self) -> dict | None:
+        """Hochrechnung aufs Jahr wie K2 (Gradtage des Standorts); None ohne Gradtage oder mit zu wenigen Tagen."""
+        year_dd = self.master.get("heating_degree_days")
+        return k1.project_year(self.daily_rows, self.outdoor_daily, self.tz, float(year_dd)) if year_dd else None
+
+    @cached_property
+    def fixed_costs(self) -> dict:
+        """Feste Kosten der Wärmepumpe je kWh Wärme (cost.fixed_costs), Jahreswärme aus K2 oder der Abrechnung."""
+        year = self.year_projection
+        return k1.fixed_costs(self.master, year["heat_kwh"] if year else None)
+
+    @cached_property
+    def timeline_master(self) -> dict:
+        """Stammdaten für die Zeitstrahl-Skalen, ergänzt um feste Kosten und die Preis-Sensoren (ohne Zeitreihe)."""
+        out = self.master | {"fixed_costs": self.fixed_costs}
+        if self.price_refs is not None:
+            heat = self.fixed_costs["annual_heat_kwh"]
+            out["price_references"] = [hp.meta(r, self.master, heat) for r in self.price_refs]
+        return out
 
     @cached_property
     def outdoor_daily(self) -> Series:

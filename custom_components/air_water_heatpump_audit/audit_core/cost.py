@@ -10,6 +10,7 @@ from __future__ import annotations
 from bisect import bisect_right
 
 from . import days
+from . import heating_prices as hp
 from .efficiency import HEATING_LIMIT_C, ROOM_BASE_C, WEEK_DAYS
 from .heat import time_mean
 from .result import (DERIVED, ELAPSED, FULL_DAYS, early, HINT, INFO, NOT_ASSESSABLE, OK, SOURCED, CheckResult, count, num,
@@ -73,6 +74,79 @@ def reference_heat_price(master: dict) -> float | None:
     return float(fuel) / float(eff) if fuel and eff else None
 
 
+# Zähler der Wärmepumpe (Stammdatum `heat_pump_meter`): eigener Zähler mit WP-Tarif oder am Haushaltszähler
+METER_SEPARATE = "separate_meter"
+METER_HOUSEHOLD = "household_meter"
+FIXED_COST_LABELS = {"heat_pump_meter": "Zähler der Wärmepumpe (eigener Zähler oder Haushaltszähler)",
+                     "tariff_base_fee": "Grundpreis des Wärmepumpentarifs",
+                     "meter_fee": "Messstellenentgelt des Wärmepumpenzählers"}
+
+
+def _fee(master: dict, key: str) -> float | None:
+    value = master.get(key)
+    return None if value in (None, "") else float(value)
+
+
+def heat_pump_fixed_costs(master: dict) -> tuple[float | None, tuple[str, ...]]:
+    """Feste Kosten der Wärmepumpe in €/a (Mehrkosten-Sicht) und die Stammdaten, die dafür fehlen.
+
+    Am Haushaltszähler gibt es keine zusätzlichen festen Kosten; der Grundpreis des Haushaltsstroms fällt auch ohne
+    Wärmepumpe an. Mit eigenem Zähler zählen Grundpreis des WP-Tarifs und Messstellenentgelt. Ein leeres Feld heißt
+    „nicht eingetragen“ (Hinweis), 0 ist ein gültiger Wert. Ist die Zählerart offen, aber ein Grundpreis eingetragen,
+    gilt der eigene Zähler (Einträge aus Versionen ohne die Auswahl)."""
+    meter = master.get("heat_pump_meter")
+    if meter == METER_HOUSEHOLD:
+        return 0.0, ()
+    fees = {k: _fee(master, k) for k in ("tariff_base_fee", "meter_fee")}
+    if meter != METER_SEPARATE and fees["tariff_base_fee"] is None:
+        return None, ("heat_pump_meter",)
+    missing = tuple(k for k, v in fees.items() if v is None)
+    known = [v for v in fees.values() if v is not None]
+    return (sum(known) if known else None), missing
+
+
+def previous_heat_kwh(master: dict) -> float | None:
+    """Jahreswärme aus der früheren Abrechnung: Verbrauch (Menge + Einheit) × Nutzungsgrad der früheren Heizung."""
+    system = master.get("previous_heating_system")
+    if not system or system == hp.NO_PREVIOUS_SYSTEM:
+        return None
+    fuel = hp.consumption_kwh(system, master.get("previous_consumption"), master.get("previous_consumption_unit"))
+    return None if fuel is None else fuel * hp.efficiency(system, master)
+
+
+def annual_heat(master: dict, projected_heat_kwh: float | None) -> tuple[float | None, str | None]:
+    """Jahreswärme für die Verteilung fester Kosten: 1. Hochrechnung K2, 2. frühere Abrechnung, sonst keine."""
+    if projected_heat_kwh and projected_heat_kwh > 0:
+        return float(projected_heat_kwh), "projection"
+    previous = previous_heat_kwh(master)
+    return (previous, "bill") if previous else (None, None)
+
+
+def fixed_costs(master: dict, projected_heat_kwh: float | None) -> dict:
+    """Feste Kosten der Wärmepumpe je kWh Wärme (Entscheid F257: über die Jahreswärme verteilt, nicht je Tag).
+
+    `eur_per_kwh` ist None, wenn die Jahreswärme unbekannt ist („Grundpreis noch nicht eingerechnet“); `missing` nennt
+    die fehlenden Stammdaten. Fehlt nur ein Teil, wird der bekannte Teil eingerechnet."""
+    eur, missing = heat_pump_fixed_costs(master)
+    heat, source = annual_heat(master, projected_heat_kwh)
+    per_kwh = eur / heat if eur is not None and heat else None
+    if eur == 0:
+        per_kwh = 0.0
+    return {"eur_per_year": None if eur is None else round(eur, 2), "annual_heat_kwh": None if heat is None else round(heat),
+            "heat_source": source, "eur_per_kwh": per_kwh, "missing": list(missing)}
+
+
+def fixed_costs_text(fixed: dict) -> str:
+    """Satz für die Prüfungstexte: was an festen Kosten eingerechnet ist und was fehlt."""
+    parts = []
+    if fixed["missing"]:
+        parts.append("Stammdaten fehlen: " + ", ".join(FIXED_COST_LABELS[k] for k in fixed["missing"]) + ".")
+    if fixed["eur_per_year"] and fixed["eur_per_kwh"] is None:
+        parts.append("Grundpreis noch nicht eingerechnet: Jahreswärme unbekannt (Hochrechnung K2 noch nicht möglich, "
+                     "frühere Abrechnung nicht eingetragen).")
+    return " ".join(parts)
+
+
 def _week(rows: list[dict]) -> list[dict] | None:
     """Die letzten 7 gültigen Tage; vorläufig schon ab early(7) Tagen."""
     return rows[-WEEK_DAYS:] if len(rows) >= early(WEEK_DAYS) else None
@@ -91,8 +165,11 @@ def _missing_price(key: tuple[str, str]) -> CheckResult:
                        "„dynamischer Strompreis“).", origin=DERIVED)
 
 
-def check_heat_price(rows: list[dict], costs: dict[str, float | None], master: dict, since: float) -> CheckResult:
-    """K1: Wärmepreis der Woche in ct/kWh, inklusive Grundpreis-Anteil, gegen den Vergleichsbrennstoff."""
+def check_heat_price(rows: list[dict], costs: dict[str, float | None], master: dict, since: float,
+                     fixed: dict | None = None) -> CheckResult:
+    """K1: Wärmepreis der Woche in ct/kWh, inklusive fester Kosten (über die Jahreswärme verteilt), gegen den
+    Vergleichsbrennstoff."""
+    fixed = fixed or fixed_costs(master, None)
     key = ("K1", "heat_price")
     prog = progress(len(rows), WEEK_DAYS, "days", FULL_DAYS, since)
     week = _week(rows)
@@ -105,17 +182,19 @@ def check_heat_price(rows: list[dict], costs: dict[str, float | None], master: d
     heat = sum(r["heat_kwh"] for r in week)
     if heat <= 0:
         return CheckResult(*key, NOT_ASSESSABLE, text="Keine Wärme im Zeitraum.", origin=DERIVED, progress=prog)
-    base = float(master.get("tariff_base_fee") or 0) * len(week) / 365
+    base = (fixed["eur_per_kwh"] or 0) * heat
     cost = sum(week_costs) + base
     price = cost / heat
     reference = reference_heat_price(master)
     text = (f"{days.display(week[0]['day'])} bis {days.display(week[-1]['day'])}: Wärme kostet {ct(price)} ct/kWh "
             f"({num(cost, '.2f')} € für {num(heat, '.0f')} kWh Wärme")
-    text += ", mit Anteil am Grundpreis). " if base else "). "
+    text += ", mit Anteil an den festen Kosten). " if base else "). "
     details = {"cost_eur": round(cost, 2), "heat_kwh": round(heat, 1), "base_fee_eur": round(base, 2),
                "reference_ct": None if reference is None else round(100 * reference, 1)}
+    note = fixed_costs_text(fixed)
     if reference is None:
         text += "Für einen Vergleich Preis und Nutzungsgrad des früheren Brennstoffs in den Stammdaten eintragen."
+        text += f" {note}" if note else ""
         return CheckResult(*key, INFO, round(100 * price, 1), "ct/kWh", text, DERIVED, details, progress=prog)
     text += f"Mit dem Vergleichsbrennstoff wären es {ct(reference)} ct/kWh. "
     if price <= reference * REFERENCE_TOLERANCE:
@@ -126,6 +205,7 @@ def check_heat_price(rows: list[dict], costs: dict[str, float | None], master: d
         verdict = HINT
         text += ("In diesem Zeitraum teurer als der Vergleich. Im Winter ist die Arbeitszahl niedriger; dauerhaft "
                  "teurer heißt: Tarif und Effizienz (Audit 1) prüfen.")
+    text += f" {note}" if note else ""
     return CheckResult(*key, verdict, round(100 * price, 1), "ct/kWh", text, DERIVED, details, progress=prog)
 
 
@@ -191,7 +271,8 @@ def check_annual_cost(rows: list[dict], outdoor: Series, costs: dict[str, float 
     if any(c is None for c in day_costs):
         return _missing_price(key)
     mean_price = sum(day_costs) / sum(r["electricity_kwh"] for r in rows)
-    base = float(master.get("tariff_base_fee") or 0)
+    fixed_eur, missing = heat_pump_fixed_costs(master)
+    base = fixed_eur or 0.0
     cost = year["electricity_kwh"] * mean_price + base
     text = (f"Hochgerechnet ≈ {num(round(year['electricity_kwh'], -1), ',.0f')} kWh Strom und "
             f"≈ {num(round(cost, -1), ',.0f')} € im Jahr für ≈ {num(round(year['heat_kwh'], -2), ',.0f')} kWh Wärme "
@@ -215,6 +296,9 @@ def check_annual_cost(rows: list[dict], outdoor: Series, costs: dict[str, float 
     if persons_mean:
         details["cost_per_person_eur"] = round(cost / persons_mean)
         text += f" Je Person (Ø {num(persons_mean, '.1f')}) ≈ {num(round(cost / persons_mean, -1), ',.0f')} € im Jahr."
+    if missing:
+        text += " Stammdaten fehlen: " + ", ".join(FIXED_COST_LABELS[k] for k in missing) + "."
+    details["fixed_eur"] = round(base, 2)
     for k in ("electricity_kwh", "heat_kwh"):
         details[k] = round(details[k])
     return CheckResult(*key, INFO, round(cost), "€/a", text, SOURCED, details, progress=prog)
@@ -227,6 +311,9 @@ def check_tariff(annual: CheckResult, master: dict, dynamic: bool) -> CheckResul
     if dynamic:
         return CheckResult(*key, NOT_ASSESSABLE, text="Bei einem dynamischen Tarif bewertet K4 den Strompreis.",
                            origin=DERIVED)
+    if master.get("heat_pump_meter") == METER_HOUSEHOLD:
+        return CheckResult(*key, INFO, text="Die Wärmepumpe hängt am Haushaltszähler, es gibt keinen eigenen Tarif "
+                           "zu vergleichen.", origin=DERIVED)
     if not household or not tariff:
         return CheckResult(*key, NOT_ASSESSABLE, text="Stammdaten fehlen: Arbeitspreis von Wärmepumpen- und "
                            "Haushaltsstrom.", origin=DERIVED)
@@ -234,10 +321,11 @@ def check_tariff(annual: CheckResult, master: dict, dynamic: bool) -> CheckResul
     if kwh is None:
         return CheckResult(*key, NOT_ASSESSABLE, text="Braucht die Hochrechnung aufs Jahr (K2).", origin=DERIVED,
                            progress=annual.progress)
-    base = float(master.get("tariff_base_fee") or 0)
+    fixed_eur, missing = heat_pump_fixed_costs(master)
+    base = fixed_eur or 0.0
     benefit = (float(household) - float(tariff)) * kwh - base
     text = (f"{ct(float(tariff))} statt {ct(float(household))} ct/kWh bei ≈ {num(round(kwh, -1), ',.0f')} kWh im Jahr")
-    text += f", abzüglich {num(base, '.0f')} € Grundpreis: " if base else ": "
+    text += f", abzüglich {num(base, '.0f')} € feste Kosten des eigenen Zählers: " if base else ": "
     if benefit >= 0:
         verdict = OK
         text += f"Der Tarif spart ≈ {num(round(benefit, -1), ',.0f')} € im Jahr."
@@ -245,6 +333,8 @@ def check_tariff(annual: CheckResult, master: dict, dynamic: bool) -> CheckResul
         verdict = HINT
         text += (f"Der Tarif kostet ≈ {num(round(-benefit, -1), ',.0f')} € im Jahr mehr als Haushaltsstrom. "
                  "Angebote vergleichen oder auf einen Zähler zusammenlegen.")
+    if missing:
+        text += " Stammdaten fehlen: " + ", ".join(FIXED_COST_LABELS[k] for k in missing) + "."
     return CheckResult(*key, verdict, round(benefit), "€/a", text, DERIVED, {"electricity_kwh": kwh,
                                                                               "base_fee_eur": base},
                        progress=annual.progress)
@@ -306,11 +396,12 @@ def check_grid_lock(lock: Series, heaters: list[Interval], since: float, end: fl
                         "heater_after_h": round(heater_h, 2)}, progress=prog)
 
 
-def daily_point(row: dict | None, cost: float | None, master: dict) -> dict:
-    """Zeitstrahl: Wärmepreis des Tages (ohne Grundpreis) mit derselben Ampel wie K1."""
+def daily_point(row: dict | None, cost: float | None, master: dict, fixed: dict | None = None) -> dict:
+    """Zeitstrahl: Wärmepreis des Tages mit derselben Ampel wie K1. Feste Kosten kommen als fester Aufschlag je kWh
+    dazu (über die Jahreswärme verteilt), damit Tage mit wenig Wärme nicht ausschlagen."""
     if not row or cost is None or row["heat_kwh"] <= 0:
         return {"value": None, "verdict": NOT_ASSESSABLE}
-    price = cost / row["heat_kwh"]
+    price = cost / row["heat_kwh"] + ((fixed or {}).get("eur_per_kwh") or 0)
     reference = reference_heat_price(master)
     verdict = INFO if reference is None else OK if price <= reference * REFERENCE_TOLERANCE else HINT
     return {"value": round(100 * price, 1), "verdict": verdict, "cost_eur": round(cost, 2)}

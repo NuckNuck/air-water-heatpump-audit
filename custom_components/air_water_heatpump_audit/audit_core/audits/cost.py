@@ -13,10 +13,11 @@ from ..series import intervals_where, normalize
 
 def _point(ctx: Context, a: float, b: float, day: str) -> dict:
     row = next((r for r in ctx.daily_rows_window if r["day"] == day), None)
-    point = k1.daily_point(row, ctx.day_costs.get(day), ctx.master)
+    point = k1.daily_point(row, ctx.day_costs.get(day), ctx.master, ctx.fixed_costs)
     if ctx.price_refs:
         # Wärmepreise anderer Heizsysteme an diesem Tag, auch ohne eigenen Wert (Sensor-ID → ct/kWh Wärme)
-        refs = {r["id"]: hp.day_heat_price(r, r["series"], a, b) for r in ctx.price_refs}
+        heat = ctx.fixed_costs["annual_heat_kwh"]
+        refs = {r["id"]: hp.day_heat_price(r, r["series"], a, b, ctx.master, heat) for r in ctx.price_refs}
         if refs := {k: v for k, v in refs.items() if v is not None}:
             point["references"] = refs
     return point
@@ -30,6 +31,8 @@ def _scale(master: dict) -> dict:
            "bands": [[0, limit, OK], [limit, None, HINT]] if limit else []}
     if "price_references" in master:  # Vergleich eingeschaltet; leere Liste = kein Preis-Sensor gefunden
         out["references"] = master["price_references"]
+    if "fixed_costs" in master:  # was an festen Kosten im eigenen Wärmepreis steckt (Text unter dem Zeitstrahl)
+        out["fixed_costs"] = master["fixed_costs"]
     return out
 
 
@@ -50,12 +53,13 @@ AUDIT = AuditSpec(
            "flow_temp", "return_temp", "flow_rate", "outdoor_temp", "outdoor_temp_reference", "dhw_active",
            "heartbeat", "controller_heat_today", "compressor_running", "pump_running", "defrost"),
     required_roles=("electricity_meter", "flow_temp", "return_temp", "flow_rate"),
-    master_keys=("tariff_price", "tariff_base_fee", "household_price", "reference_fuel_price",
-                 "reference_efficiency", "heating_degree_days", "living_area_m2", "household"),
+    master_keys=("tariff_price", "heat_pump_meter", "tariff_base_fee", "meter_fee", "household_price",
+                 "reference_fuel_price", "reference_efficiency", "previous_heating_system", "previous_consumption",
+                 "previous_consumption_unit", "heating_degree_days", "living_area_m2", "household"),
     names={"de": "Kosten", "en": "Cost"},
     checks=(
         CheckSpec("K1", "heat_price", lambda ctx: k1.check_heat_price(ctx.daily_rows, ctx.day_costs, ctx.master,
-                                                                       ctx.section_start)),
+                                                                       ctx.section_start, ctx.fixed_costs)),
         CheckSpec("K2", "annual_cost", _annual),
         CheckSpec("K3", "tariff_benefit", lambda ctx: k1.check_tariff(_annual(ctx), ctx.master,
                                                                        bool(ctx.s["price_signal"]))),

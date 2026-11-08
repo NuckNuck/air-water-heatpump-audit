@@ -74,7 +74,7 @@ def run_audits(s: dict[str, Series], start: float, end: float, *, recorder_keep_
     report = {
         "period": {"start": start, "end": end},
         "timeline": {"days": tl.daily_points(ctx, with_timeline),
-                     "scales": {a.audit_id: a.timeline.scale(ctx.master) for a in with_timeline}},
+                     "scales": {a.audit_id: a.timeline.scale(ctx.timeline_master) for a in with_timeline}},
         "section": {"start": ctx.section_start, "event": ctx.event},
         "readiness": readiness,
         "audits": report_audits,

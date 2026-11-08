@@ -738,6 +738,142 @@ class HeatingPriceContractTest(unittest.TestCase):
         self.assertIsNone(hp.day_heat_price(ref, [], 0, H))
 
 
+class HeatingPriceFixedChargesTest(unittest.TestCase):
+    """Vertrag Spezifikation 7.3: Nutzungsgrad des früheren Systems und feste Kosten von Vergleichspreisen."""
+
+    GAS = {"id": "sensor.gas", "system": "natural_gas", "unit": "€/kWh"}
+    GAS_EUR_PER_KWH, ANNUAL_HEAT_KWH, BASE_FEE_EUR = 0.10, 15000.0, 150.0
+
+    def test_pellet_efficiency_is_field_mean(self):
+        from audit_core import heating_prices as hp
+        self.assertEqual(hp.SYSTEMS["wood_pellets"]["efficiency"], 0.80)
+
+    def test_previous_system_uses_master_efficiency(self):
+        from audit_core import heating_prices as hp
+        master = {"previous_heating_system": "natural_gas", "reference_efficiency": 0.92}
+        self.assertEqual(hp.efficiency("natural_gas", master), 0.92)
+
+    def test_other_system_keeps_constant_efficiency(self):
+        from audit_core import heating_prices as hp
+        master = {"previous_heating_system": "natural_gas", "reference_efficiency": 0.92}
+        self.assertEqual(hp.efficiency("heating_oil", master), hp.SYSTEMS["heating_oil"]["efficiency"])
+
+    def test_consumption_in_tonnes_of_pellets_converts_via_energy_content(self):
+        from audit_core import heating_prices as hp
+        self.assertAlmostEqual(hp.consumption_kwh("wood_pellets", 5, "t"), 5 * 1000 * 4.8)
+
+    def test_consumption_unit_not_matching_system_gives_none(self):
+        from audit_core import heating_prices as hp
+        self.assertIsNone(hp.consumption_kwh("natural_gas", 2000, "L"))
+
+    def test_base_fee_with_annual_heat_is_added_per_kwh_heat(self):
+        from audit_core import heating_prices as hp
+        ref = self.GAS | {"annual_base_fee": self.BASE_FEE_EUR}
+        price = hp.day_heat_price(ref, [(0, self.GAS_EUR_PER_KWH)], 0, H, None, self.ANNUAL_HEAT_KWH)
+        expected = 100 * self.GAS_EUR_PER_KWH / 0.86 + 100 * self.BASE_FEE_EUR / self.ANNUAL_HEAT_KWH
+        self.assertAlmostEqual(price, expected, places=1)
+
+    def test_price_including_fixed_charges_gets_no_base_fee(self):
+        from audit_core import heating_prices as hp
+        ref = self.GAS | {"annual_base_fee": self.BASE_FEE_EUR, "includes_fixed_charges": True}
+        price = hp.day_heat_price(ref, [(0, self.GAS_EUR_PER_KWH)], 0, H, None, self.ANNUAL_HEAT_KWH)
+        self.assertAlmostEqual(price, 100 * self.GAS_EUR_PER_KWH / 0.86, places=1)
+
+    def test_base_fee_without_annual_heat_is_reported_missing(self):
+        from audit_core import heating_prices as hp
+        meta = hp.meta(self.GAS | {"annual_base_fee": self.BASE_FEE_EUR})
+        self.assertEqual(meta["fixed_charges"], "missing_heat")
+
+    def test_price_including_fixed_charges_is_reported_included(self):
+        from audit_core import heating_prices as hp
+        self.assertEqual(hp.meta(self.GAS | {"includes_fixed_charges": True})["fixed_charges"], "included")
+
+
+class FixedCostContractTest(unittest.TestCase):
+    """Feste Kosten der Wärmepumpe (Spezifikation 7.1): Mehrkosten-Sicht, leer ≠ 0, Verteilung über die Jahreswärme."""
+
+    SEPARATE = {"heat_pump_meter": "separate_meter", "tariff_base_fee": 120.0, "meter_fee": 30.0}
+
+    def test_household_meter_has_no_fixed_costs(self):
+        from audit_core import cost as k1
+        self.assertEqual(k1.heat_pump_fixed_costs({"heat_pump_meter": "household_meter"}), (0.0, ()))
+
+    def test_separate_meter_sums_base_fee_and_meter_fee(self):
+        from audit_core import cost as k1
+        self.assertEqual(k1.heat_pump_fixed_costs(self.SEPARATE), (150.0, ()))
+
+    def test_empty_meter_fee_is_reported_missing(self):
+        from audit_core import cost as k1
+        self.assertEqual(k1.heat_pump_fixed_costs(self.SEPARATE | {"meter_fee": None}), (120.0, ("meter_fee",)))
+
+    def test_zero_meter_fee_is_a_valid_entry(self):
+        from audit_core import cost as k1
+        self.assertEqual(k1.heat_pump_fixed_costs(self.SEPARATE | {"meter_fee": 0.0}), (120.0, ()))
+
+    def test_unknown_meter_with_base_fee_counts_as_separate_meter(self):
+        from audit_core import cost as k1
+        self.assertEqual(k1.heat_pump_fixed_costs({"tariff_base_fee": 73.0}), (73.0, ("meter_fee",)))
+
+    def test_unknown_meter_without_fees_is_reported_missing(self):
+        from audit_core import cost as k1
+        self.assertEqual(k1.heat_pump_fixed_costs({}), (None, ("heat_pump_meter",)))
+
+    def test_projection_has_priority_over_bill(self):
+        from audit_core import cost as k1
+        bill = {"previous_heating_system": "natural_gas", "previous_consumption": 20000, "previous_consumption_unit": "kWh"}
+        self.assertEqual(k1.annual_heat(bill, 12000.0), (12000.0, "projection"))
+
+    def test_bill_without_projection_converts_with_previous_efficiency(self):
+        from audit_core import cost as k1
+        bill = {"previous_heating_system": "natural_gas", "previous_consumption": 20000,
+                "previous_consumption_unit": "kWh", "reference_efficiency": 0.86}
+        heat, source = k1.annual_heat(bill, None)
+        self.assertEqual((round(heat), source), (17200, "bill"))
+
+    def test_new_building_without_projection_has_no_annual_heat(self):
+        from audit_core import cost as k1
+        self.assertEqual(k1.annual_heat({"previous_heating_system": "none"}, None), (None, None))
+
+    def test_fixed_costs_are_spread_over_annual_heat(self):
+        from audit_core import cost as k1
+        fixed = k1.fixed_costs(self.SEPARATE, 15000.0)
+        self.assertAlmostEqual(fixed["eur_per_kwh"], 150.0 / 15000.0)
+
+    def test_fixed_costs_without_annual_heat_are_not_included(self):
+        from audit_core import cost as k1
+        fixed = k1.fixed_costs(self.SEPARATE, None)
+        self.assertIsNone(fixed["eur_per_kwh"])
+
+    def test_fixed_costs_without_annual_heat_are_named_in_text(self):
+        from audit_core import cost as k1
+        self.assertIn("Grundpreis noch nicht eingerechnet", k1.fixed_costs_text(k1.fixed_costs(self.SEPARATE, None)))
+
+    def test_missing_fixed_cost_entry_is_named_in_text(self):
+        from audit_core import cost as k1
+        text = k1.fixed_costs_text(k1.fixed_costs(self.SEPARATE | {"meter_fee": None}, 15000.0))
+        self.assertIn("Messstellenentgelt", text)
+
+    def test_daily_heat_price_adds_fixed_costs_per_kwh(self):
+        from audit_core import cost as k1
+        row = {"heat_kwh": 40.0}
+        point = k1.daily_point(row, 2.0, {}, k1.fixed_costs(self.SEPARATE, 15000.0))
+        self.assertEqual(point["value"], round(100 * (2.0 / 40.0 + 150.0 / 15000.0), 1))
+
+    def test_weekly_heat_price_adds_fixed_costs_per_kwh(self):
+        from audit_core import cost as k1
+        rows = CostTest.rows(7)
+        costs = {r["day"]: r["electricity_kwh"] * 0.25 for r in rows}
+        r = k1.check_heat_price(rows, costs, {}, 0, k1.fixed_costs(self.SEPARATE, 15000.0))
+        self.assertEqual(r.value, round(100 * (7 * 2.5 / 245 + 150.0 / 15000.0), 1))
+
+    def test_tariff_check_on_household_meter_is_info(self):
+        from audit_core import cost as k1
+        from audit_core.result import CheckResult
+        annual = CheckResult("K2", "annual_cost", INFO, 500, "€/a", "", details={"electricity_kwh": 3000})
+        master = {"heat_pump_meter": "household_meter", "household_price": 0.32, "tariff_price": 0.25}
+        self.assertEqual(k1.check_tariff(annual, master, False).verdict, INFO)
+
+
 class TimelineTest(unittest.TestCase):
     """Drei volle Tage, 20 min an / 20 min aus, Puffer kostet 2 K, Ereignis am zweiten Tag."""
 
@@ -795,6 +931,17 @@ class TimelineTest(unittest.TestCase):
         rep = self.run_cost(None)
         self.assertNotIn("references", rep["timeline"]["scales"]["cost"])
         self.assertNotIn("references", rep["timeline"]["days"][0]["cost"])
+
+    def test_household_price_gives_direct_electric_reference(self):
+        from audit_core.runner import run_audits
+        rep = run_audits(self.s, self.start, self.end, recorder_keep_days=10, long_term_days=None, heater_kw={},
+                         master=self.master | {"tariff_price": 0.25, "household_price": 0.32}, audits=["cost"],
+                         price_refs=[])
+        day = rep["timeline"]["days"][0]["cost"]["references"]
+        self.assertEqual(list(day.values()), [32.0])
+
+    def test_scale_reports_fixed_costs(self):
+        self.assertIn("fixed_costs", self.run_cost([])["timeline"]["scales"]["cost"])
 
     def test_comparison_on_without_sensors_gives_empty_list(self):
         self.assertEqual(self.run_cost([])["timeline"]["scales"]["cost"]["references"], [])
@@ -1243,8 +1390,8 @@ class CostTest(unittest.TestCase):
         rows = self.rows(7)
         costs = {r["day"]: r["electricity_kwh"] * 0.25 for r in rows}
         r = k1.check_heat_price(rows, costs, self.MASTER, 0)
-        # (7 × 2,50 € + 73 € × 7/365) ÷ 245 kWh = 7,7 ct; Gas 12 ct ÷ 0,9 = 13,3 ct
-        self.assertEqual((r.verdict, r.value, r.details["reference_ct"]), (OK, 7.7, 13.3))
+        # Ohne Jahreswärme keine festen Kosten: 7 × 2,50 € ÷ 245 kWh = 7,1 ct; Gas 12 ct ÷ 0,9 = 13,3 ct
+        self.assertEqual((r.verdict, r.value, r.details["reference_ct"]), (OK, 7.1, 13.3))
         expensive = {k: v * 2.5 for k, v in costs.items()}
         self.assertEqual(k1.check_heat_price(rows, expensive, self.MASTER, 0).verdict, HINT)
         self.assertEqual(k1.check_heat_price(rows, costs, {"tariff_price": 0.25}, 0).verdict, INFO)

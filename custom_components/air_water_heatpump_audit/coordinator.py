@@ -22,7 +22,7 @@ from .audit_core.audits import REGISTRY
 from .audit_core.runner import ROLE_KEYS, roles_for, run_audits
 from .const import (CONF_AUDIT, CONF_IMPORT_TIMELINE_FROM, LEGACY_DOMAIN, SUBENTRY_AUDIT)
 from .const import (CONF_COMPARE_HEATING_SYSTEMS, PRICE_ATTR_AS_OF, PRICE_ATTR_SOURCE, PRICE_ATTR_SOURCE_KIND,
-                    PRICE_ATTR_SYSTEM, PRICE_ROLE_PREFIX)
+                    PRICE_ATTR_SYSTEM, PRICE_ROLE_PREFIX, PRICE_ATTR_INCLUDES_FIXED, PRICE_ATTR_BASE_FEE)
 from .const import (CONF_BOOSTER_HEATER_2_KW, CONF_BOOSTER_HEATER_KW, CONF_DATA_SINCE, CONF_DATA_SOURCE,
                     CONF_EVENT_KIND, CONF_EVENT_NOTE, CONF_EVENT_TIME, CONF_IMMERSION_HEATER_KW, CONF_WINDOW_DAYS,
                     DEFAULT_OPTIONS, DOMAIN, MASTER_KEYS, SOURCE_INFLUXDB, SOURCE_RECORDER, SUBENTRY_EVENT, SUBENTRY_PERSON,
@@ -100,7 +100,9 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ref = {"id": st.entity_id, "system": system, "unit": st.attributes.get("unit_of_measurement"),
                    "name": st.attributes.get("friendly_name"), "source": st.attributes.get(PRICE_ATTR_SOURCE),
                    "source_kind": st.attributes.get(PRICE_ATTR_SOURCE_KIND),
-                   "as_of": st.attributes.get(PRICE_ATTR_AS_OF)}
+                   "as_of": st.attributes.get(PRICE_ATTR_AS_OF),
+                   "includes_fixed_charges": st.attributes.get(PRICE_ATTR_INCLUDES_FIXED),
+                   "annual_base_fee": st.attributes.get(PRICE_ATTR_BASE_FEE)}
             if heating_prices.usable(ref):
                 out.append(ref)
             elif st.entity_id not in self._warned_prices:

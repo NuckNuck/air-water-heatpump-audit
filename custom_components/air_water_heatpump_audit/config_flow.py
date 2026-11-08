@@ -22,6 +22,8 @@ from homeassistant.helpers import selector
 from homeassistant.util import dt as dt_util
 
 from .audit_core.heat import parse_capacity_table
+from .audit_core.cost import heat_pump_fixed_costs
+from .audit_core.heating_prices import NO_PREVIOUS_SYSTEM, consumption_kwh
 from .audit_core.household import PRESENCE_MODES, SHOWER_TIMES, WEEKDAYS
 from .audit_core.audits import BY_ID, REGISTRY
 from .const import (CONF_AUDIT, CONF_AUDITS, CONF_IMPORT_TIMELINE_FROM, LEGACY_DOMAIN, SUBENTRY_AUDIT, audit_title,
@@ -38,6 +40,8 @@ from .const import (CONF_BOOSTER_HEATER_2_KW, CONF_BOOSTER_HEATER_KW, CONF_CAPAC
                     CONF_ROOM_TEMP_TARGET, CONF_TARIFF_BASE_FEE, CONF_TARIFF_PRICE, CONF_WINDOW_DAYS, DATA_SOURCES, DEFAULT_OPTIONS, DOMAIN, EVENT_KIND_LABELS, EVENT_KINDS,
                     HYDRAULIC_SEPARATIONS, OPTION_SECTIONS, OPTIONAL_OPTIONS, ROLE_DOMAINS, ROLE_STEPS,
                     SUBENTRY_EVENT)
+from .const import (CONF_HEAT_PUMP_METER, CONF_METER_FEE, CONF_PREVIOUS_CONSUMPTION, CONF_PREVIOUS_CONSUMPTION_UNIT,
+                    CONF_PREVIOUS_HEATING_SYSTEM, CONSUMPTION_UNITS, HEAT_PUMP_METERS, PREVIOUS_HEATING_SYSTEMS)
 from .profiles import COMMON_ROLE_SUGGESTIONS, INTERFACE_PROFILES, MODEL_PROFILES, role_candidates
 
 STEP_ORDER = list(ROLE_STEPS)
@@ -236,7 +240,17 @@ def _option_selectors() -> dict[str, Any]:
             min=1, max=60, step=1, unit_of_measurement="d", mode=selector.NumberSelectorMode.BOX)),
         CONF_HEATING_DEGREE_DAYS: _number(8000, 1, "Kd"),
         CONF_TARIFF_PRICE: _number(2, 0.001, "€/kWh"),
+        CONF_HEAT_PUMP_METER: selector.SelectSelector(selector.SelectSelectorConfig(
+            options=HEAT_PUMP_METERS, translation_key=CONF_HEAT_PUMP_METER, mode=selector.SelectSelectorMode.LIST)),
         CONF_TARIFF_BASE_FEE: _number(1000, 0.01, "€/a"),
+        CONF_METER_FEE: _number(1000, 0.01, "€/a"),
+        CONF_PREVIOUS_HEATING_SYSTEM: selector.SelectSelector(selector.SelectSelectorConfig(
+            options=PREVIOUS_HEATING_SYSTEMS, translation_key=CONF_PREVIOUS_HEATING_SYSTEM,
+            mode=selector.SelectSelectorMode.DROPDOWN)),
+        CONF_PREVIOUS_CONSUMPTION: _number(1_000_000, 1, ""),
+        CONF_PREVIOUS_CONSUMPTION_UNIT: selector.SelectSelector(selector.SelectSelectorConfig(
+            options=CONSUMPTION_UNITS, translation_key=CONF_PREVIOUS_CONSUMPTION_UNIT,
+            mode=selector.SelectSelectorMode.DROPDOWN)),
         CONF_HOUSEHOLD_PRICE: _number(2, 0.001, "€/kWh"),
         CONF_REFERENCE_FUEL_PRICE: _number(2, 0.001, "€/kWh"),
         CONF_REFERENCE_EFFICIENCY: _number(1.2, 0.01, ""),
@@ -249,6 +263,15 @@ def _option_selectors() -> dict[str, Any]:
         CONF_DATA_SOURCE: selector.SelectSelector(selector.SelectSelectorConfig(
             options=DATA_SOURCES, translation_key=CONF_DATA_SOURCE, mode=selector.SelectSelectorMode.LIST)),
     }
+
+
+def consumption_error(options: dict) -> bool:
+    """True, wenn ein früherer Verbrauch eingetragen ist, der sich mit System und Einheit nicht umrechnen lässt."""
+    amount = options.get(CONF_PREVIOUS_CONSUMPTION)
+    system = options.get(CONF_PREVIOUS_HEATING_SYSTEM)
+    if not amount or system in (None, NO_PREVIOUS_SYSTEM):
+        return False
+    return consumption_kwh(system, amount, options.get(CONF_PREVIOUS_CONSUMPTION_UNIT)) is None
 
 
 class AirWaterAuditOptionsFlow(OptionsFlow):
@@ -271,9 +294,13 @@ class AirWaterAuditOptionsFlow(OptionsFlow):
             except ValueError:
                 errors["base"] = "invalid_capacity_table"
             else:
-                return self.async_create_entry(data=flat)
+                if consumption_error(flat):
+                    errors["base"] = "invalid_consumption_unit"
+                else:
+                    return self.async_create_entry(data=flat)
             current |= flat
         selectors = _option_selectors()
+        cost_missing = bool(heat_pump_fixed_costs(current)[1])
         schema = {}
         for name, keys in OPTION_SECTIONS.items():
             fields = {}
@@ -283,7 +310,9 @@ class AirWaterAuditOptionsFlow(OptionsFlow):
                     fields[vol.Optional(key, description={"suggested_value": value} if value is not None else None)] = selectors[key]
                 else:
                     fields[vol.Required(key, default=current[key])] = selectors[key]
-            schema[vol.Required(name)] = section(vol.Schema(fields), {"collapsed": name == "evaluation"})
+            # Fehlen feste Kosten, ist nur „Kosten“ aufgeklappt: Der Link aus der Karte führt direkt dorthin.
+            collapsed = name != "cost" if cost_missing else name == "evaluation"
+            schema[vol.Required(name)] = section(vol.Schema(fields), {"collapsed": collapsed})
         return self.async_show_form(step_id="init", data_schema=vol.Schema(schema), errors=errors)
 
 
