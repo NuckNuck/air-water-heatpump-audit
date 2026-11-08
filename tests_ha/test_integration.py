@@ -92,6 +92,10 @@ async def test_config_flow_suggests_default_german_entity_ids(hass: HomeAssistan
     assert schema["return_temp"] is None  # gibt es in dieser Instanz in keiner Schreibweise
 
 
+# Gespeicherter Tag der Vorgängerin; mit Wert, denn leere Tage vor dem ersten Messwert entfallen (#10)
+LEGACY_DAY = {"day": "2020-01-01", "capacity": {"value": 12, "verdict": "hint"}}
+
+
 async def test_import_from_legacy_wp_audit(hass: HomeAssistant, hass_storage):
     """Übernahme aus „WP-Audit“ (Domain heatpump_audit, Rollen noch mit ftc_*): Rollen, Optionen, Ereignisse, Zeitstrahl."""
     old = MockConfigEntry(domain="heatpump_audit", title="WP-Audit", version=1,
@@ -103,7 +107,7 @@ async def test_import_from_legacy_wp_audit(hass: HomeAssistant, hass_storage):
                                             "data": {"time": "2026-10-25 19:31:00", "kind": "pump_setting", "note": ""}}])
     old.add_to_hass(hass)
     hass_storage[f"heatpump_audit.timeline.{old.entry_id}"] = {"version": 1, "key": "x",
-                                                               "data": {"days": [{"day": "2020-01-01"}]}}
+                                                               "data": {"days": [LEGACY_DAY]}}
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
     assert result["type"] is FlowResultType.MENU
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {"next_step_id": "import_legacy"})
@@ -119,7 +123,7 @@ async def test_import_from_legacy_wp_audit(hass: HomeAssistant, hass_storage):
     kinds = sorted(sub.subentry_type for sub in entry.subentries.values())
     assert kinds == ["audit"] * len(REGISTRY) + ["event"]
     days = await entry.runtime_data._merge_timeline([])
-    assert days[0] == {"day": "2020-01-01"}  # Tag aus dem Speicher der Vorgängerin
+    assert days[0] == LEGACY_DAY  # Tag aus dem Speicher der Vorgängerin
 
 
 async def test_add_audit_subentry_and_entities_follow(hass: HomeAssistant):
