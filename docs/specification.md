@@ -479,6 +479,39 @@ Ziel: Den gemessenen Strom in Euro umrechnen: Was kostet eine Kilowattstunde Wä
 **Gesamturteil Audit 5:** schlechtestes Urteil aus K1, K3–K5; K2 ist Information. Zeitstrahl: Wärmepreis je Tag (ohne
 Grundpreis) mit dem Band von K1.
 
+### 7.3 Wärmepreise anderer Heizsysteme (Zeitstrahl)
+
+Option `compare_heating_systems` (Standard: an). Das Audit holt keine Preise selbst; sie kommen aus **Preis-Sensoren**
+beliebiger Integrationen (Preis-Plugin, HA-Integration *Scrape*, Vorlage …). Vertrag eines Preis-Sensors:
+
+| Teil | Inhalt |
+|---|---|
+| `state` | Brennstoffpreis, brutto |
+| `unit_of_measurement` | `€/kWh`, `ct/kWh`, `€/MWh` (alle Systeme); `€/L`, `ct/L`, `€/100 L`, `€/1000 L` (nur Heizöl); `€/kg`, `€/t` (nur Holzpellets) |
+| Attribut `heating_system` | `heating_oil`, `natural_gas`, `wood_pellets`, `district_heating`, `direct_electric` – Pflicht, daran erkennt das Audit den Sensor |
+| Attribut `source` | Name der Quelle (optional) |
+| Attribut `source_kind` | `official`, `association`, `commercial`, `local` (optional) |
+| Attribut `as_of` | Stand des Preises, ISO-Datum (optional) |
+
+Sensoren mit anderem System oder unpassender Einheit (z. B. Erdgas in €/m³) werden mit einer Warnung im Log
+übergangen. Der Verlauf kommt wie bei einer Rolle aus Recorder bzw. InfluxDB.
+
+**Rechenweg:** Zeitmittel des Preises über den Tag → €/kWh Brennstoff → ÷ Nutzungsgrad = ct/kWh Wärme, ohne Grundpreis
+(wie der Tageswert des Zeitstrahls). Energieinhalt und Nutzungsgrad je System (`audit_core/heating_prices.py`):
+
+| System | Energieinhalt | Nutzungsgrad | Herkunft |
+|---|---|---|---|
+| Erdgas | abgerechnet in kWh nach Brennwert | 0,86 auf Hs | `derived`: DBU-Feldtest Gas-Brennwert, wie `reference_efficiency` |
+| Heizöl EL | 10 kWh/L (Heizwert) | 0,91 auf Hi | `derived`: wie Gas 0,86 auf Hs, Hs/Hi = 1,06; 10 kWh/L nach Verbraucherzentrale und LfL |
+| Holzpellets | 4,8 kWh/kg (Heizwert) | 0,85 | Energieinhalt C.A.R.M.E.N.; Nutzungsgrad Annahme Pelletkessel im Bestand |
+| Fernwärme | je kWh gelieferter Wärme | 1 | Übergabeverluste vernachlässigt |
+| Stromdirektheizung | je kWh Strom | 1 | `physical` |
+
+Die Tageswerte stehen je Sensor im Punkt des Zeitstrahls (`references`: Sensor-ID → ct/kWh) und bleiben mit dem
+gespeicherten Zeitstrahl erhalten. Die Skala nennt die Sensoren (`references`: id, system, name, source,
+source_kind, as_of, efficiency); eine leere Liste heißt „Vergleich an, aber kein Preis-Sensor gefunden“, die Karte
+zeigt dann einen Hinweis. Ampel und Bänder bleiben am eigenen Vergleichsbrennstoff (K1).
+
 Geplant: Anteil eigener PV-Strom (Rolle für Netzbezug bzw. Eigenverbrauch).
 
 ---
