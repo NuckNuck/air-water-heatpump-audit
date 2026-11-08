@@ -654,3 +654,49 @@ async def test_person_subentry_with_rotation_reaches_core(hass: HomeAssistant):
         coordinator._compute({}, 0, 1, 10, None, {})
     assert run.call_args.kwargs["master"]["household"] == [sub.data]
     assert run.call_args.kwargs["master"]["dhw_disinfection_interval_days"] == 7
+
+
+# Feste Kosten der Wärmepumpe (Spezifikation 7.1): Reparatur-Issue, Options Flow
+async def test_cost_audit_without_fixed_costs_raises_fixable_issue(hass: HomeAssistant):
+    from homeassistant.helpers import issue_registry as ir
+    coordinator = await _cost_coordinator(hass)
+    issue = ir.async_get(hass).async_get_issue(DOMAIN, f"fixed_costs_missing_{coordinator.config_entry.entry_id}")
+    assert issue is not None and issue.is_fixable
+
+
+async def test_household_meter_raises_no_issue(hass: HomeAssistant):
+    from homeassistant.helpers import issue_registry as ir
+    coordinator = await _cost_coordinator(hass, heat_pump_meter="household_meter")
+    assert ir.async_get(hass).async_get_issue(DOMAIN, f"fixed_costs_missing_{coordinator.config_entry.entry_id}") is None
+
+
+async def test_fix_flow_writes_fixed_costs_to_options(hass: HomeAssistant):
+    from custom_components.air_water_heatpump_audit.repairs import async_create_fix_flow, issue_id
+    coordinator = await _cost_coordinator(hass)
+    entry = coordinator.config_entry
+    flow = await async_create_fix_flow(hass, issue_id(entry.entry_id), {"entry_id": entry.entry_id})
+    flow.hass = hass
+    result = await flow.async_step_init({"heat_pump_meter": "separate_meter", "tariff_base_fee": 120.0,
+                                         "meter_fee": 0.0})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert (entry.options["tariff_base_fee"], entry.options["meter_fee"]) == (120.0, 0.0)
+
+
+async def test_options_flow_opens_cost_section_when_fixed_costs_missing(hass: HomeAssistant):
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR, options=DEFAULT_OPTIONS)
+    entry.add_to_hass(hass)
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+    collapsed = {str(k): v.options["collapsed"] for k, v in result["data_schema"].schema.items()}
+    assert collapsed["cost"] is False and all(v for k, v in collapsed.items() if k != "cost")
+
+
+async def test_options_flow_rejects_consumption_unit_not_matching_system(hass: HomeAssistant):
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR, options=DEFAULT_OPTIONS)
+    entry.add_to_hass(hass)
+    values = DEFAULT_OPTIONS | {"previous_heating_system": "natural_gas", "previous_consumption": 2000,
+                                "previous_consumption_unit": "L"}
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await hass.config_entries.options.async_configure(result["flow_id"], _sections(values))
+    assert result["type"] is FlowResultType.FORM and result["errors"] == {"base": "invalid_consumption_unit"}

@@ -164,18 +164,28 @@
             "description": "Preise brutto. Der Arbeitspreis wird aus dem Energie-Dashboard vorgeschlagen, wenn der Stromzähler der Wärmepumpe dort eingetragen ist.",
             "data": {
               "tariff_price": "Arbeitspreis Wärmepumpenstrom",
-              "tariff_base_fee": "Grundpreis Wärmepumpenzähler",
+              "heat_pump_meter": "Zähler der Wärmepumpe",
+              "tariff_base_fee": "Grundpreis Wärmepumpentarif",
+              "meter_fee": "Messstellenentgelt Wärmepumpenzähler",
               "household_price": "Arbeitspreis Haushaltsstrom",
+              "previous_heating_system": "Frühere Heizung",
+              "previous_consumption": "Früherer Jahresverbrauch",
+              "previous_consumption_unit": "Einheit des früheren Verbrauchs",
               "reference_fuel_price": "Preis früherer Brennstoff",
               "reference_efficiency": "Nutzungsgrad frühere Heizung",
               "compare_heating_systems": "Wärmepreise anderer Heizsysteme vergleichen"
             },
             "data_description": {
               "tariff_price": "Preis je kWh für den Strom der Wärmepumpe (K1, K2).",
-              "tariff_base_fee": "Nur der zusätzliche Grundpreis pro Jahr für einen eigenen Wärmepumpenzähler; ohne eigenen Zähler leer lassen.",
-              "household_price": "Zum Vergleich: lohnt der eigene Wärmepumpentarif (K3)?",
+              "heat_pump_meter": "Eigener Zähler mit Wärmepumpentarif oder Wärmepumpe am Haushaltszähler. Am Haushaltszähler gibt es keine zusätzlichen festen Kosten.",
+              "tariff_base_fee": "Grundpreis des Wärmepumpentarifs pro Jahr laut Vertrag. Leer = nicht eingetragen (Hinweis im Audit), 0 = kein Grundpreis.",
+              "meter_fee": "Messstellenentgelt (Zählermiete) des Wärmepumpenzählers pro Jahr, oft vom Messstellenbetreiber getrennt abgerechnet. Leer = nicht eingetragen, 0 = keins.",
+              "household_price": "Zum Vergleich: lohnt der eigene Wärmepumpentarif (K3)? Ergibt auch die Vergleichslinie Stromdirektheizung.",
+              "previous_heating_system": "Womit vorher geheizt wurde; bei einem Neubau „Keine“. Für dieses System gilt der Nutzungsgrad unten.",
+              "previous_consumption": "Jahresverbrauch so, wie er auf der letzten Abrechnung steht. Damit werden feste Kosten verteilt, solange die Hochrechnung (K2) noch nicht möglich ist.",
+              "previous_consumption_unit": "kWh oder MWh für Gas, Fernwärme und Strom, Liter für Heizöl, kg oder t für Pellets.",
               "reference_fuel_price": "Zum Vergleich, z. B. Gas: Kosten je kWh inklusive Grundpreis-Anteil (K1, K2).",
-              "reference_efficiency": "Anteil des abgerechneten Brennstoffs, der als Wärme ankommt. Gas-Brennwertkessel erreichen im Feld im Mittel 0,86, bezogen auf den Brennwert, nach dem Gas abgerechnet wird.",
+              "reference_efficiency": "Anteil des abgerechneten Brennstoffs, der als Wärme ankommt; gilt für die frühere Heizung. Richtwerte: Gas-Brennwertkessel 0,86 (Brennwert), Ölkessel 0,91 (Heizwert), Pelletkessel 0,80, Fernwärme 1.",
               "compare_heating_systems": "Zeigt im Kosten-Zeitstrahl gestrichelte Linien für Heizöl, Erdgas, Holzpellets, Fernwärme und Stromdirektheizung. Die Preise kommen aus Preis-Sensoren mit dem Attribut heating_system, z. B. aus einer Preis-Integration oder einem Scrape-Sensor (README)."
             }
           },
@@ -196,7 +206,8 @@
       }
     },
     "error": {
-      "invalid_capacity_table": "Die Mindestleistung hat nicht die erwartete Form. Beispiel: „35:“ und darunter eingerückt „-7: 3.9“, „2: 3.5“, „7: 3.5“."
+      "invalid_capacity_table": "Die Mindestleistung hat nicht die erwartete Form. Beispiel: „35:“ und darunter eingerückt „-7: 3.9“, „2: 3.5“, „7: 3.5“.",
+      "invalid_consumption_unit": "Früherer Verbrauch: Die Einheit passt nicht zur früheren Heizung (z. B. Liter bei Gas)."
     }
   },
   "entity": {
@@ -712,6 +723,31 @@
         "sat": "Samstag",
         "sun": "Sonntag"
       }
+    },
+    "heat_pump_meter": {
+      "options": {
+        "separate_meter": "Eigener Zähler mit Wärmepumpentarif",
+        "household_meter": "Haushaltszähler (kein eigener Tarif)"
+      }
+    },
+    "previous_heating_system": {
+      "options": {
+        "natural_gas": "Erdgas",
+        "heating_oil": "Heizöl",
+        "wood_pellets": "Holzpellets",
+        "district_heating": "Fernwärme",
+        "direct_electric": "Stromdirektheizung",
+        "none": "Keine (Neubau)"
+      }
+    },
+    "previous_consumption_unit": {
+      "options": {
+        "kWh": "kWh",
+        "MWh": "MWh",
+        "L": "Liter",
+        "kg": "kg",
+        "t": "Tonnen"
+      }
     }
   },
   "config_subentries": {
@@ -857,6 +893,32 @@
       },
       "abort": {
         "reconfigure_successful": "Person gespeichert."
+      }
+    }
+  },
+  "issues": {
+    "fixed_costs_missing": {
+      "title": "Feste Kosten der Wärmepumpe fehlen",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Feste Kosten der Wärmepumpe",
+            "description": "Für den Wärmepreis fehlen Angaben zu den festen Kosten der Wärmepumpe: {missing}. Bis dahin rechnet das Audit ohne sie. Leer lassen heißt „nicht eingetragen“, 0 heißt „gibt es nicht“.",
+            "data": {
+              "heat_pump_meter": "Zähler der Wärmepumpe",
+              "tariff_base_fee": "Grundpreis Wärmepumpentarif",
+              "meter_fee": "Messstellenentgelt Wärmepumpenzähler"
+            },
+            "data_description": {
+              "heat_pump_meter": "Eigener Zähler mit Wärmepumpentarif oder Wärmepumpe am Haushaltszähler. Am Haushaltszähler gibt es keine zusätzlichen festen Kosten.",
+              "tariff_base_fee": "Grundpreis des Wärmepumpentarifs pro Jahr laut Vertrag. Leer = nicht eingetragen (Hinweis im Audit), 0 = kein Grundpreis.",
+              "meter_fee": "Messstellenentgelt (Zählermiete) des Wärmepumpenzählers pro Jahr, oft vom Messstellenbetreiber getrennt abgerechnet. Leer = nicht eingetragen, 0 = keins."
+            }
+          }
+        },
+        "abort": {
+          "entry_missing": "Der Eintrag existiert nicht mehr."
+        }
       }
     }
   }

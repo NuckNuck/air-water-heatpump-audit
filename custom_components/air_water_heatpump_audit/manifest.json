@@ -10,7 +10,8 @@
   "config_flow": true,
   "dependencies": [
     "recorder",
-    "http"
+    "http",
+    "repairs"
   ],
   "documentation": "https://github.com/NuckNuck/air-water-heatpump-audit",
   "integration_type": "service",

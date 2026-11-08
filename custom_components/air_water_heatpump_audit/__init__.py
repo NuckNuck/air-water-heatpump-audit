@@ -18,6 +18,7 @@ from homeassistant.loader import async_get_integration
 
 from .const import CARD_URL, DOMAIN
 from .coordinator import AirWaterAuditConfigEntry, AirWaterAuditCoordinator, timeline_store
+from .repairs import issue_id, update_fixed_cost_issue
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.SENSOR]
@@ -65,6 +66,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry
     coordinator = AirWaterAuditCoordinator(hass, entry)
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    update_fixed_cost_issue(hass, entry, coordinator.audits())
 
     # Erste Rechnung erst nach dem HA-Start, damit die Recorder-Abfrage den Start nicht bremst.
     async def _first_refresh(_hass: HomeAssistant) -> None:
@@ -85,5 +87,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntr
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry) -> None:
-    """Gespeicherte Tageswerte des Zeitstrahls mit dem Eintrag entfernen."""
+    """Gespeicherte Tageswerte des Zeitstrahls und ein offenes Reparatur-Issue mit dem Eintrag entfernen."""
     await timeline_store(hass, entry.entry_id).async_remove()
+    from homeassistant.helpers import issue_registry as ir
+    ir.async_delete_issue(hass, DOMAIN, issue_id(entry.entry_id))

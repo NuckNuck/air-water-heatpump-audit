@@ -163,19 +163,29 @@
             "name": "Cost",
             "description": "Gross prices. The energy price is suggested from the energy dashboard if the heat pump meter is set up there.",
             "data": {
-              "tariff_price": "Heat pump energy price",
-              "tariff_base_fee": "Heat pump meter standing charge",
-              "household_price": "Household energy price",
+              "tariff_price": "Heat pump electricity price",
+              "heat_pump_meter": "Heat pump meter",
+              "tariff_base_fee": "Heat pump tariff standing charge",
+              "meter_fee": "Heat pump meter fee",
+              "household_price": "Household electricity price",
+              "previous_heating_system": "Previous heating",
+              "previous_consumption": "Previous annual consumption",
+              "previous_consumption_unit": "Unit of previous consumption",
               "reference_fuel_price": "Previous fuel price",
               "reference_efficiency": "Previous heating efficiency",
               "compare_heating_systems": "Compare heat prices of other heating systems"
             },
             "data_description": {
               "tariff_price": "Price per kWh of heat pump electricity (K1, K2).",
-              "tariff_base_fee": "Only the additional standing charge per year for a separate heat pump meter; leave empty without one.",
-              "household_price": "For comparison: is the separate heat pump tariff worth it (K3)?",
+              "heat_pump_meter": "Separate meter with a heat pump tariff, or heat pump on the household meter. On the household meter there are no additional fixed costs.",
+              "tariff_base_fee": "Annual standing charge of the heat pump tariff. Empty = not entered (note in the audit), 0 = none.",
+              "meter_fee": "Annual metering fee of the heat pump meter, often billed separately by the meter operator. Empty = not entered, 0 = none.",
+              "household_price": "For comparison: does the heat pump tariff pay off (K3)? Also gives the comparison line for direct electric heating.",
+              "previous_heating_system": "What was used for heating before; 'None' for a new building. The efficiency below applies to this system.",
+              "previous_consumption": "Annual consumption as on the last bill. Used to spread fixed costs as long as the projection (K2) is not possible.",
+              "previous_consumption_unit": "kWh or MWh for gas, district heating and electricity, litres for heating oil, kg or t for pellets.",
               "reference_fuel_price": "For comparison, e.g. gas: cost per kWh including the share of the standing charge (K1, K2).",
-              "reference_efficiency": "Share of the billed fuel that arrives as heat. Gas condensing boilers reach 0.86 on average in field tests, based on the gross calorific value that gas is billed by.",
+              "reference_efficiency": "Share of the billed fuel that arrives as heat; applies to the previous heating. Guide values: gas condensing boiler 0.86 (gross), oil boiler 0.91 (net), pellet boiler 0.80, district heating 1.",
               "compare_heating_systems": "Shows dashed lines for heating oil, natural gas, wood pellets, district heating and direct electric heating in the cost timeline. Prices come from price sensors with the attribute heating_system, e.g. from a price integration or a Scrape sensor (README)."
             }
           },
@@ -196,7 +206,8 @@
       }
     },
     "error": {
-      "invalid_capacity_table": "The minimum capacity does not have the expected format. Example: \"35:\" followed by indented \"-7: 3.9\", \"2: 3.5\", \"7: 3.5\"."
+      "invalid_capacity_table": "The minimum capacity does not have the expected format. Example: \"35:\" followed by indented \"-7: 3.9\", \"2: 3.5\", \"7: 3.5\".",
+      "invalid_consumption_unit": "Previous consumption: the unit does not match the previous heating (e.g. litres for gas)."
     }
   },
   "entity": {
@@ -712,6 +723,31 @@
         "sat": "Saturday",
         "sun": "Sunday"
       }
+    },
+    "heat_pump_meter": {
+      "options": {
+        "separate_meter": "Separate meter with heat pump tariff",
+        "household_meter": "Household meter (no own tariff)"
+      }
+    },
+    "previous_heating_system": {
+      "options": {
+        "natural_gas": "Natural gas",
+        "heating_oil": "Heating oil",
+        "wood_pellets": "Wood pellets",
+        "district_heating": "District heating",
+        "direct_electric": "Direct electric heating",
+        "none": "None (new building)"
+      }
+    },
+    "previous_consumption_unit": {
+      "options": {
+        "kWh": "kWh",
+        "MWh": "MWh",
+        "L": "Litres",
+        "kg": "kg",
+        "t": "Tonnes"
+      }
     }
   },
   "config_subentries": {
@@ -857,6 +893,32 @@
       },
       "abort": {
         "reconfigure_successful": "Person saved."
+      }
+    }
+  },
+  "issues": {
+    "fixed_costs_missing": {
+      "title": "Heat pump fixed costs missing",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Heat pump fixed costs",
+            "description": "The heat price lacks information on the fixed costs of the heat pump: {missing}. Until then the audit calculates without them. Empty means 'not entered', 0 means 'there is none'.",
+            "data": {
+              "heat_pump_meter": "Heat pump meter",
+              "tariff_base_fee": "Heat pump tariff standing charge",
+              "meter_fee": "Heat pump meter fee"
+            },
+            "data_description": {
+              "heat_pump_meter": "Separate meter with a heat pump tariff, or heat pump on the household meter. On the household meter there are no additional fixed costs.",
+              "tariff_base_fee": "Annual standing charge of the heat pump tariff. Empty = not entered (note in the audit), 0 = none.",
+              "meter_fee": "Annual metering fee of the heat pump meter, often billed separately by the meter operator. Empty = not entered, 0 = none."
+            }
+          }
+        },
+        "abort": {
+          "entry_missing": "The entry no longer exists."
+        }
       }
     }
   }

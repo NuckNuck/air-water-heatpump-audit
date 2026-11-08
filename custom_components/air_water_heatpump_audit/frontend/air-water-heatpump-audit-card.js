@@ -26,6 +26,7 @@ function enabledAudits(hass) {
 
 const TEXT = {
   de: {
+    settings: "Einstellungen",
     dq: "Datenqualität",
     dqLevels: { high: "hoch", medium: "mittel", low: "niedrig" },
     period: "Zeitraum",
@@ -85,6 +86,7 @@ const TEXT = {
     },
   },
   en: {
+    settings: "Settings",
     dq: "Data quality",
     dqLevels: { high: "high", medium: "medium", low: "low" },
     period: "Period",
@@ -146,6 +148,18 @@ const TEXT = {
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
+// Link auf die Integrationsseite mit hervorgehobenem Eintrag; dort ist „Konfigurieren“ ein Klick. Einen öffentlichen
+// Weg, den Options Flow direkt zu öffnen, gibt es nicht (Frontend 2026.10).
+const settingsUrl = (entryId) => `/config/integrations/integration/air_water_heatpump_audit${entryId ? `?config_entry=${encodeURIComponent(entryId)}` : ""}`;
+const settingsLink = (entryId, label) => `<a class="settings" data-nav href="${esc(settingsUrl(entryId))}">⚙ ${esc(label)}</a>`;
+// Navigation innerhalb von HA ohne Neuladen der Seite
+function navigate(path) {
+  history.pushState(null, "", path);
+  window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
+}
+// Prüftexte, die auf fehlende Stammdaten hinweisen, bekommen einen Link in die Einstellungen.
+const NEEDS_SETTINGS = /Stammdaten fehlen|Grundpreis noch nicht eingerechnet|master data missing|standing charge not yet included/i;
+
 function formatValue(value, unit, locale) {
   if (value === null || value === undefined || typeof value === "object") return "";
   const text = typeof value === "number" ? value.toLocaleString(locale, { maximumFractionDigits: 2 }) : value;
@@ -201,6 +215,8 @@ class AirWaterAuditCard extends HTMLElement {
     root.addEventListener("focusin", (ev) => { const q = ev.target.closest?.(TIP); if (q && !this._tipPinned) show(q, false); });
     root.addEventListener("focusout", (ev) => { if (ev.target.closest?.(TIP)) hide(); });
     root.addEventListener("click", (ev) => {
+      const nav = ev.target.closest?.("a[data-nav]");
+      if (nav) { ev.preventDefault(); navigate(nav.getAttribute("href")); return; }
       const toggle = ev.target.closest?.("[data-days]");
       if (toggle) {
         const id = toggle.dataset.days;
@@ -251,7 +267,7 @@ class AirWaterAuditCard extends HTMLElement {
       <td>${this._pill(verdict, st, at.progress, t)}${this._provisional(at, t)}</td>
       <td class="action">${action}</td>
       <td class="num">${esc(formatValue(at.value, at.unit, hass.language))}</td>
-      <td class="text">${esc(at.text)}${toggle}</td>
+      <td class="text">${esc(at.text)}${NEEDS_SETTINGS.test(at.text ?? "") ? ` ${settingsLink(this._entryId, t.settings)}` : ""}${toggle}</td>
       <td class="origin">${esc(t.origin[at.origin] ?? at.origin)}</td>
     </tr>${days}`;
   }
@@ -477,10 +493,12 @@ class AirWaterAuditCard extends HTMLElement {
         <div class="light" style="background:${COLORS[audit.state] ?? COLORS.not_assessable}"></div>
         <div class="title">${esc(title)}</div>
         <div class="state">${esc(hass.formatEntityState(audit))}</div>
+        ${a.entry_id ? settingsLink(a.entry_id, t.settings) : ""}
       </div>${a.heat ? `<div class="heat">${esc(t.heat(a.heat))}</div>` : ""}</td></tr>`;
     if (audit.state === "unavailable" || audit.state === "unknown") {
       return head + `<tr><td colspan="${span}" class="msg">${t.waiting}</td></tr>`;
     }
+    this._entryId = a.entry_id;
     return head + (a.checks ?? []).map((c) => this._checkRow(c, t)).join("");
   }
 
@@ -507,6 +525,8 @@ class AirWaterAuditCard extends HTMLElement {
         .light { width: 24px; height: 24px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 2px rgba(0,0,0,.15); }
         .title { font-size: 1.15em; font-weight: 500; flex: 1; }
         .state { font-weight: 500; }
+        a.settings { color: var(--primary-color); font-size: .85em; white-space: nowrap; text-decoration: none; }
+        tr.audit a.settings { color: inherit; }
         .meta, .heat { color: var(--secondary-text-color); font-size: .9em; }
         .meta { margin-bottom: 6px; }
         .heat { margin-top: 4px; }
@@ -644,7 +664,7 @@ const TL_TEXT = {
       efficiency: "Tageswert; das Urteil in der Tabelle gilt erst für eine Woche. Blau oben: unplausibel hoch, eher ein Messfehler.",
       capacity: "Grenze aus Prüfung C1 (2.000 Starts pro Jahr, umgerechnet auf die Heizstunden des Standorts).",
       dhw: "Aus den Warmwasserladungen des Tages; dieselbe Ampel wie beim Heizen.",
-      cost: "Ohne Grundpreis. Grenze: früherer Brennstoff plus 10 % Messtoleranz (Prüfung K1).",
+      cost: "Grenze: früherer Brennstoff plus 10 % Messtoleranz (Prüfung K1).",
     },
     units: { "1/d": "/Tag" },
     verdicts: { ok: "grün", hint: "gelb", warn: "rot", info: "Info", not_assessable: "nicht bewertbar" },
@@ -654,7 +674,18 @@ const TL_TEXT = {
       direct_electric: "Stromdirektheizung" },
     sourceKinds: { official: "amtlich", association: "Verband", commercial: "Preisportal", local: "lokal" },
     asOf: "Stand",
-    refsIntro: "Gestrichelt: Wärmepreis anderer Heizsysteme (Brennstoffpreis ÷ Nutzungsgrad), ohne Grundpreis.",
+    refsIntro: "Gestrichelt: Wärmepreis anderer Heizsysteme (Brennstoffpreis ÷ Nutzungsgrad).",
+    fixedCharges: { included: "inkl. Grundpreis", added: "inkl. Grundpreis", missing_heat: "ohne Grundpreis" },
+    fixed: {
+      added: (ct, eur, kwh, src) => `Eigener Wärmepreis inklusive fester Kosten: +${ct} ct/kWh (${eur} € im Jahr auf ${kwh} kWh Wärme, ${src}).`,
+      none: "Keine festen Kosten: Die Wärmepumpe hängt am Haushaltszähler.",
+      noHeat: "Grundpreis noch nicht eingerechnet: Jahreswärme unbekannt (Hochrechnung K2 noch nicht möglich, frühere Abrechnung nicht eingetragen).",
+      missing: (list) => `Stammdaten fehlen: ${list}.`,
+      sources: { projection: "Hochrechnung K2", bill: "frühere Abrechnung" },
+      labels: { heat_pump_meter: "Zähler der Wärmepumpe", tariff_base_fee: "Grundpreis des Wärmepumpentarifs",
+        meter_fee: "Messstellenentgelt des Wärmepumpenzählers" },
+    },
+    settings: "Einstellungen",
     noRefs: "Keine Preis-Sensoren für andere Heizsysteme gefunden. Sie kommen aus einer Preis-Integration oder z. B. "
       + "aus einem Scrape-Sensor mit dem Attribut heating_system (siehe README). Abschalten in den Optionen, Abschnitt Kosten.",
     none: "Noch kein voller Tag ausgewertet. Der erste Tageswert erscheint nach Mitternacht.",
@@ -688,7 +719,7 @@ const TL_TEXT = {
       efficiency: "Daily value; the verdict in the table needs a full week. Blue at the top: implausibly high, more likely a measurement error.",
       capacity: "Limit from check C1 (2,000 starts per year, scaled to the site's heating hours).",
       dhw: "From the day's hot water charges; same colours as for space heating.",
-      cost: "Without standing charge. Limit: previous fuel plus 10 % measurement tolerance (check K1).",
+      cost: "Limit: previous fuel plus 10 % measurement tolerance (check K1).",
     },
     units: { "1/d": "/day" },
     verdicts: { ok: "green", hint: "yellow", warn: "red", info: "info", not_assessable: "not assessable" },
@@ -698,7 +729,18 @@ const TL_TEXT = {
       district_heating: "District heating", direct_electric: "Direct electric heating" },
     sourceKinds: { official: "official", association: "association", commercial: "price portal", local: "local" },
     asOf: "as of",
-    refsIntro: "Dashed: heat price of other heating systems (fuel price ÷ efficiency), without standing charge.",
+    refsIntro: "Dashed: heat price of other heating systems (fuel price ÷ efficiency).",
+    fixedCharges: { included: "incl. standing charge", added: "incl. standing charge", missing_heat: "without standing charge" },
+    fixed: {
+      added: (ct, eur, kwh, src) => `Own heat price including fixed costs: +${ct} ct/kWh (€${eur} a year over ${kwh} kWh of heat, ${src}).`,
+      none: "No fixed costs: the heat pump is on the household meter.",
+      noHeat: "Standing charge not yet included: annual heat unknown (projection K2 not yet possible, previous bill not entered).",
+      missing: (list) => `Master data missing: ${list}.`,
+      sources: { projection: "projection K2", bill: "previous bill" },
+      labels: { heat_pump_meter: "heat pump meter", tariff_base_fee: "heat pump tariff standing charge",
+        meter_fee: "heat pump meter fee" },
+    },
+    settings: "Settings",
     noRefs: "No price sensors for other heating systems found. They come from a price integration or e.g. from a "
       + "Scrape sensor with the attribute heating_system (see README). Switch off in the options, section Cost.",
     none: "No full day evaluated yet. The first daily value appears after midnight.",
@@ -797,6 +839,8 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     this._charts = this.shadowRoot.getElementById("charts");
     this._admin = this.shadowRoot.getElementById("admin");
     this._charts.addEventListener("click", (ev) => {
+      const nav = ev.target.closest?.("a[data-nav]");
+      if (nav) { ev.preventDefault(); navigate(nav.getAttribute("href")); return; }
       const i = ev.target?.dataset?.day;
       if (i === undefined) return;
       this._selected = Number(i) === this._selected ? null : Number(i);
@@ -980,7 +1024,7 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     const note = t.notes[audit] && (!["capacity", "cost"].includes(audit) || (scale.bands ?? []).length) ? `<div class="muted">${t.notes[audit]}</div>` : "";
     return `<div class="chart">
       <div class="label"><b>${esc(name)}</b><span class="muted">${esc(metric)} · ${t.latest} ${esc(now)}</span></div>${note}
-      <svg viewBox="0 0 ${geo.width} ${h}" height="${h}" preserveAspectRatio="none">${svg}</svg>${this._refLegend(scale, refs, days, audit, t)}</div>`;
+      <svg viewBox="0 0 ${geo.width} ${h}" height="${h}" preserveAspectRatio="none">${svg}</svg>${this._refLegend(scale, refs, days, audit, t)}${this._fixedNote(scale, t)}</div>`;
   }
 
   // Farbe und Strichmuster je Preis-Sensor
@@ -992,8 +1036,28 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     });
   }
 
+  // Was an festen Kosten im eigenen Wärmepreis steckt; fehlende Stammdaten mit Link in die Einstellungen
+  _fixedNote(scale, t) {
+    const f = scale.fixed_costs;
+    if (!f) return "";
+    const lines = [];
+    if (f.eur_per_kwh > 0) {
+      lines.push(esc(t.fixed.added(this._fmt(100 * f.eur_per_kwh, 1), this._fmt(f.eur_per_year, 0),
+        this._fmt(f.annual_heat_kwh, 0), t.fixed.sources[f.heat_source] ?? f.heat_source)));
+    } else if (f.eur_per_year === 0 && !f.missing.length) {
+      lines.push(esc(t.fixed.none));
+    } else if (f.eur_per_year > 0) {
+      lines.push(esc(t.fixed.noHeat));
+    }
+    if (f.missing.length) {
+      const entryId = this._hass.states[this._config.entity]?.attributes?.entry_id;
+      lines.push(`${esc(t.fixed.missing(f.missing.map((k) => t.fixed.labels[k] ?? k).join(", ")))} ${settingsLink(entryId, t.settings)}`);
+    }
+    return lines.length ? `<div class="muted">${lines.join("<br>")}</div>` : "";
+  }
+
   _refLabel(r, t) {
-    const parts = [r.source, t.sourceKinds[r.source_kind] ?? r.source_kind].filter(Boolean);
+    const parts = [r.source, t.sourceKinds[r.source_kind] ?? r.source_kind, t.fixedCharges[r.fixed_charges]].filter(Boolean);
     if (r.as_of) parts.push(`${t.asOf} ${this._refDate(r.as_of)}`);
     return `${t.systems[r.system] ?? r.system}${parts.length ? ` (${parts.join(", ")})` : ""}`;
   }
