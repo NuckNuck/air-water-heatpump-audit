@@ -37,6 +37,8 @@ const TEXT = {
     columns: ["ID", "Prüfung", "Urteil", "Aktion", "Wert", "Erläuterung", "Herkunft"],
     who: { owner: "Selbst", installer: "Fachbetrieb", none: "Nichts nötig" },
     target: "Ziel",
+    meter: { x: "Haushaltsstrom (ct/kWh)", y: "Wärmepumpenstrom (kWh/Jahr)", pays: "eigener Zähler lohnt sich",
+      not: "ein Zähler für alles günstiger", you: "heute", title: "Lohnt sich der eigene Zähler?" },
     steps: { show: (n) => `▸ So geht's (${n} Schritte)`, hide: "▾ Schritte ausblenden" },
     impact: { save: (eur, kwh) => `Bringt ≈ ${eur} €/Jahr` + (kwh ? ` (≈ ${kwh} kWh Strom)` : ""),
       cost: (eur, kwh) => `Kostet ≈ ${eur} €/Jahr` + (kwh ? ` (≈ ${kwh} kWh Strom)` : ""),
@@ -98,6 +100,8 @@ const TEXT = {
     columns: ["ID", "Check", "Verdict", "Action", "Value", "Explanation", "Origin"],
     who: { owner: "Yourself", installer: "Installer", none: "Nothing needed" },
     target: "Target",
+    meter: { x: "Household electricity (ct/kWh)", y: "Heat pump electricity (kWh/year)", pays: "own meter pays off",
+      not: "one meter for everything is cheaper", you: "today", title: "Does the own meter pay off?" },
     steps: { show: (n) => `▸ How to (${n} steps)`, hide: "▾ Hide steps" },
     impact: { save: (eur, kwh) => `Saves ≈ €${eur}/year` + (kwh ? ` (≈ ${kwh} kWh electricity)` : ""),
       cost: (eur, kwh) => `Costs ≈ €${eur}/year` + (kwh ? ` (≈ ${kwh} kWh electricity)` : ""),
@@ -269,9 +273,68 @@ class AirWaterAuditCard extends HTMLElement {
       <td>${this._pill(verdict, st, at.progress, t)}${this._provisional(at, t)}</td>
       <td class="action">${action}</td>
       <td class="num">${esc(formatValue(at.value, at.unit, hass.language))}</td>
-      <td class="text">${esc(at.text)}${NEEDS_SETTINGS.test(at.text ?? "") ? ` ${settingsLink(this._entryId, t.settings)}` : ""}${toggle}</td>
+      <td class="text">${esc(at.text)}${NEEDS_SETTINGS.test(at.text ?? "") ? ` ${settingsLink(this._entryId, t.settings)}` : ""}${toggle}${c.check_id === "K3" ? this._meterChart(at.details, t) : ""}</td>
       <td class="origin">${esc(t.origin[at.origin] ?? at.origin)}</td>
     </tr>${days}`;
+  }
+
+  // K3 (Spezifikation 7.2.1): Haushaltsstrompreis gegen Jahresstrom der Wärmepumpe. Über der Grenzkurve
+  // E = F ÷ (p_H − p_T) lohnt sich der eigene Zähler, darunter ist ein Zähler für alles günstiger.
+  _meterChart(d, t) {
+    if (!d || d.break_even_household_ct == null || !d.electricity_kwh) return "";
+    const m = t.meter;
+    const loc = this._hass.locale?.language || this._hass.language;
+    const f = (v, n = 0) => Number(v).toLocaleString(loc, { minimumFractionDigits: n, maximumFractionDigits: n });
+    const pT = d.tariff_ct, pH = d.household_ct, E = d.electricity_kwh, F = d.base_fee_eur ?? 0;
+    const W = 420, H = 210, L = 52, R = 12, T = 10, B = 34;
+    const xMin = pT, xMax = Math.max(pH, d.break_even_household_ct, pT + 4) * 1.25 + 2;
+    const yMax = Math.max(E, d.break_even_kwh ?? 0) * 1.8;
+    const x = (v) => L + (v - xMin) / (xMax - xMin) * (W - L - R);
+    const y = (v) => T + (1 - Math.min(v, yMax) / yMax) * (H - T - B);
+    const curve = (p) => (p <= pT ? yMax : (100 * F) / (p - pT));
+    const pts = [];
+    for (let i = 0; i <= 80; i++) {
+      const p = xMin + (xMax - xMin) * i / 80;
+      pts.push(`${x(p).toFixed(1)},${y(curve(p)).toFixed(1)}`);
+    }
+    const pays = `M${x(xMin)},${y(yMax)} L${pts.join(" L")} L${x(xMax)},${y(yMax)} Z`;
+    // Schrittweite 1/2/5 × 10^n, höchstens etwa 5 Teilstriche
+    const step = (v) => { const raw = v / 5, e = 10 ** Math.floor(Math.log10(raw)); return [1, 2, 5, 10].map((k) => k * e).find((s) => s >= raw); };
+    const xs = step(xMax - xMin), ys = step(yMax);
+    let ticks = "";
+    for (let v = Math.ceil(xMin / xs) * xs; v <= xMax; v += xs) {
+      ticks += `<line x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - B}" stroke="var(--divider-color)"/>`
+        + `<text x="${x(v)}" y="${H - B + 13}" text-anchor="middle">${f(v)}</text>`;
+    }
+    for (let v = 0; v <= yMax; v += ys) {
+      ticks += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--divider-color)"/>`
+        + `<text x="${L - 4}" y="${y(v) + 4}" text-anchor="end">${f(v)}</text>`;
+    }
+    // Grenzen zur eigenen Lage: senkrecht beim Grenzpreis (heutiger Verbrauch), waagrecht beim Grenzverbrauch
+    const be = (xx, yy, anchor, text) => `<text class="be" x="${xx}" y="${yy}" text-anchor="${anchor}">${esc(text)}</text>`;
+    let guides = be(x(d.break_even_household_ct) + 4, H - B - 4, "start", `ab ${f(d.break_even_household_ct, 1)} ct`)
+      + `<line x1="${x(d.break_even_household_ct)}" x2="${x(d.break_even_household_ct)}" y1="${y(E)}" y2="${H - B}"
+      stroke="var(--primary-text-color)" stroke-dasharray="3 3"><title>${esc(f(d.break_even_household_ct, 1))} ct/kWh</title></line>`;
+    if (d.break_even_kwh != null) {
+      guides += `<line x1="${L}" x2="${x(pH)}" y1="${y(d.break_even_kwh)}" y2="${y(d.break_even_kwh)}"
+        stroke="var(--primary-text-color)" stroke-dasharray="3 3"><title>${esc(f(d.break_even_kwh))} kWh</title></line>`
+        + be(L + 4, y(d.break_even_kwh) - 4, "start", `ab ${f(Math.round(d.break_even_kwh / 10) * 10)} kWh`);
+    }
+    const dot = `<circle cx="${x(pH)}" cy="${y(E)}" r="5" fill="var(--primary-text-color)" stroke="var(--card-background-color, #fff)" stroke-width="1.5">
+      <title>${esc(m.you)}: ${esc(f(pH, 1))} ct/kWh, ${esc(f(E))} kWh</title></circle>
+      <text x="${x(pH) + 8}" y="${y(E) + 4}" class="you">${esc(m.you)}</text>`;
+    return `<div class="meter"><div class="mtitle">${esc(m.title)}</div>
+      <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px" role="img" aria-label="${esc(m.title)}">
+        <rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="${COLORS.hint}" fill-opacity=".18"/>
+        <path d="${pays}" fill="${COLORS.ok}" fill-opacity=".22"/>
+        ${ticks}
+        <polyline points="${pts.join(" ")}" fill="none" stroke="${COLORS.ok}" stroke-width="2"/>
+        ${guides}${dot}
+        <text x="${(L + W - R) / 2}" y="${H - 4}" text-anchor="middle">${esc(m.x)}</text>
+        <text x="12" y="${(T + H - B) / 2}" text-anchor="middle" transform="rotate(-90 12 ${(T + H - B) / 2})">${esc(m.y)}</text>
+      </svg>
+      <div class="mkey"><span class="sw" style="background:${COLORS.ok}"></span>${esc(m.pays)}
+        <span class="sw" style="background:${COLORS.hint}"></span>${esc(m.not)}</div></div>`;
   }
 
   // Urteils-Marker; „nicht bewertbar“ füllt sich mit dem Datenstand grün, bis die Prüfung ihr Urteil hat.
@@ -563,7 +626,7 @@ class AirWaterAuditCard extends HTMLElement {
         .pill { color: #fff; border-radius: 10px; padding: 1px 8px; white-space: nowrap; font-size: .9em; }
         .pill.prov { opacity: .7; outline: 1px dashed currentColor; outline-offset: -3px; }
         .pill.small { padding: 0 6px; font-size: .85em; }
-        .sub-verdict { margin-top: 3px; font-size: .85em; color: var(--secondary-text-color); white-space: nowrap; cursor: help; }
+        .sub-verdict { margin-top: 3px; font-size: .85em; color: var(--secondary-text-color); cursor: help; }
         .msg { color: var(--secondary-text-color); }
         .q { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; margin-left: 3px;
           border-radius: 50%; font-size: 11px; font-weight: 600; line-height: 1; cursor: help; vertical-align: 1px;
@@ -582,6 +645,13 @@ class AirWaterAuditCard extends HTMLElement {
         table.days .gap { cursor: help; color: var(--secondary-text-color); }
         table.days tr.total td { border-top: 2px solid var(--divider-color); }
         .ready { margin: 6px 0 10px; }
+        .meter { margin-top: 8px; } .mtitle { font-weight: 500; margin-bottom: 2px; }
+        .meter svg text { font-size: 10px; fill: var(--secondary-text-color); }
+        .meter svg text.be { fill: var(--primary-text-color); paint-order: stroke; stroke-width: 3px;
+          stroke: var(--card-background-color, #fff); }
+        .meter svg text.you { fill: var(--primary-text-color); font-weight: 600; }
+        .mkey { font-size: .85em; color: var(--secondary-text-color); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .mkey .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; opacity: .6; }
         .rhead { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin-bottom: 6px; }
         .rtitle { font-weight: 500; }
         .bar { position: relative; height: 10px; border-radius: 5px; background: var(--divider-color); }
@@ -649,6 +719,9 @@ const TL_AUDITS = ["efficiency", "flow_temperature", "capacity", "data_basis"];
 const REF_COLORS = { heating_oil: "#6d4c41", natural_gas: "#1e88e5", wood_pellets: "#8e24aa", district_heating: "#00897b",
   direct_electric: "#c2185b" };
 const REF_DASHES = ["6 3", "2 3", "10 3 2 3"];
+// Zeitraum-Umschalter (F285 a): Tage oder "all"; Auswahl je Browser in localStorage
+const TL_RANGES = ["30", "90", "365", "all"];
+const TL_RANGE_KEY = "air-water-heatpump-audit-timeline-range";
 
 const TL_TEXT = {
   de: {
@@ -677,6 +750,10 @@ const TL_TEXT = {
     sourceKinds: { official: "amtlich", association: "Verband", commercial: "Preisportal", local: "lokal" },
     asOf: "Stand",
     refsIntro: "Gestrichelt: Wärmepreis anderer Heizsysteme (Brennstoffpreis ÷ Nutzungsgrad).",
+    previous: (sys, v) => `Ihre frühere Heizung${sys ? ` (${sys})` : ""}: ${v}`,
+    market: "Markt",
+    previousLegend: "Durchgezogen: Ihre frühere Heizung (Preis laut Ihren Angaben ÷ Nutzungsgrad, ohne Toleranz).",
+    range: { label: "Zeitraum", 30: "30 Tage", 90: "90 Tage", 365: "1 Jahr", all: "Alles" },
     fixedCharges: { included: "inkl. Grundpreis", added: "inkl. Grundpreis", missing_heat: "ohne Grundpreis" },
     fixed: {
       added: (ct, eur, kwh, src) => `Eigener Wärmepreis inklusive fester Kosten: +${ct} ct/kWh (${eur} € im Jahr auf ${kwh} kWh Wärme, ${src}).`,
@@ -739,6 +816,10 @@ const TL_TEXT = {
     sourceKinds: { official: "official", association: "association", commercial: "price portal", local: "local" },
     asOf: "as of",
     refsIntro: "Dashed: heat price of other heating systems (fuel price ÷ efficiency).",
+    previous: (sys, v) => `Your previous heating${sys ? ` (${sys})` : ""}: ${v}`,
+    market: "market",
+    previousLegend: "Solid: your previous heating (price as entered ÷ efficiency, without tolerance).",
+    range: { label: "Period", 30: "30 days", 90: "90 days", 365: "1 year", all: "All" },
     fixedCharges: { included: "incl. standing charge", added: "incl. standing charge", missing_heat: "without standing charge" },
     fixed: {
       added: (ct, eur, kwh, src) => `Own heat price including fixed costs: +${ct} ct/kWh (€${eur} a year over ${kwh} kWh of heat, ${src}).`,
@@ -784,6 +865,10 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     this._config = { entity: "sensor.air_water_heatpump_audit_timeline", ...config };
     this._signature = null;
     this._selected = null;
+    let stored = null;
+    try { stored = window.localStorage.getItem(TL_RANGE_KEY); } catch (e) { /* ohne Speicher: Vorgabe */ }
+    const fallback = String(this._config.range ?? "90");
+    this._range = TL_RANGES.includes(stored) ? stored : TL_RANGES.includes(fallback) ? fallback : "90";
     if (!this.shadowRoot) this._build();
   }
 
@@ -821,6 +906,12 @@ class AirWaterAuditTimelineCard extends HTMLElement {
         h2 { margin: 0 0 4px; font-size: 1.2em; font-weight: 500; }
         .muted { color: var(--secondary-text-color); font-size: .9em; }
         .chart { margin-top: 14px; }
+        .range { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+        .range button { padding: 2px 10px; background: transparent; color: var(--primary-color);
+          border: 1px solid var(--primary-color); }
+        .range button.on { background: var(--primary-color); color: var(--text-primary-color, #fff); }
+        svg text.inline { font-size: 11px; font-weight: 600; paint-order: stroke; stroke-width: 3px;
+          stroke: var(--card-background-color, #fff); }
         .chart .label { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
         .chart .label b { font-weight: 500; }
         .legend { position: relative; cursor: help; color: var(--primary-color); font-size: .9em; outline: none; }
@@ -870,6 +961,14 @@ class AirWaterAuditTimelineCard extends HTMLElement {
       if (edit) { this._openEventForm(this._eventById(edit.dataset.edit)); return; }
       const del = ev.target.closest?.("[data-del]");
       if (del) { this._deleteEvent(this._eventById(del.dataset.del)); return; }
+      const range = ev.target.closest?.("[data-range]");
+      if (range) {
+        this._range = range.dataset.range;
+        this._selected = null;
+        try { window.localStorage.setItem(TL_RANGE_KEY, this._range); } catch (e) { /* nur für diese Sitzung */ }
+        this._update(true);
+        return;
+      }
       const i = ev.target?.dataset?.day;
       if (i === undefined) return;
       this._selected = Number(i) === this._selected ? null : Number(i);
@@ -912,14 +1011,18 @@ class AirWaterAuditTimelineCard extends HTMLElement {
       return;
     }
     const a = st.attributes;
-    const days = a.days ?? [];
+    const now = Date.now() / 1000;
+    const all = a.days ?? [];
+    const cutoff = this._range === "all" ? -Infinity : this._nextMidnight(now) - Number(this._range) * 86400;
+    const days = all.filter((d) => d.end > cutoff);
     const events = (a.events ?? []).map((e, i) => ({ ...e, n: i + 1, t: Date.parse(e.time) / 1000 }));
+    const ranges = all.length ? `<div class="range"><span class="muted">${esc(t.range.label)}:</span>${TL_RANGES.map((r) =>
+      `<button type="button" data-range="${r}" class="${r === this._range ? "on" : ""}">${esc(t.range[r])}</button>`).join("")}</div>` : "";
     if (!days.length) {
-      this._charts.innerHTML = title + `<p class="muted">${t.none}</p>` + this._eventList(events, null, t);
+      this._charts.innerHTML = title + ranges + `<p class="muted">${t.none}</p>` + this._eventList(events, null, t);
       return;
     }
     const x0 = days[0].start;
-    const now = Date.now() / 1000;
     const x1 = Math.max(days[days.length - 1].end, this._nextMidnight(now));
     const geo = { width, left: 44, right: 10, x0, x1, now };
     geo.x = (s) => geo.left + (s - x0) / (x1 - x0) * (width - geo.left - geo.right);
@@ -930,7 +1033,7 @@ class AirWaterAuditTimelineCard extends HTMLElement {
       k === 0, k === audits.length - 1)).join("");
     const sel = this._selected !== null && days[this._selected] ? this._dayDetails(days[this._selected], a.scales, t, events)
       : `<div class="muted" style="margin-top:8px">${t.pick}</div>`;
-    this._charts.innerHTML = title + charts + sel + this._eventList(events, x0, t);
+    this._charts.innerHTML = title + ranges + charts + sel + this._eventList(events, x0, t);
   }
 
   // Zugeschaltete Audits mit Zeitstrahl: Linien zuerst, Streifen (Datenbasis) zuletzt
@@ -955,7 +1058,9 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     const axisH = 16;
     const h = top + plotH + axisH;
     const refs = this._refStyles(scale.references ?? []);
+    const prev = scale.previous_heating;
     const values = days.flatMap((d) => [d[audit]?.value, ...refs.map((r) => d[audit]?.references?.[r.id])])
+      .concat(prev ? [prev.ct_per_kwh] : [])
       .filter((v) => v !== null && v !== undefined);
     const lo = scale.min ?? 0;
     let hi = scale.max;
@@ -1002,16 +1107,40 @@ class AirWaterAuditTimelineCard extends HTMLElement {
         path += `${open ? "L" : "M"}${geo.x((d.start + d.end) / 2).toFixed(1)},${y(v).toFixed(1)}`;
         open = true;
       });
-      // Vergleichslinien anderer Heizsysteme unter der eigenen Linie
+      // Frühere Heizung: durchgezogene Linie über die ganze Breite, links beschriftet (Spezifikation 7.2)
+      const labels = [];  // rechte Beschriftungen der Vergleichslinien, werden unten gestapelt
+      const label = (x, yy, anchor, color, text) =>
+        `<text class="inline" x="${x}" y="${yy}" text-anchor="${anchor}" style="fill:${color}">${esc(text)}</text>`;
+      let labelSvg = "";
+      if (prev) {
+        const color = REF_COLORS[prev.system] ?? "var(--primary-text-color)";
+        const py = y(prev.ct_per_kwh);
+        const text = t.previous(t.systems[prev.system] ?? prev.system, `${this._fmt(prev.ct_per_kwh, scale.decimals)}${this._unit(scale.unit, t)}`);
+        svg += `<line x1="${xl}" x2="${xr}" y1="${py}" y2="${py}" stroke="${color}" stroke-width="2"><title>${esc(text)}</title></line>`;
+        labelSvg += label(xl + 4, py - 4, "start", color, text);
+      }
+      // Vergleichslinien anderer Heizsysteme unter der eigenen Linie, am rechten Ende beschriftet
       for (const r of refs) {
-        let rp = "", ro = false;
+        let rp = "", ro = false, last = null;
         days.forEach((d) => {
           const v = d[audit]?.references?.[r.id];
           if (v === null || v === undefined) { ro = false; return; }
           rp += `${ro ? "L" : "M"}${geo.x(d.start).toFixed(1)},${y(v).toFixed(1)}L${geo.x(d.end).toFixed(1)},${y(v).toFixed(1)}`;
           ro = true;
+          last = { x: geo.x(d.end), v };
         });
-        if (rp) svg += `<path d="${rp}" fill="none" stroke="${r.color}" stroke-width="1.5" stroke-dasharray="${r.dash}"><title>${esc(this._refLabel(r, t))}</title></path>`;
+        if (!rp) continue;
+        svg += `<path d="${rp}" fill="none" stroke="${r.color}" stroke-width="2" stroke-dasharray="${r.dash}"><title>${esc(this._refLabel(r, t))}</title></path>`;
+        labels.push({ x: last.x - 2, y: y(last.v) - 4, color: r.color,
+          // Stromdirektheizung rechnet mit dem eigenen Haushaltsstrompreis, alle anderen mit Marktpreisen
+          text: `${t.systems[r.system] ?? r.system}${r.system === "direct_electric" ? "" : ` (${t.market})`} ${this._fmt(last.v, scale.decimals)}` });
+      }
+      // Von oben nach unten stapeln: jede Beschriftung mindestens 11 px unter der vorigen, nichts fällt weg
+      let floor = top + 9;
+      for (const l of labels.sort((p, q) => p.y - q.y)) {
+        l.y = Math.max(l.y, floor);
+        floor = l.y + 11;
+        labelSvg += label(l.x, l.y, "end", l.color, l.text);
       }
       svg += `<path d="${path}" fill="none" stroke="var(--primary-text-color)" stroke-opacity=".55" stroke-width="1.5"/>`;
       days.forEach((d, i) => {
@@ -1026,6 +1155,7 @@ class AirWaterAuditTimelineCard extends HTMLElement {
           stroke-width="${mixed ? 2 : 1.5}" style="cursor:pointer">
           <title>${esc(d.day)}: ${esc(this._fmt(p.value, scale.decimals))}${esc(this._unit(scale.unit, t))} (${esc(t.verdicts[p.verdict] ?? p.verdict)})${mixed ? ` – ${esc(t.mixed)}` : ""}</title></circle>`;
       });
+      svg += labelSvg;
     }
     // Tagesraster: Trennlinie an jeder Mitternacht, noch nicht vergangener Teil von heute abgedunkelt
     for (const g of geo.days) {
@@ -1052,7 +1182,8 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     const now = latest ? `${this._fmt(latest[audit].value, strip ? 1 : scale.decimals)}${this._unit(scale.unit, t)} (${esc(latest.day.slice(8, 10) + "." + latest.day.slice(5, 7) + ".")})` : "–";
     const note = t.notes[audit] && (!["capacity", "cost"].includes(audit) || (scale.bands ?? []).length) ? `<div class="muted">${t.notes[audit]}</div>` : "";
     // Legende (Vergleichslinien, feste Kosten) nur beim Überfahren; Handlungsbedarf bleibt sichtbar
-    const legend = this._refLegend(scale, refs, days, audit, t) + this._fixedNote(scale, t);
+    const legend = (scale.previous_heating ? `<div>${esc(t.previousLegend)}</div>` : "")
+      + this._refLegend(scale, refs, days, audit, t) + this._fixedNote(scale, t);
     const tip = legend ? `<span class="legend" tabindex="0">ⓘ ${esc(t.legend)}<div class="tip">${legend}</div></span>` : "";
     return `<div class="chart">
       <div class="label"><b>${esc(name)}</b><span class="muted">${esc(metric)} · ${t.latest} ${esc(now)}</span>${tip}</div>${note}

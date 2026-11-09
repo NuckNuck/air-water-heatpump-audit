@@ -132,7 +132,7 @@ Stromzähler der Wärmepumpe im Energie-Dashboard, wird dessen Preis vorgeschlag
 |---|---|
 | K1 Wärmepreis | Was eine Kilowattstunde Wärme in der letzten Woche gekostet hat, im Vergleich zum früheren Brennstoff (z. B. Gas). Grün bis 10 % teurer (Messgenauigkeit). |
 | K2 Kosten pro Jahr | Strom und Kosten aufs Jahr hochgerechnet, mit der Ersparnis gegenüber dem früheren Brennstoff (nur Info). Mit der Wohnfläche dazu der Verbrauch je m² und die ungefähre Klasse im Energieausweis, mit den Personen die Kosten je Person. Braucht die Gradtage des Wohnorts und 14 Tage. |
-| K3 Wärmepumpentarif | Ob sich ein eigener Wärmepumpentarif mit zweitem Zähler gegenüber Haushaltsstrom lohnt. |
+| K3 Wärmepumpentarif | Ob sich ein eigener Wärmepumpentarif mit zweitem Zähler gegenüber Haushaltsstrom lohnt, und ab welchem Haushaltsstrompreis bzw. Jahresverbrauch er sich lohnen würde (mit Diagramm). Hinweis auf das reduzierte Netzentgelt nach § 14a EnWG, das an den eigenen Zähler gebunden ist. |
 | K4 Strompreis dynamisch | Nur bei dynamischem Tarif: ob die Wärmepumpe bevorzugt in teuren Stunden läuft. |
 | K5 Sperrzeiten | Nur mit Sperrsignal des Netzbetreibers: wie oft und wie lange gesperrt oder gedimmt wird; gelb, wenn währenddessen oder danach der Heizstab nachheizt. |
 
@@ -205,7 +205,10 @@ Eine zweite Karte zeigt je Tag einen Wert pro Audit (Gütegrad, Pufferverlust, S
 Wärmepreis, Datenabdeckung) mit
 denselben Ampelgrenzen, dazu die Ereignisse als senkrechte Linien. Die Tageswerte speichert die Integration selbst,
 sie bleiben also auch erhalten, wenn Home Assistant die alten Rohdaten löscht. Der Zeitstrahl beginnt mit dem
-ersten Tag, an dem Messwerte ankamen; Lücken danach bleiben sichtbar.
+ersten Tag, an dem Messwerte ankamen; Lücken danach bleiben sichtbar. Oben wählt man den gezeigten Zeitraum: 30 Tage,
+90 Tage (Vorgabe, änderbar mit der Kartenoption `range`), 1 Jahr oder alles; der Browser merkt sich die Auswahl. Im
+Kosten-Zeitstrahl zeigt eine durchgezogene Linie den Wärmepreis der früheren Heizung, die gestrichelten Linien die
+aktuellen Marktpreise anderer Heizsysteme, jeweils mit Beschriftung an der Linie.
 
 ## Was brauche ich?
 
