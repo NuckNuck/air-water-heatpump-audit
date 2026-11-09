@@ -10,6 +10,7 @@ from typing import Any
 from homeassistant.components.recorder import get_instance
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
@@ -45,6 +46,16 @@ def timeline_store(hass: HomeAssistant, entry_id: str) -> Store:
     return Store(hass, TIMELINE_STORE_VERSION, f"{DOMAIN}.timeline.{entry_id}")
 
 
+SIGNAL_PROGRESS = f"{DOMAIN}_progress"  # Dispatcher-Signal: (entry_id, Fortschritt), Spezifikation 8.1
+STEP_LOAD, STEP_STATISTICS, STEP_COMPUTE, STEP_STORE = "load", "statistics", "compute", "store"
+
+
+def structure(entry: ConfigEntry) -> tuple:
+    """Was die Menge der Sensoren bestimmt (Rollen, Audits); ändert es sich, wird der Eintrag neu geladen (8.1)."""
+    subs = tuple(sorted((s.subentry_id, s.subentry_type, repr(sorted(s.data.items()))) for s in entry.subentries.values()))
+    return repr(sorted(entry.data.items())), subs
+
+
 # Für D1: Ab wann reichen die Rohdaten in InfluxDB zurück? Erste vorhandene Rolle dieser Liste.
 DEPTH_ROLES = ("compressor_running", "flow_temp", "heartbeat")
 
@@ -60,6 +71,43 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._store = timeline_store(hass, entry.entry_id)
         self._timeline_days: list[dict] | None = None  # None = noch nicht aus dem Speicher geladen
         self._warned_prices: set[str] = set()  # Preis-Sensoren, zu denen schon eine Warnung im Log steht
+        self.structure = structure(entry)
+        self._last_duration: float | None = None  # Dauer des letzten vollständigen Laufs, im Zeitstrahl-Speicher
+        self._rerun = False  # Optionen während eines Laufs geändert → danach noch ein Lauf
+        self._scheduled = False  # Lauf angestoßen, aber noch nicht begonnen: liest die Optionen ohnehin frisch
+        self._progress: dict[str, Any] = {"running": False, "step": None, "done": 0, "total": 1, "started": None}
+
+    def progress(self) -> dict[str, Any]:
+        """Stand des Laufs für das WebSocket-Abo (Spezifikation 8.1)."""
+        return {"entry_id": self.config_entry.entry_id, **self._progress, "last_duration_s": self._last_duration}
+
+    def _set_progress(self, **changes: Any) -> None:
+        self._progress |= changes
+        async_dispatcher_send(self.hass, SIGNAL_PROGRESS, self.config_entry.entry_id, self.progress())
+
+    def _advance(self, step: str | None = None) -> None:
+        self._set_progress(done=min(self._progress["done"] + 1, self._progress["total"]),
+                           **({"step": step} if step else {}))
+
+    def request_rerun(self) -> None:
+        """Optionen geändert: sofort neu rechnen, ohne die bisherigen Ergebnisse zu verwerfen (8.1). Läuft schon ein
+        Lauf, folgt nach ihm genau ein weiterer."""
+        if self._progress["running"]:
+            self._rerun = True
+        elif not self._scheduled:
+            self._scheduled = True
+            self.config_entry.async_create_task(self.hass, self.async_refresh(), f"{DOMAIN}_rerun")
+
+    async def async_load_store(self) -> None:
+        """Gespeicherte Tage und Dauer des letzten Laufs laden (einmal je Laufzeit)."""
+        if self._timeline_days is not None:
+            return
+        stored = await self._store.async_load() or {}
+        if not stored and (old := self.config_entry.data.get(CONF_IMPORT_TIMELINE_FROM)):
+            # Übernahme aus „WP-Audit“: dessen gespeicherte Tageswerte einmalig lesen
+            stored = await Store(self.hass, TIMELINE_STORE_VERSION, f"{LEGACY_DOMAIN}.timeline.{old}").async_load() or {}
+        self._timeline_days = stored.get("days", [])
+        self._last_duration = stored.get("last_duration_s")
 
     def _option(self, key: str):
         return self.config_entry.options.get(key, DEFAULT_OPTIONS[key])
@@ -195,6 +243,19 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return None if self._influx_since is None else (end - self._influx_since) / 86400
 
     async def _async_update_data(self) -> dict[str, Any]:
+        """Ein Lauf; wurden die Optionen währenddessen geändert, gleich noch einer (Spezifikation 8.1)."""
+        self._scheduled = False
+        await self.async_load_store()
+        try:
+            while True:
+                self._rerun = False
+                report = await self._run()
+                if not self._rerun:
+                    return report
+        finally:
+            self._set_progress(running=False, step=None, done=self._progress["total"])
+
+    async def _run(self) -> dict[str, Any]:
         price_refs = self._price_refs()
         # Preis-Sensoren laden wie Rollen; der Präfix hält sie getrennt von den Rollen-Keys
         roles = self._roles() | {PRICE_ROLE_PREFIX + r["id"]: r["id"] for r in price_refs or []}
@@ -204,10 +265,14 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         long_term_days = None
         from_recorder = list(roles)
         t0 = time.monotonic()
+        # Schritte: je InfluxDB-Abfrage einer, Recorder, Statistik, Rechnen, Speichern
+        queries = influx_source.query_count(roles) if conn is not None else 0
+        self._set_progress(running=True, step=STEP_LOAD, done=0, total=queries + 4,
+                           started=dt_util.utcnow().isoformat())
         start, end = self.window(None if conn else recorder.keep_days)
         if conn is not None:
             try:
-                series = await influx_source.load_series(self.hass, conn, roles, start, end)
+                series = await influx_source.load_series(self.hass, conn, roles, start, end, self._advance)
                 long_term_days = await self._influx_depth_days(conn, roles, end)
                 # Rollen, die InfluxDB nicht hat (z. B. per include/exclude ausgefiltert), kommen aus dem Recorder.
                 from_recorder = [r for r in roles if not series.get(r)]
@@ -217,16 +282,20 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 conn, series = None, {}
                 start, end = self.window(recorder.keep_days)
                 from_recorder = list(roles)
+                self._set_progress(done=queries)
         if from_recorder:
             # Datenbankzugriff im Executor des Recorders, das Rechnen im allgemeinen Executor.
             series |= await recorder.async_add_executor_job(
                 self._load_recorder, {r: roles[r] for r in from_recorder}, start, end)
+        self._advance(STEP_STATISTICS)
         stats = await recorder.async_add_executor_job(self._load_statistics, roles, start, end)
+        self._advance(STEP_COMPUTE)
         t1 = time.monotonic()
         report = await self.hass.async_add_executor_job(self._compute, series, start, end, recorder.keep_days,
                                                         long_term_days, self._controls(), price_refs, stats)
         report["runtime_s"] = {"load": round(t1 - t0, 2), "audits": round(time.monotonic() - t1, 2)}
-        report["timeline"]["days"] = await self._merge_timeline(report["timeline"]["days"])
+        self._advance(STEP_STORE)
+        report["timeline"]["days"] = await self._merge_timeline(report["timeline"]["days"], time.monotonic() - t0)
         report["events"] = sorted(self._events(), key=lambda e: e["time"])
         report["points"] = {r: len(s) for r, s in series.items()}
         report["source"] = {"used": SOURCE_INFLUXDB if conn else SOURCE_RECORDER,
@@ -234,13 +303,9 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         _LOGGER.debug("Audit gerechnet: %s, Quelle %s", report["runtime_s"], report["source"])
         return report
 
-    async def _merge_timeline(self, fresh: list[dict]) -> list[dict]:
-        if self._timeline_days is None:
-            stored = await self._store.async_load() or {}
-            if not stored and (old := self.config_entry.data.get(CONF_IMPORT_TIMELINE_FROM)):
-                # Übernahme aus „WP-Audit“: dessen gespeicherte Tageswerte einmalig lesen
-                stored = await Store(self.hass, TIMELINE_STORE_VERSION, f"{LEGACY_DOMAIN}.timeline.{old}").async_load() or {}
-            self._timeline_days = stored.get("days", [])
+    async def _merge_timeline(self, fresh: list[dict], duration: float) -> list[dict]:
+        await self.async_load_store()
         self._timeline_days = timeline.merge(self._timeline_days, fresh)
-        await self._store.async_save({"days": self._timeline_days})
+        self._last_duration = round(duration, 1)
+        await self._store.async_save({"days": self._timeline_days, "last_duration_s": self._last_duration})
         return self._timeline_days
