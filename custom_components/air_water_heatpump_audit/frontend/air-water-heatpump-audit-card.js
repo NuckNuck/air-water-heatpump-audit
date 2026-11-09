@@ -286,7 +286,7 @@ class AirWaterAuditCard extends HTMLElement {
     const loc = this._hass.locale?.language || this._hass.language;
     const f = (v, n = 0) => Number(v).toLocaleString(loc, { minimumFractionDigits: n, maximumFractionDigits: n });
     const pT = d.tariff_ct, pH = d.household_ct, E = d.electricity_kwh, F = d.base_fee_eur ?? 0;
-    const W = 420, H = 210, L = 52, R = 12, T = 10, B = 34;
+    const W = 620, H = 210, L = 52, R = 12, T = 10, B = 34;
     const xMin = pT, xMax = Math.max(pH, d.break_even_household_ct, pT + 4) * 1.25 + 2;
     const yMax = Math.max(E, d.break_even_kwh ?? 0) * 1.8;
     const x = (v) => L + (v - xMin) / (xMax - xMin) * (W - L - R);
@@ -324,7 +324,7 @@ class AirWaterAuditCard extends HTMLElement {
       <title>${esc(m.you)}: ${esc(f(pH, 1))} ct/kWh, ${esc(f(E))} kWh</title></circle>
       <text x="${x(pH) + 8}" y="${y(E) + 4}" class="you">${esc(m.you)}</text>`;
     return `<div class="meter"><div class="mtitle">${esc(m.title)}</div>
-      <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px" role="img" aria-label="${esc(m.title)}">
+      <svg viewBox="0 0 ${W} ${H}" width="${W}" style="width:${W}px; max-width:${W}px" role="img" aria-label="${esc(m.title)}">
         <rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="${COLORS.hint}" fill-opacity=".18"/>
         <path d="${pays}" fill="${COLORS.ok}" fill-opacity=".22"/>
         ${ticks}
