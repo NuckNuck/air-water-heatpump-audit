@@ -6,7 +6,7 @@ Assistant 2026.11) bieten sie als Update an.
 Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/): Solange die Hauptversion 0 ist, kann jede
 Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
-## [0.19.0] – in Arbeit
+## [0.19.0] – 2026-11-09
 
 ### Neu
 - **K3: Lohnt sich der eigene Zähler?** (#25) Neben der Ersparnis nennt K3 jetzt, ab welchem Haushaltsstrompreis und
