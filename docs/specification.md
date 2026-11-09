@@ -611,8 +611,8 @@ Geplant: Anteil eigener PV-Strom (Rolle für Netzbezug bzw. Eigenverbrauch).
   `help.py`, Aktionen in `actions.py`.
 - **Tests:** `python3 -m unittest` (Kern, inkl. Vergleichsbericht einer synthetischen Anlage in `tests/golden/`),
   `pytest tests_ha` (Integration).
-- **Zeitstrahl-Karte:** Umschalter für den gezeigten Zeitraum: 30 Tage, 90 Tage, 1 Jahr, alles (F285 a). Vorgabe
-  über die Kartenoption `range` (`30`, `90`, `365`, `all`; Standard `90`); die Auswahl im Browser bleibt je Gerät
+- **Zeitstrahl-Karte:** Umschalter für den gezeigten Zeitraum: 3 Tage, 7 Tage, 30 Tage, 90 Tage, 1 Jahr, alles
+  (F285 a). Vorgabe über die Kartenoption `range` (`3`, `7`, `30`, `90`, `365`, `all`; Standard `90`); die Auswahl im Browser bleibt je Gerät
   erhalten. Gespeichert und gerechnet wird unabhängig davon über alle Tage. Vergleichslinien im Kosten-Zeitstrahl
   tragen ihre Beschriftung am rechten Ende der Linie.
 
