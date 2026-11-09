@@ -14,6 +14,11 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
   alle Audits „nicht verfügbar“. Jetzt bleiben die bisherigen Ergebnisse stehen und es wird im Hintergrund neu
   gerechnet. Neu geladen wird nur noch, wenn sich Rollen oder Audits ändern.
 
+### Schneller
+- **Rohdaten bleiben zwischen den Läufen im Speicher** (#35): Statt bei jedem Lauf das ganze Fenster neu zu laden,
+  holt die Integration nur das Neue seit dem letzten Lauf. Ganz geladen wird nach dem Start, bei geänderten Rollen,
+  Preis-Sensoren oder Datenquelle, nach einem Fehler und einmal am Tag (Spezifikation 8.2).
+
 ### Neu
 - **Hinweis „Wird aktualisiert …“ mit Fortschrittsbalken** in Audit- und Zeitstrahl-Karte, solange gerechnet wird,
   mit Schritt und geschätzter Restzeit (aus der Dauer des letzten Laufs). Grundlage ist das neue WebSocket-Abo

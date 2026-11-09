@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from . import influx_source
+from .series_cache import SeriesCache
 from .audit_core import timeline
 from .audit_core.actions import CONTROL_ROLES
 from .audit_core import heating_prices
@@ -72,6 +73,7 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._timeline_days: list[dict] | None = None  # None = noch nicht aus dem Speicher geladen
         self._warned_prices: set[str] = set()  # Preis-Sensoren, zu denen schon eine Warnung im Log steht
         self.structure = structure(entry)
+        self._cache = SeriesCache()  # Rohdaten des letzten Laufs (Spezifikation 8.2)
         self._last_duration: float | None = None  # Dauer des letzten vollständigen Laufs, im Zeitstrahl-Speicher
         self._rerun = False  # Optionen während eines Laufs geändert → danach noch ein Lauf
         self._scheduled = False  # Lauf angestoßen, aber noch nicht begonnen: liest die Optionen ohnehin frisch
@@ -261,32 +263,44 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         roles = self._roles() | {PRICE_ROLE_PREFIX + r["id"]: r["id"] for r in price_refs or []}
         recorder = get_instance(self.hass)
         conn, note = self._influx_connection()
-        series: dict = {}
         long_term_days = None
-        from_recorder = list(roles)
         t0 = time.monotonic()
+        start, end = self.window(None if conn else recorder.keep_days)
+        source_key = ("influxdb", conn.url, conn.bucket) if conn else ("recorder",)
+        # Nur nachladen, wenn der letzte Lauf dasselbe gelesen hat (Spezifikation 8.2)
+        since = self._cache.delta_start((source_key, tuple(sorted(roles.items()))), start, end)
+        load_from = start if since is None else since
+        series: dict = {}
+        from_recorder = self._cache.from_recorder if since is not None else list(roles)
+        to_load = {r: e for r, e in roles.items() if since is None or r not in from_recorder}
         # Schritte: je InfluxDB-Abfrage einer, Recorder, Statistik, Rechnen, Speichern
-        queries = influx_source.query_count(roles) if conn is not None else 0
+        queries = influx_source.query_count(to_load) if conn is not None else 0
         self._set_progress(running=True, step=STEP_LOAD, done=0, total=queries + 4,
                            started=dt_util.utcnow().isoformat())
-        start, end = self.window(None if conn else recorder.keep_days)
         if conn is not None:
             try:
-                series = await influx_source.load_series(self.hass, conn, roles, start, end, self._advance)
+                series = await influx_source.load_series(self.hass, conn, to_load, load_from, end, self._advance)
                 long_term_days = await self._influx_depth_days(conn, roles, end)
                 # Rollen, die InfluxDB nicht hat (z. B. per include/exclude ausgefiltert), kommen aus dem Recorder.
-                from_recorder = [r for r in roles if not series.get(r)]
+                if since is None:
+                    from_recorder = [r for r in roles if not series.get(r)]
             except influx_source.InfluxError as err:
                 _LOGGER.warning("InfluxDB nicht nutzbar, rechne mit dem Recorder: %s", err)
                 note = f"InfluxDB nicht erreichbar ({err}), Recorder genutzt."
-                conn, series = None, {}
+                conn, series, since = None, {}, None
+                self._cache.clear()
                 start, end = self.window(recorder.keep_days)
+                load_from, source_key = start, ("recorder",)
                 from_recorder = list(roles)
                 self._set_progress(done=queries)
         if from_recorder:
             # Datenbankzugriff im Executor des Recorders, das Rechnen im allgemeinen Executor.
             series |= await recorder.async_add_executor_job(
-                self._load_recorder, {r: roles[r] for r in from_recorder}, start, end)
+                self._load_recorder, {r: roles[r] for r in from_recorder}, load_from, end)
+        if since is not None:
+            series = self._cache.merge(series, start, since)
+        self._cache.keep((source_key, tuple(sorted(roles.items()))), series, from_recorder, end,
+                         full=since is None)
         self._advance(STEP_STATISTICS)
         stats = await recorder.async_add_executor_job(self._load_statistics, roles, start, end)
         self._advance(STEP_COMPUTE)
