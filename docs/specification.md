@@ -540,16 +540,19 @@ E = Jahresstrom aus K2 (kWh) lohnt sich der eigene Zähler genau dann, wenn (p_H
 | `base_fee_eur` | F |
 | `tariff_ct`, `household_ct` | p_T und p_H in ct/kWh |
 | `break_even_household_ct` | Haushaltsstrompreis, ab dem der eigene Zähler sich beim heutigen Jahresstrom lohnt: 100 × (p_T + F ÷ E), ct/kWh auf eine Nachkommastelle; bei F = 0 gleich `tariff_ct` |
+| `break_even_gap_ct` | nötiger Abstand Haushaltsstrom − Wärmepumpentarif beim heutigen Jahresstrom: 100 × F ÷ E, ct/kWh auf eine Nachkommastelle; 0 bei F = 0. Unabhängig von der Preishöhe; es gilt `break_even_household_ct` = `tariff_ct` + `break_even_gap_ct` (bis auf Rundung) |
 | `break_even_kwh` | Jahresstrom der Wärmepumpe, ab dem der eigene Zähler sich beim heutigen Haushaltsstrompreis lohnt: F ÷ (p_H − p_T), kWh gerundet; 0 bei F = 0; `null`, wenn p_H ≤ p_T und F > 0 (lohnt sich bei keinem Verbrauch) |
 
 Der Text nennt beide Grenzen in einem Satz („lohnt sich ab … ct/kWh Haushaltsstrom oder ab ≈ … kWh
-Wärmepumpenstrom im Jahr“; bei `break_even_kwh` = `null` „bei keinem Verbrauch“). Ist `reduced_grid_fee` gesetzt,
+Wärmepumpenstrom im Jahr“; bei `break_even_kwh` = `null` „bei keinem Verbrauch“) und den nötigen Abstand mit dem
+heutigen („nötig sind … ct/kWh Abstand zum Haushaltsstrom, heute … ct/kWh“). Ist `reduced_grid_fee` gesetzt,
 folgt der Hinweis auf § 14a EnWG: Das reduzierte Netzentgelt für steuerbare Verbrauchseinrichtungen (Modul 2,
 BK6-22-300 Anl. 1) setzt einen eigenen Zähler voraus, steckt im Wärmepumpentarif und entfiele beim Zusammenlegen;
 ohne `reduced_grid_fee` fehlt der Hinweis. Das Audit rechnet damit nicht, der Vergleich nutzt die eingetragenen
 Arbeitspreise. Die Tabellenkarte zeichnet aus diesen Feldern ein Diagramm: Haushaltsstrompreis (x) gegen
 Jahresstrom (y), die Grenzkurve E = F ÷ (p_H − p_T), darüber „eigener Zähler lohnt sich“, darunter „Haushaltszähler
-günstiger“, die eigene Lage (`household_ct`, `electricity_kwh`) als Punkt.
+günstiger“, die eigene Lage (`household_ct`, `electricity_kwh`) als Punkt; oben eine zweite x-Achse mit dem
+Abstand zum Wärmepumpentarif (p_H − p_T in ct/kWh).
 
 **Gesamturteil Audit 5:** schlechtestes Urteil aus K1, K3–K5; K2 ist Information. Zeitstrahl: Wärmepreis je Tag (mit festen
 Kosten je kWh, sobald die Jahreswärme bekannt ist) mit dem Band von K1. Die Skala nennt unter `fixed_costs`, was
