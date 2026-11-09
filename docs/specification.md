@@ -111,6 +111,7 @@ Options Flow mit Menü: „Anlagendaten“ in Abschnitten und „Haushalt“ mit
 | Kosten | `tariff_base_fee_period` | `month` oder `year`, wie im Vertrag; leer = `year` (Einträge vor 0.18.0b5); Vorauswahl `month` | K1–K3 |
 | Kosten | `meter_fee` | Zählermiete (Messstellenentgelt) des Wärmepumpenzählers (€ je `meter_fee_period`); leer = nicht eingetragen, 0 = keine | K1–K3 |
 | Kosten | `meter_fee_period` | `month` oder `year`, wie auf der Rechnung; leer = `year`; Vorauswahl `year` | K1–K3 |
+| Kosten | `reduced_grid_fee` | Wärmepumpentarif mit reduziertem Netzentgelt nach § 14a EnWG (Modul 2): `true`/`false`, Standard `false`. Nur mit `heat_pump_meter` = `separate_meter` zulässig; das Formular lehnt `true` am Haushaltszähler ab | K3 |
 | Kosten | `household_price` | Arbeitspreis des Haushaltsstroms (je `household_price_unit`) | K3 |
 | Kosten | `previous_heating_system` | frühere Heizung (`natural_gas`, `heating_oil`, `wood_pellets`, `district_heating`, `direct_electric`, `none` = Neubau); für dieses System gilt `reference_efficiency` | K1, K2, Zeitstrahl |
 | Kosten | `previous_consumption`, `previous_consumption_unit` | früherer Jahresverbrauch so, wie er auf der Abrechnung steht (`kWh`, `MWh`, `L`, `kg`, `t`) | Jahreswärme (7.1) |
@@ -542,10 +543,11 @@ E = Jahresstrom aus K2 (kWh) lohnt sich der eigene Zähler genau dann, wenn (p_H
 | `break_even_kwh` | Jahresstrom der Wärmepumpe, ab dem der eigene Zähler sich beim heutigen Haushaltsstrompreis lohnt: F ÷ (p_H − p_T), kWh gerundet; 0 bei F = 0; `null`, wenn p_H ≤ p_T und F > 0 (lohnt sich bei keinem Verbrauch) |
 
 Der Text nennt beide Grenzen in einem Satz („lohnt sich ab … ct/kWh Haushaltsstrom oder ab ≈ … kWh
-Wärmepumpenstrom im Jahr“; bei `break_even_kwh` = `null` „bei keinem Verbrauch“) und, bei eigenem Zähler, den
-Hinweis auf § 14a EnWG: Ein reduziertes Netzentgelt für steuerbare Verbrauchseinrichtungen (Modul 2, BK6-22-300
-Anl. 1) setzt einen eigenen Zähler voraus, steckt oft schon im Wärmepumpentarif und entfiele beim Zusammenlegen. Das
-Audit rechnet damit nicht. Die Tabellenkarte zeichnet aus diesen Feldern ein Diagramm: Haushaltsstrompreis (x) gegen
+Wärmepumpenstrom im Jahr“; bei `break_even_kwh` = `null` „bei keinem Verbrauch“). Ist `reduced_grid_fee` gesetzt,
+folgt der Hinweis auf § 14a EnWG: Das reduzierte Netzentgelt für steuerbare Verbrauchseinrichtungen (Modul 2,
+BK6-22-300 Anl. 1) setzt einen eigenen Zähler voraus, steckt im Wärmepumpentarif und entfiele beim Zusammenlegen;
+ohne `reduced_grid_fee` fehlt der Hinweis. Das Audit rechnet damit nicht, der Vergleich nutzt die eingetragenen
+Arbeitspreise. Die Tabellenkarte zeichnet aus diesen Feldern ein Diagramm: Haushaltsstrompreis (x) gegen
 Jahresstrom (y), die Grenzkurve E = F ÷ (p_H − p_T), darüber „eigener Zähler lohnt sich“, darunter „Haushaltszähler
 günstiger“, die eigene Lage (`household_ct`, `electricity_kwh`) als Punkt.
 
