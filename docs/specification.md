@@ -619,6 +619,36 @@ Geplant: Anteil eigener PV-Strom (Rolle für Netzbezug bzw. Eigenverbrauch).
   erhalten. Gespeichert und gerechnet wird unabhängig davon über alle Tage. Vergleichslinien im Kosten-Zeitstrahl
   tragen ihre Beschriftung am rechten Ende der Linie.
 
+### 8.1 Aktualisieren und Fortschritt
+
+Ein Lauf (Laden + Rechnen) dauert je nach Datenmenge eine halbe Minute und mehr. Die Seite darf in dieser Zeit nicht
+leer werden (Issue #31).
+
+- **Optionen geändert** (Ereignisse, Haushalt, Stammdaten, Einstellungen): Der Eintrag wird **nicht** neu geladen.
+  Die Sensoren behalten die Ergebnisse des letzten Laufs und bleiben verfügbar; ein neuer Lauf startet sofort und
+  rechnet mit den neuen Optionen. Ändert sich während eines Laufs erneut etwas, folgt nach seinem Ende genau ein
+  weiterer Lauf.
+- **Rollen oder Audits geändert** (Eintragsdaten, Untereinträge): Der Eintrag wird neu geladen, weil Sensoren
+  hinzukommen oder wegfallen.
+- **Fortschritt** per WebSocket-Abo `air_water_heatpump_audit/progress/subscribe` (optional `entry_id`; ohne
+  alle Einträge der Integration; Leserecht genügt). Unbekannte `entry_id` → Fehler `not_found`. Sofort nach dem Abo
+  kommt je Eintrag der aktuelle Stand, danach bei jeder Änderung eine Nachricht:
+
+  | Feld | Bedeutung |
+  |---|---|
+  | `entry_id` | Eintrag |
+  | `running` | `true`, solange ein Lauf läuft |
+  | `step` | aktueller Schritt: `load` (Rohdaten), `statistics` (Langzeitstatistik), `compute` (Audits), `store` (Zeitstrahl speichern); `null`, wenn kein Lauf läuft |
+  | `done`, `total` | erledigte und alle Schritte des Laufs (`0 ≤ done ≤ total`, `total ≥ 1`); `done = total` nach dem Ende |
+  | `started` | Beginn des Laufs (ISO-Zeit), `null` vor dem ersten Lauf |
+  | `last_duration_s` | Dauer des letzten vollständigen Laufs in Sekunden; `null`, wenn noch keiner fertig wurde. Bleibt über einen Neustart erhalten. |
+
+  Der Laden-Schritt kann in mehrere Teilschritte zerfallen (je Abfrage einer), `total` steht zu Beginn des Laufs fest.
+- **Karten:** Solange ein Lauf läuft, zeigen Audit- und Zeitstrahl-Karte oben den Hinweis „Wird aktualisiert …“
+  mit Schritt und Fortschrittsbalken; die bisherigen Ergebnisse bleiben darunter stehen. Gibt es noch keine
+  Ergebnisse (z. B. nach dem Start), steht der Hinweis an ihrer Stelle. Der Balken schätzt aus den Schritten und der
+  Dauer des letzten Laufs und erreicht 100 % erst am Ende des Laufs.
+
 ---
 
 ## 9. Quellen

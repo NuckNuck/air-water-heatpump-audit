@@ -174,7 +174,95 @@ function formatValue(value, unit, locale) {
   return unit ? `${text} ${unit}` : String(text);
 }
 
-class AirWaterAuditCard extends HTMLElement {
+// Fortschritt eines Laufs (Spezifikation 8.1): ein WebSocket-Abo je Verbindung, alle Karten hören mit. Ohne das Abo
+// (ältere Integration) bleibt der Hinweis einfach aus.
+const PROGRESS_TEXT = {
+  de: { title: "Wird aktualisiert …", first: "Die Auswertung läuft, die Ergebnisse folgen gleich.",
+        steps: { load: "Daten laden", statistics: "Langzeitstatistik lesen", compute: "Audits rechnen", store: "Speichern" },
+        step: (d, n) => `Schritt ${d + 1} von ${n}`, left: (s) => `noch etwa ${s} s` },
+  en: { title: "Updating …", first: "The evaluation is running, results follow shortly.",
+        steps: { load: "Loading data", statistics: "Reading long-term statistics", compute: "Computing audits", store: "Saving" },
+        step: (d, n) => `step ${d + 1} of ${n}`, left: (s) => `about ${s} s left` },
+};
+const PROGRESS_CSS = `
+  .refresh { margin: 0 0 12px; padding: 8px 10px; border-radius: 8px; background: var(--secondary-background-color); }
+  .refresh .rt { font-size: .9em; color: var(--secondary-text-color); margin-bottom: 6px; }
+  .refresh .rt b { color: var(--primary-text-color); font-weight: 500; }
+  .refresh .pbar { height: 8px; border-radius: 4px; background: var(--divider-color); overflow: hidden; }
+  .refresh .pfill { height: 100%; width: 0; background: var(--primary-color); transition: width .9s linear; }
+  .refresh[hidden] { display: none; }`;
+const PROGRESS_HTML = `<div class="refresh" hidden><div class="rt"></div><div class="pbar"><div class="pfill"></div></div></div>`;
+const progressHub = { conn: null, unsub: null, states: new Map(), listeners: new Set() };
+
+function watchProgress(hass, listener) {
+  if (progressHub.conn !== hass.connection) {
+    progressHub.unsub?.then((u) => u()).catch(() => {});
+    progressHub.conn = hass.connection;
+    progressHub.states.clear();
+    progressHub.unsub = hass.connection.subscribeMessage((msg) => {
+      progressHub.states.set(msg.entry_id, msg);
+      progressHub.listeners.forEach((l) => l());
+    }, { type: "air_water_heatpump_audit/progress/subscribe" });
+    progressHub.unsub.catch(() => {});
+  }
+  progressHub.listeners.add(listener);
+  return () => progressHub.listeners.delete(listener);
+}
+
+const runningProgress = () => [...progressHub.states.values()].find((p) => p.running) ?? null;
+
+// Schätzung aus Schritten und Dauer des letzten Laufs; 100 % erst, wenn der Lauf fertig ist.
+function progressEstimate(p) {
+  const elapsed = Math.max(0, (Date.now() - Date.parse(p.started)) / 1000);
+  const last = p.last_duration_s;
+  const frac = Math.min(0.97, Math.max(p.done / p.total, last ? elapsed / last : 0));
+  return { frac, left: last ? Math.max(1, Math.round(last - elapsed)) : null };
+}
+
+// Füllt den Hinweis in `root`; true, solange ein Lauf läuft.
+function paintProgress(root, lang) {
+  const box = root?.querySelector(".refresh");
+  const p = runningProgress();
+  if (!box) return !!p;
+  box.hidden = !p;
+  if (!p) return false;
+  const t = PROGRESS_TEXT[lang];
+  const { frac, left } = progressEstimate(p);
+  box.querySelector(".rt").innerHTML = `<b>${esc(t.title)}</b> ` + esc([t.steps[p.step], t.step(p.done, p.total),
+    left !== null ? t.left(left) : null].filter(Boolean).join(" · "));
+  box.querySelector(".pfill").style.width = `${Math.round(frac * 100)}%`;
+  return true;
+}
+
+// Gemeinsam für beide Karten: Abo beim ersten `hass`, Neuzeichnen des Hinweises im Sekundentakt, solange es läuft.
+const ProgressMixin = (Base) => class extends Base {
+  _watchProgress(hass) {
+    if (!this._unwatch) this._unwatch = watchProgress(hass, () => this._onProgress());
+  }
+
+  _lang() {
+    return (this._hass?.language || "en").startsWith("de") ? "de" : "en";
+  }
+
+  _onProgress() {
+    this._paintProgress();
+  }
+
+  _paintProgress() {
+    const running = paintProgress(this.shadowRoot, this._lang());
+    if (running && !this._ticker) this._ticker = setInterval(() => this._paintProgress(), 1000);
+    if (!running && this._ticker) { clearInterval(this._ticker); this._ticker = null; }
+    return running;
+  }
+
+  _stopProgress() {
+    this._unwatch?.();
+    this._unwatch = null;
+    if (this._ticker) { clearInterval(this._ticker); this._ticker = null; }
+  }
+};
+
+class AirWaterAuditCard extends ProgressMixin(HTMLElement) {
   // `entities`: mehrere Audits in einer gemeinsamen Tabelle (gleiche Spaltenbreiten, Audit-Titel als Zwischenzeile).
   // `entity`: ein einzelnes Audit. Ohne beides: alle zugeschalteten Audits in Registry-Reihenfolge.
   setConfig(config) {
@@ -241,8 +329,26 @@ class AirWaterAuditCard extends HTMLElement {
     window.addEventListener("scroll", () => { this._tipPinned = null; hide(); }, { passive: true, capture: true });
   }
 
+  connectedCallback() {
+    if (this._hass) this._watchProgress(this._hass);
+  }
+
+  disconnectedCallback() {
+    this._stopProgress();
+  }
+
+  // Beginnt oder endet ein Lauf, ändert sich auch der Text an Stelle fehlender Ergebnisse → neu zeichnen.
+  _onProgress() {
+    const running = !!runningProgress();
+    if (running !== this._wasRunning && this.shadowRoot?.innerHTML) {
+      this._wasRunning = running;
+      this._render();
+    } else this._paintProgress();
+  }
+
   set hass(hass) {
     this._hass = hass;
+    this._watchProgress(hass);
     const audits = this._entities.map((e) => hass.states[e]);
     const checks = audits.flatMap((a) => a?.attributes?.checks ?? []);
     const checkStates = checks.map((c) => hass.states[c.entity_id]);
@@ -572,7 +678,8 @@ class AirWaterAuditCard extends HTMLElement {
         ${a.entry_id ? settingsLink(a.entry_id, t.settings) : ""}
       </div>${a.heat ? `<div class="heat">${esc(t.heat(a.heat))}</div>` : ""}</td></tr>`;
     if (audit.state === "unavailable" || audit.state === "unknown") {
-      return head + `<tr><td colspan="${span}" class="msg">${t.waiting}</td></tr>`;
+      const msg = runningProgress() ? PROGRESS_TEXT[this._lang()].first : t.waiting;
+      return head + `<tr><td colspan="${span}" class="msg">${esc(msg)}</td></tr>`;
     }
     this._entryId = a.entry_id;
     return head + (a.checks ?? []).map((c) => this._checkRow(c, t)).join("");
@@ -676,8 +783,10 @@ class AirWaterAuditCard extends HTMLElement {
         .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px;
           box-shadow: inset 0 0 0 2px var(--c); }
         .dot.done { background: var(--c); }
+        ${PROGRESS_CSS}
       </style>
       <ha-card>
+        ${PROGRESS_HTML}
         ${meta}
         ${this._readiness(t)}
         ${this._priorities(t)}
@@ -689,6 +798,7 @@ class AirWaterAuditCard extends HTMLElement {
         <div id="tip" hidden></div>
       </ha-card>`;
     this._tipPinned = null;
+    this._wasRunning = this._paintProgress();
   }
 
   getCardSize() {
@@ -872,7 +982,7 @@ const TL_TEXT = {
 
 const pad = (n) => String(n).padStart(2, "0");
 
-class AirWaterAuditTimelineCard extends HTMLElement {
+class AirWaterAuditTimelineCard extends ProgressMixin(HTMLElement) {
   setConfig(config) {
     this._config = { entity: "sensor.air_water_heatpump_audit_timeline", ...config };
     this._signature = null;
@@ -889,15 +999,18 @@ class AirWaterAuditTimelineCard extends HTMLElement {
       this._resize = new ResizeObserver(() => this._update(true));
       this._resize.observe(this);
     }
+    if (this._hass) this._watchProgress(this._hass);
   }
 
   disconnectedCallback() {
     this._resize?.disconnect();
     this._resize = null;
+    this._stopProgress();
   }
 
   set hass(hass) {
     this._hass = hass;
+    this._watchProgress(hass);
     this._update(false);
   }
 
@@ -959,8 +1072,10 @@ class AirWaterAuditTimelineCard extends HTMLElement {
         button.secondary { background: transparent; color: var(--primary-color); border: 1px solid var(--primary-color); }
         a { color: var(--primary-color); }
         .status { font-size: .9em; }
+        ${PROGRESS_CSS}
       </style>
       <ha-card>
+        ${PROGRESS_HTML}
         <div id="charts"></div>
         <div id="admin" class="admin" hidden></div>
       </ha-card>`;

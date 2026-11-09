@@ -123,7 +123,7 @@ async def test_import_from_legacy_wp_audit(hass: HomeAssistant, hass_storage):
     kinds = sorted(sub.subentry_type for sub in entry.subentries.values())
     assert kinds == ["audit"] * len(REGISTRY)
     assert [(e["time"], e["kind"]) for e in entry.options["events"]] == [("2026-10-25 19:31:00", "pump_setting")]
-    days = await entry.runtime_data._merge_timeline([])
+    days = await entry.runtime_data._merge_timeline([], 0)
     assert days[0] == LEGACY_DAY  # Tag aus dem Speicher der Vorgängerin
 
 
@@ -413,7 +413,7 @@ async def test_options_flow_rejects_bad_capacity_table(hass: HomeAssistant):
 async def _save_event(hass: HomeAssistant, ws, entry, event: dict) -> dict:
     await ws.send_json_auto_id({"type": f"{DOMAIN}/event/save", "entry_id": entry.entry_id, "event": event})
     reply = await ws.receive_json()
-    await hass.async_block_till_done()  # Update-Listener lädt neu
+    await hass.async_block_till_done()  # Update-Listener rechnet neu
     return reply
 
 

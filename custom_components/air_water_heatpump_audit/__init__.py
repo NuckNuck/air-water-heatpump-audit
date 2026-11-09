@@ -17,7 +17,8 @@ from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_integration
 
 from .const import CARD_URL, DOMAIN
-from .coordinator import AirWaterAuditConfigEntry, AirWaterAuditCoordinator, timeline_store
+from .coordinator import AirWaterAuditConfigEntry, AirWaterAuditCoordinator, structure, timeline_store
+from .progress import async_register_progress
 from .records import RECORDS_MINOR_VERSION, async_migrate_records, async_register_websocket
 from .repairs import issue_id, update_fixed_cost_issue
 
@@ -36,6 +37,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     await hass.http.async_register_static_paths([StaticPathConfig(CARD_URL, str(card), False)])
     hass.async_create_task(_async_register_card(hass))
     async_register_websocket(hass)
+    async_register_progress(hass)
     return True
 
 
@@ -76,6 +78,7 @@ async def _async_register_card(hass: HomeAssistant) -> None:
 async def async_setup_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry) -> bool:
     coordinator = AirWaterAuditCoordinator(hass, entry)
     entry.runtime_data = coordinator
+    await coordinator.async_load_store()  # Dauer des letzten Laufs für den Fortschritt, schon vor dem ersten Lauf
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     update_fixed_cost_issue(hass, entry, coordinator.audits())
 
@@ -84,13 +87,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry
         await coordinator.async_refresh()
 
     entry.async_on_unload(async_at_started(hass, _first_refresh))
-    # Stammdaten, Audits oder Ereignisse geändert → neu laden und neu rechnen
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
     return True
 
 
 async def _async_entry_updated(hass: HomeAssistant, entry: AirWaterAuditConfigEntry) -> None:
-    hass.config_entries.async_schedule_reload(entry.entry_id)
+    """Rollen oder Audits geändert → neu laden (Sensoren kommen oder gehen). Nur Optionen (Ereignisse, Haushalt,
+    Stammdaten) → im Hintergrund neu rechnen; die bisherigen Ergebnisse bleiben sichtbar (Spezifikation 8.1)."""
+    coordinator = entry.runtime_data
+    if structure(entry) != coordinator.structure:
+        hass.config_entries.async_schedule_reload(entry.entry_id)
+        return
+    update_fixed_cost_issue(hass, entry, coordinator.audits())
+    coordinator.request_rerun()
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry) -> bool:

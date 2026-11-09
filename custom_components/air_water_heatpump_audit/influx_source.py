@@ -11,6 +11,7 @@ from __future__ import annotations
 import csv
 import io
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -126,17 +127,29 @@ async def _query(hass: HomeAssistant, conn: InfluxConnection, flux: str) -> str:
         raise InfluxError(str(err) or type(err).__name__) from err
 
 
-async def load_series(hass: HomeAssistant, conn: InfluxConnection, roles: dict[str, str],
-                      start: float, end: float) -> dict[str, Series]:
-    """Eine Abfrage je Feld (Zahlen und Text lassen sich in Flux nicht in einer Tabelle mischen)."""
+def _by_field(roles: dict[str, str]) -> dict[str, dict[str, str]]:
     by_field: dict[str, dict[str, str]] = defaultdict(dict)
     for role, eid in roles.items():
         by_field[field_for(role, eid)][role] = eid
+    return by_field
+
+
+def query_count(roles: dict[str, str]) -> int:
+    """Zahl der Abfragen, die `load_series` für diese Rollen stellt (für den Fortschritt, Spezifikation 8.1)."""
+    return len(_by_field(roles))
+
+
+async def load_series(hass: HomeAssistant, conn: InfluxConnection, roles: dict[str, str],
+                      start: float, end: float, on_query: Callable[[], None] | None = None) -> dict[str, Series]:
+    """Eine Abfrage je Feld (Zahlen und Text lassen sich in Flux nicht in einer Tabelle mischen); `on_query` nach
+    jeder fertigen Abfrage."""
     out: dict[str, Series] = {}
-    for field, group in by_field.items():
+    for field, group in _by_field(roles).items():
         text = await _query(hass, conn, build_query(conn.bucket, field, list(set(group.values())), start, end))
         parsed = await hass.async_add_executor_job(parse_csv, text, group)
         out |= {role: trim_before(s, start) for role, s in parsed.items()}
+        if on_query is not None:
+            on_query()
     return out
 
 

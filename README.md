@@ -398,6 +398,10 @@ in der **Zeitstrahl-Karte** auf **Ereignis hinzufügen** (nur für Administrator
 „Heizkurve geändert“) und eine kurze Notiz eintragen. In der Ereignisliste unter dem Zeitstrahl ändert ✎ ein Ereignis,
 ✕ löscht es. Übernimmt man einen Vorschlag der Karte, trägt sie das Ereignis selbst ein.
 
+Danach rechnet die Integration alle Audits neu; das dauert je nach Datenmenge eine halbe Minute oder länger. Die
+bisherigen Ergebnisse bleiben so lange stehen, oben in den Karten zeigt „Wird aktualisiert …“ mit einem Balken den
+Fortschritt.
+
 ## Häufige Fragen
 
 **Ändert die Integration etwas an meiner Wärmepumpe?**
