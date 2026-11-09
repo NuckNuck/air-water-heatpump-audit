@@ -39,6 +39,12 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
   das neue Menü **Konfigurieren → Haushalt**. Die Stammdaten stehen unter **Konfigurieren → Anlagendaten**.
   Bestehende Untereinträge werden beim Update automatisch übernommen.
 
+- **Tage aus der Langzeitstatistik** (#19): Nach einer Neuinstallation zeigt der Zeitstrahl auch die Tage vor den
+  Rohdaten (bis 400 Tage zurück) mit Arbeitszahl und Wärmepreis. Strom kommt vom Zähler, die Wärme vom Wärmezähler
+  der Steuerung, korrigiert mit dem Verhältnis zur selbst gerechneten Wärme (ab einer Woche eigener Messwerte). Die
+  Hochrechnung K2 und die Jahreswärme für die festen Kosten nutzen diese Tage ab dem letzten Ereignis; alle anderen
+  Prüfungen bleiben bei Rohdaten. Das Tagesdetail der Karte kennzeichnet solche Tage.
+
 ### Behoben
 - Die Reparaturmeldung „Feste Kosten der Wärmepumpe fehlen“ schloss sich beim Öffnen sofort als behoben und leerte
   dabei Zählerart, Grundpreis und Messstellenentgelt (0.18.0b2/b3). Jetzt erscheint das Formular.
