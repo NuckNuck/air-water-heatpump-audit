@@ -10,7 +10,8 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ### Neu
 - **K3: Lohnt sich der eigene Zähler?** (#25) Neben der Ersparnis nennt K3 jetzt, ab welchem Haushaltsstrompreis und
-  ab welchem Jahresstrom der Wärmepumpe sich der eigene Zähler lohnt. Ein Diagramm in der Tabelle zeigt die
+  ab welchem Jahresstrom der Wärmepumpe sich der eigene Zähler lohnt, und welchen Preisabstand zwischen Haushaltsstrom
+  und Wärmepumpentarif es dafür braucht (#27; unabhängig von der Preishöhe, gut zum Vergleich von Angeboten). Ein Diagramm in der Tabelle zeigt die
   Grenzkurve und die eigene Lage.
 - **Frühere Heizung im Kosten-Zeitstrahl** als durchgezogene, beschriftete Linie; bisher steckte der Vergleich nur in
   der Bandgrenze (+ 10 %). Die Vergleichslinien anderer Heizsysteme sind dicker und am rechten Ende beschriftet.

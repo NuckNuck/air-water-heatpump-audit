@@ -132,7 +132,7 @@ Stromzähler der Wärmepumpe im Energie-Dashboard, wird dessen Preis vorgeschlag
 |---|---|
 | K1 Wärmepreis | Was eine Kilowattstunde Wärme in der letzten Woche gekostet hat, im Vergleich zum früheren Brennstoff (z. B. Gas). Grün bis 10 % teurer (Messgenauigkeit). |
 | K2 Kosten pro Jahr | Strom und Kosten aufs Jahr hochgerechnet, mit der Ersparnis gegenüber dem früheren Brennstoff (nur Info). Mit der Wohnfläche dazu der Verbrauch je m² und die ungefähre Klasse im Energieausweis, mit den Personen die Kosten je Person. Braucht die Gradtage des Wohnorts und 14 Tage. |
-| K3 Wärmepumpentarif | Ob sich ein eigener Wärmepumpentarif mit zweitem Zähler gegenüber Haushaltsstrom lohnt, und ab welchem Haushaltsstrompreis bzw. Jahresverbrauch er sich lohnen würde (mit Diagramm). Hinweis auf das reduzierte Netzentgelt nach § 14a EnWG, das an den eigenen Zähler gebunden ist. |
+| K3 Wärmepumpentarif | Ob sich ein eigener Wärmepumpentarif mit zweitem Zähler gegenüber Haushaltsstrom lohnt, und ab welchem Haushaltsstrompreis, Preisabstand zum Haushaltsstrom bzw. Jahresverbrauch er sich lohnen würde (mit Diagramm). Hinweis auf das reduzierte Netzentgelt nach § 14a EnWG, das an den eigenen Zähler gebunden ist. |
 | K4 Strompreis dynamisch | Nur bei dynamischem Tarif: ob die Wärmepumpe bevorzugt in teuren Stunden läuft. |
 | K5 Sperrzeiten | Nur mit Sperrsignal des Netzbetreibers: wie oft und wie lange gesperrt oder gedimmt wird; gelb, wenn währenddessen oder danach der Heizstab nachheizt. |
 
