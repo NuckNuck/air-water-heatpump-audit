@@ -53,14 +53,20 @@ class FixedCostsRepairFlow(RepairsFlow):
         self._entry_id = entry_id
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> data_entry_flow.FlowResult:
+        # HA übergibt hier {"issue_id": …}; das ist keine Formulareingabe.
+        return await self.async_step_confirm()
+
+    async def async_step_confirm(self, user_input: dict[str, Any] | None = None) -> data_entry_flow.FlowResult:
         entry = self.hass.config_entries.async_get_entry(self._entry_id)
         if entry is None:
             return self.async_abort(reason="entry_missing")
         current = DEFAULT_OPTIONS | dict(entry.options)
         if user_input is not None:
             # Geleerte Felder fehlen in user_input: „nicht eingetragen“, nicht der alte Wert.
-            new = {k: None for k in FIXED_COST_KEYS} | user_input
-            self.hass.config_entries.async_update_entry(entry, options=dict(entry.options) | new)
+            new = {k: None for k in FIXED_COST_KEYS} | {k: v for k, v in user_input.items() if k in FIXED_COST_KEYS}
+            # „issue_id“ stammt aus 0.18.0b2/b3, als der erste Schritt diese Übergabe als Eingabe gespeichert hat
+            kept = {k: v for k, v in entry.options.items() if k != "issue_id"}
+            self.hass.config_entries.async_update_entry(entry, options=kept | new)
             return self.async_create_entry(data={})
         fields = {}
         for key, sel in ((CONF_HEAT_PUMP_METER, selector.SelectSelector(selector.SelectSelectorConfig(
@@ -69,7 +75,7 @@ class FixedCostsRepairFlow(RepairsFlow):
             value = current.get(key)
             fields[vol.Optional(key, description={"suggested_value": value} if value is not None else None)] = sel
         missing = heat_pump_fixed_costs(current)[1]
-        return self.async_show_form(step_id="init", data_schema=vol.Schema(fields), description_placeholders={
+        return self.async_show_form(step_id="confirm", data_schema=vol.Schema(fields), description_placeholders={
             "missing": ", ".join(FIXED_COST_LABELS[k] for k in missing) or "–"})
 
 

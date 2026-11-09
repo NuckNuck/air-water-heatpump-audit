@@ -901,7 +901,7 @@
       "title": "Heat pump fixed costs missing",
       "fix_flow": {
         "step": {
-          "init": {
+          "confirm": {
             "title": "Heat pump fixed costs",
             "description": "The heat price lacks information on the fixed costs of the heat pump: {missing}. Until then the audit calculates without them. Empty means 'not entered', 0 means 'there is none'.",
             "data": {

@@ -25,6 +25,10 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
   **⚙ Einstellungen** je Audit und bei fehlenden Stammdaten. Die Anlagendaten öffnen dann direkt den Abschnitt Kosten.
 - Die Legende des Kosten-Zeitstrahls (Vergleichslinien, feste Kosten) steht hinter **ⓘ Legende** und öffnet sich
   beim Überfahren oder Antippen. Fehlende Stammdaten bleiben sichtbar.
+
+### Behoben
+- Die Reparaturmeldung „Feste Kosten der Wärmepumpe fehlen“ schloss sich beim Öffnen sofort als behoben und leerte
+  dabei Zählerart, Grundpreis und Messstellenentgelt (0.18.0b2/b3). Jetzt erscheint das Formular.
 - Preis-Sensoren können `includes_fixed_charges` und `annual_base_fee` angeben. Die Vergleichslinie
   Stromdirektheizung kommt aus dem Arbeitspreis des Haushaltsstroms.
 

@@ -670,16 +670,30 @@ async def test_household_meter_raises_no_issue(hass: HomeAssistant):
     assert ir.async_get(hass).async_get_issue(DOMAIN, f"fixed_costs_missing_{coordinator.config_entry.entry_id}") is None
 
 
-async def test_fix_flow_writes_fixed_costs_to_options(hass: HomeAssistant):
-    from custom_components.air_water_heatpump_audit.repairs import async_create_fix_flow, issue_id
+async def _start_fix_flow(hass: HomeAssistant, entry):
+    """Fix-Flow so starten wie „Einstellungen → Reparaturen“: über den Flow-Manager der Integration repairs."""
+    from custom_components.air_water_heatpump_audit.repairs import issue_id
+    manager = hass.data["repairs"]["flow_manager"]
+    return manager, await manager.async_init(DOMAIN, data={"issue_id": issue_id(entry.entry_id)})
+
+
+async def test_fix_flow_opened_from_repairs_shows_form_and_keeps_options(hass: HomeAssistant):
+    coordinator = await _cost_coordinator(hass, tariff_base_fee=200.0)
+    entry = coordinator.config_entry
+    _, result = await _start_fix_flow(hass, entry)
+    assert result["type"] is FlowResultType.FORM
+    assert entry.options["tariff_base_fee"] == 200.0 and "issue_id" not in entry.options
+
+
+async def test_fix_flow_submitted_writes_fixed_costs_to_options(hass: HomeAssistant):
     coordinator = await _cost_coordinator(hass)
     entry = coordinator.config_entry
-    flow = await async_create_fix_flow(hass, issue_id(entry.entry_id), {"entry_id": entry.entry_id})
-    flow.hass = hass
-    result = await flow.async_step_init({"heat_pump_meter": "separate_meter", "tariff_base_fee": 120.0,
-                                         "meter_fee": 0.0})
+    manager, result = await _start_fix_flow(hass, entry)
+    result = await manager.async_configure(result["flow_id"], {"heat_pump_meter": "separate_meter",
+                                                               "tariff_base_fee": 120.0, "meter_fee": 0.0})
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert (entry.options["tariff_base_fee"], entry.options["meter_fee"]) == (120.0, 0.0)
+    assert (entry.options["heat_pump_meter"], entry.options["tariff_base_fee"], entry.options["meter_fee"]) \
+        == ("separate_meter", 120.0, 0.0)
 
 
 async def test_options_flow_opens_cost_section_when_fixed_costs_missing(hass: HomeAssistant):

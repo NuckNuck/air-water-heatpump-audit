@@ -901,7 +901,7 @@
       "title": "Feste Kosten der Wärmepumpe fehlen",
       "fix_flow": {
         "step": {
-          "init": {
+          "confirm": {
             "title": "Feste Kosten der Wärmepumpe",
             "description": "Für den Wärmepreis fehlen Angaben zu den festen Kosten der Wärmepumpe: {missing}. Bis dahin rechnet das Audit ohne sie. Leer lassen heißt „nicht eingetragen“, 0 heißt „gibt es nicht“.",
             "data": {
