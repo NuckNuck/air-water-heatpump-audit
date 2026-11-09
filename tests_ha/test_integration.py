@@ -677,12 +677,15 @@ async def _start_fix_flow(hass: HomeAssistant, entry):
     return manager, await manager.async_init(DOMAIN, data={"issue_id": issue_id(entry.entry_id)})
 
 
+ENTERED_BASE_FEE = 99.0  # irgendein schon eingetragener Grundpreis; das Messstellenentgelt fehlt noch
+
+
 async def test_fix_flow_opened_from_repairs_shows_form_and_keeps_options(hass: HomeAssistant):
-    coordinator = await _cost_coordinator(hass, tariff_base_fee=200.0)
+    coordinator = await _cost_coordinator(hass, tariff_base_fee=ENTERED_BASE_FEE)
     entry = coordinator.config_entry
     _, result = await _start_fix_flow(hass, entry)
     assert result["type"] is FlowResultType.FORM
-    assert entry.options["tariff_base_fee"] == 200.0 and "issue_id" not in entry.options
+    assert entry.options["tariff_base_fee"] == ENTERED_BASE_FEE and "issue_id" not in entry.options
 
 
 async def test_fix_flow_submitted_writes_fixed_costs_to_options(hass: HomeAssistant):
