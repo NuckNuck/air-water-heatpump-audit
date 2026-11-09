@@ -2198,6 +2198,11 @@
       "conflicts": [
        "Nur so weit senken, wie alle Räume warm bleiben; werden einzelne Räume zu kühl, fehlt der hydraulische Abgleich."
       ],
+      "impact": {
+       "basis": "1 K weniger Vorlauf × 2,5 % des Heizstroms",
+       "eur_year": 25,
+       "kwh_year": 101
+      },
       "steps": [
        "Am Bedienteil der Wärmepumpe die Parallelverschiebung der Heizkurve um 1 K senken.",
        "Hier im Zeitstrahl „Ereignis hinzufügen“ wählen, damit die Audits ab der Änderung neu rechnen. Art: „Heizkurve geändert“.",

@@ -211,21 +211,32 @@ class OverallTest(unittest.TestCase):
 
 
 class AnnualCostGateTest(unittest.TestCase):
-    """K2 (Spezifikation 7.2): Gate 14 gültige Tage; darunter nennt der Text die Tage, nicht die Außentemperatur."""
+    """K2 (Spezifikation 7.1/7.2, F298): Hochrechnung vorläufig ab 5 gültigen Tagen, belastbar ab 14."""
 
-    def test_too_few_days_for_projection_name_days_not_outdoor(self):
+    TZ = "Europe/Berlin"
+
+    def run_k2(self, n_days: int):
         from audit_core import cost as k1
-        days_ = [f"2026-01-{d:02d}" for d in range(5, 12)]  # 7 Tage: über dem Vorab-Gate, unter 14
+        from audit_core.result import mark_provisional
+        days_ = [f"2026-01-{d:02d}" for d in range(5, 5 + n_days)]
         rows = [{"day": d, "electricity_kwh": 10.0, "heat_kwh": 30.0} for d in days_]
-        outdoor = [(local(2026, 1, 1), 0.0)]
-        r = k1.check_annual_cost(rows, outdoor, {d: 2.5 for d in days_}, {"heating_degree_days": 3500},
-                                 "Europe/Berlin", local(2026, 1, 5))
-        self.assertEqual(r.verdict, NOT_ASSESSABLE)
-        self.assertIn("Hochrechnung ab 14", r.text)
-        self.assertNotIn("Außentemperatur", r.text)
+        r = k1.check_annual_cost(rows, [(local(2026, 1, 1), 0.0)], {d: 2.5 for d in days_},
+                                 {"heating_degree_days": 3500}, self.TZ, local(2026, 1, 5))
+        mark_provisional(r)
+        return r
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_five_days_give_provisional_projection(self):
+        r = self.run_k2(5)
+        self.assertEqual(r.verdict, INFO)
+        self.assertTrue(r.provisional)
+
+    def test_four_days_are_not_assessable(self):
+        r = self.run_k2(4)
+        self.assertEqual(r.verdict, NOT_ASSESSABLE)
+        self.assertIn("vorläufiges Urteil ab 5", r.text)
+
+    def test_fourteen_days_give_final_projection(self):
+        self.assertFalse(self.run_k2(14).provisional)
 
 
 from audit_core import heat

@@ -45,9 +45,12 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
   Hochrechnung K2 und die Jahreswärme für die festen Kosten nutzen diese Tage ab dem letzten Ereignis; alle anderen
   Prüfungen bleiben bei Rohdaten. Das Tagesdetail der Karte kennzeichnet solche Tage.
 
+- **Hochrechnung K2 schon ab 5 gültigen Tagen** (#21), als vorläufig gekennzeichnet bis 14 Tage; sie wird mit jedem
+  Tag genauer. Jahreswärme für die festen Kosten und die Wirkung je Aktion folgen derselben Hochrechnung. Das Audit
+  Vorlauf liest dafür auch die Außentemperatur, damit es allein dieselbe Wirkung zeigt wie im Gesamtlauf.
+
 ### Behoben
-- K2 meldete bei 5–13 gültigen Tagen „Außentemperatur fehlt für die Gradtage“; jetzt nennt der Text die Tage und
-  ab wann hochgerechnet wird.
+- K2 meldete bei 5–13 gültigen Tagen „Außentemperatur fehlt für die Gradtage“, obwohl nur Tage fehlten.
 - Statistik-Tage beginnen mit dem ersten vollen Tag nach `data_since`; der angebrochene Einbautag zählt nicht.
 - Die Reparaturmeldung „Feste Kosten der Wärmepumpe fehlen“ schloss sich beim Öffnen sofort als behoben und leerte
   dabei Zählerart, Grundpreis und Messstellenentgelt (0.18.0b2/b3). Jetzt erscheint das Formular.

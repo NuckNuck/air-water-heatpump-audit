@@ -184,8 +184,8 @@ CHECK_HELP: dict[str, dict[str, str]] = {
            "source": "Abgeleitet; Nutzungsgrad der früheren Heizung aus den Stammdaten."},
     "K2": {"what": "Strom und Kosten aufs Jahr hochgerechnet: Grundlast (Warmwasser, Bereitschaft) an 365 Tagen, "
                    "der Rest nach den Gradtagen des Standorts.",
-           "rating": INFO_ONLY + f" Ab {k1.PROJECTION_MIN_DAYS} gültigen Tagen; mit mehr Wochen und kälteren Tagen "
-                     "wird sie genauer.",
+           "rating": INFO_ONLY + f" Vorläufig ab {k1.PROJECTION_EARLY_DAYS} gültigen Tagen, belastbar ab "
+                     f"{k1.PROJECTION_MIN_DAYS}; mit mehr Wochen und kälteren Tagen wird sie genauer.",
            "source": "Gradtagzahl G20/15 nach VDI 4710."},
     "K3": {"what": "Ob sich der eigene Wärmepumpentarif lohnt: Preisunterschied zum Haushaltsstrom × Jahresstrom, "
                    "abzüglich Grundpreis und Messstellenentgelt des zweiten Zählers.",
