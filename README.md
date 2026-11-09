@@ -259,7 +259,8 @@ Hand kopieren).
 ### Weg A: über HACS
 
 HACS ist ein „App-Store“ für Erweiterungen von Home Assistant. Falls noch nicht vorhanden:
-[Anleitung zur HACS-Installation](https://hacs.xyz/docs/use/).
+[Anleitung zur HACS-Installation](https://hacs.xyz/docs/use/). Ab Home Assistant 2026.11 ersetzt der eingebaute
+**Marketplace** HACS; dort das Repository genauso als benutzerdefiniertes Repository (Typ Integration) hinzufügen.
 
 1. In Home Assistant links auf **HACS** klicken.
 2. Oben rechts auf die **drei Punkte ⋮** → **Benutzerdefinierte Repositories**.
