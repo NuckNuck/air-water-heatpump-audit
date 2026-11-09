@@ -37,7 +37,8 @@ const TEXT = {
     columns: ["ID", "Prüfung", "Urteil", "Aktion", "Wert", "Erläuterung", "Herkunft"],
     who: { owner: "Selbst", installer: "Fachbetrieb", none: "Nichts nötig" },
     target: "Ziel",
-    meter: { x: "Haushaltsstrom (ct/kWh)", y: "Wärmepumpenstrom (kWh/Jahr)", pays: "eigener Zähler lohnt sich",
+    meter: { gap: "Abstand Haushaltsstrom − Wärmepumpentarif (ct/kWh)", gapFrom: (v) => `ab ${v} ct Abstand`,
+      x: "Haushaltsstrom (ct/kWh)", y: "Wärmepumpenstrom (kWh/Jahr)", pays: "eigener Zähler lohnt sich",
       not: "ein Zähler für alles günstiger", you: "heute", title: "Lohnt sich der eigene Zähler?" },
     steps: { show: (n) => `▸ So geht's (${n} Schritte)`, hide: "▾ Schritte ausblenden" },
     impact: { save: (eur, kwh) => `Bringt ≈ ${eur} €/Jahr` + (kwh ? ` (≈ ${kwh} kWh Strom)` : ""),
@@ -100,7 +101,8 @@ const TEXT = {
     columns: ["ID", "Check", "Verdict", "Action", "Value", "Explanation", "Origin"],
     who: { owner: "Yourself", installer: "Installer", none: "Nothing needed" },
     target: "Target",
-    meter: { x: "Household electricity (ct/kWh)", y: "Heat pump electricity (kWh/year)", pays: "own meter pays off",
+    meter: { gap: "Gap household electricity − heat pump tariff (ct/kWh)", gapFrom: (v) => `from ${v} ct gap`,
+      x: "Household electricity (ct/kWh)", y: "Heat pump electricity (kWh/year)", pays: "own meter pays off",
       not: "one meter for everything is cheaper", you: "today", title: "Does the own meter pay off?" },
     steps: { show: (n) => `▸ How to (${n} steps)`, hide: "▾ Hide steps" },
     impact: { save: (eur, kwh) => `Saves ≈ €${eur}/year` + (kwh ? ` (≈ ${kwh} kWh electricity)` : ""),
@@ -286,7 +288,7 @@ class AirWaterAuditCard extends HTMLElement {
     const loc = this._hass.locale?.language || this._hass.language;
     const f = (v, n = 0) => Number(v).toLocaleString(loc, { minimumFractionDigits: n, maximumFractionDigits: n });
     const pT = d.tariff_ct, pH = d.household_ct, E = d.electricity_kwh, F = d.base_fee_eur ?? 0;
-    const W = 620, H = 310, L = 62, R = 12, T = 10, B = 40;
+    const W = 620, H = 340, L = 62, R = 12, T = 40, B = 40;
     const xMin = pT, xMax = Math.max(pH, d.break_even_household_ct, pT + 4) * 1.25 + 2;
     const yMax = Math.max(E, d.break_even_kwh ?? 0) * 1.8;
     const x = (v) => L + (v - xMin) / (xMax - xMin) * (W - L - R);
@@ -306,13 +308,22 @@ class AirWaterAuditCard extends HTMLElement {
       ticks += `<line x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - B}" stroke="var(--divider-color)"/>`
         + `<text x="${x(v)}" y="${H - B + 15}" text-anchor="middle">${f(v)}</text>`;
     }
+    // Zweite x-Achse oben: Abstand zum Wärmepumpentarif (p_H − p_T), unabhängig von der Preishöhe
+    for (let g = 0; pT + g <= xMax + 1e-9; g += xs) {
+      ticks += `<line x1="${x(pT + g)}" x2="${x(pT + g)}" y1="${T - 4}" y2="${T}" stroke="var(--secondary-text-color)"/>`
+        + `<text x="${x(pT + g)}" y="${T - 7}" text-anchor="middle">${f(g)}</text>`;
+    }
     for (let v = 0; v <= yMax; v += ys) {
       ticks += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--divider-color)"/>`
         + `<text x="${L - 4}" y="${y(v) + 4}" text-anchor="end">${f(v)}</text>`;
     }
     // Grenzen zur eigenen Lage: senkrecht beim Grenzpreis (heutiger Verbrauch), waagrecht beim Grenzverbrauch
     const be = (xx, yy, anchor, text) => `<text class="be" x="${xx}" y="${yy}" text-anchor="${anchor}">${esc(text)}</text>`;
+    const gap = d.break_even_gap_ct ?? d.break_even_household_ct - pT;
     let guides = be(x(d.break_even_household_ct) + 4, H - B - 4, "start", `ab ${f(d.break_even_household_ct, 1)} ct`)
+      + be(x(d.break_even_household_ct) + 4, T + 15, "start", m.gapFrom(f(gap, 1)))
+      + `<line x1="${x(d.break_even_household_ct)}" x2="${x(d.break_even_household_ct)}" y1="${T}" y2="${y(E)}"
+      stroke="var(--primary-text-color)" stroke-opacity=".45" stroke-dasharray="3 3"/>`
       + `<line x1="${x(d.break_even_household_ct)}" x2="${x(d.break_even_household_ct)}" y1="${y(E)}" y2="${H - B}"
       stroke="var(--primary-text-color)" stroke-dasharray="3 3"><title>${esc(f(d.break_even_household_ct, 1))} ct/kWh</title></line>`;
     if (d.break_even_kwh != null) {
@@ -331,6 +342,7 @@ class AirWaterAuditCard extends HTMLElement {
         <polyline points="${pts.join(" ")}" fill="none" stroke="${COLORS.ok}" stroke-width="2"/>
         ${guides}${dot}
         <text x="${(L + W - R) / 2}" y="${H - 5}" text-anchor="middle">${esc(m.x)}</text>
+        <text x="${(L + W - R) / 2}" y="13" text-anchor="middle">${esc(m.gap)}</text>
         <text x="14" y="${(T + H - B) / 2}" text-anchor="middle" transform="rotate(-90 14 ${(T + H - B) / 2})">${esc(m.y)}</text>
       </svg>
       <div class="mkey"><span class="sw" style="background:${COLORS.ok}"></span>${esc(m.pays)}

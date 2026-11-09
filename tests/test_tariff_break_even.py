@@ -42,6 +42,24 @@ class TariffBreakEvenTest(unittest.TestCase):
         d = k1.check_tariff(annual(7000.0), master(), False).details
         self.assertEqual(d["break_even_household_ct"], round(d["break_even_household_ct"], 1))
 
+    def test_break_even_gap_is_household_minus_tariff_at_break_even(self):
+        d = k1.check_tariff(annual(), master(), False).details
+        self.assertAlmostEqual(d["tariff_ct"] + d["break_even_gap_ct"], d["break_even_household_ct"], delta=0.1)
+
+    def test_break_even_gap_does_not_depend_on_price_level(self):
+        price_rise = 0.05
+        cheap = k1.check_tariff(annual(), master(), False).details
+        dear = k1.check_tariff(annual(), master(tariff_price=TARIFF + price_rise,
+                                                 household_price=HOUSEHOLD + price_rise), False).details
+        self.assertEqual(cheap["break_even_gap_ct"], dear["break_even_gap_ct"])
+
+    def test_no_fixed_costs_gives_zero_gap(self):
+        d = k1.check_tariff(annual(), master(tariff_base_fee=0, meter_fee=0), False).details
+        self.assertEqual(d["break_even_gap_ct"], 0)
+
+    def test_text_names_needed_and_current_gap(self):
+        self.assertIn("ct/kWh Abstand zum Haushaltsstrom, heute", k1.check_tariff(annual(), master(), False).text)
+
     def test_break_even_kwh_makes_benefit_zero(self):
         d = k1.check_tariff(annual(), master(), False).details
         at_break_even = k1.check_tariff(annual(d["break_even_kwh"]), master(), False)
