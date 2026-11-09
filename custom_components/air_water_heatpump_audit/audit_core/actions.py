@@ -236,7 +236,9 @@ _ACTIONS: dict[str, Callable[[CheckResult, dict], Action]] = {
         "Den Wert über mehrere Wochen ansehen; im Winter ist er höher als im Jahresmittel."]),
     "K3": _fixed(OWNER, "Der eigene Wärmepumpentarif lohnt sich bei diesem Verbrauch nicht.", steps=[
         "Angebote für Wärmepumpenstrom vergleichen.",
-        "Sonst mit dem Elektriker klären, ob die Wärmepumpe über den Haushaltszähler laufen kann."]),
+        "Sonst mit dem Elektriker klären, ob die Wärmepumpe über den Haushaltszähler laufen kann.",
+        "Vorher prüfen, ob der Tarif ein reduziertes Netzentgelt nach § 14a EnWG enthält; es entfiele beim "
+        "Zusammenlegen."]),
     "K4": _fixed(OWNER, "Die Wärmepumpe läuft oft in teuren Stunden.", steps=[
         "Warmwasser in die günstigen Stunden legen (Zeitprogramm).",
         "Wenn die Steuerung es kann: Heizen bei niedrigen Preisen etwas vorziehen (Puffer, Gebäudemasse)."]),

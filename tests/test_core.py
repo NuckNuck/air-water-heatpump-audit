@@ -990,6 +990,19 @@ class TimelineTest(unittest.TestCase):
     def test_scale_reports_fixed_costs(self):
         self.assertIn("fixed_costs", self.run_cost([])["timeline"]["scales"]["cost"])
 
+    # Vertrag: Spezifikation 7.2 (Wärmepreis der früheren Heizung als eigene Linie)
+    def test_reference_price_gives_previous_heating_without_tolerance(self):
+        from audit_core.runner import run_audits
+        gas_with_base_share, boiler_efficiency = 0.129, 0.86
+        master = self.master | {"tariff_price": 0.25, "previous_heating_system": "natural_gas",
+                                "reference_fuel_price": gas_with_base_share, "reference_efficiency": boiler_efficiency}
+        scale = run_audits(self.s, self.start, self.end, recorder_keep_days=10, long_term_days=None, heater_kw={},
+                           master=master, audits=["cost"])["timeline"]["scales"]["cost"]
+        self.assertEqual(scale["previous_heating"], {"system": "natural_gas", "ct_per_kwh": 15.0})
+
+    def test_no_reference_price_gives_no_previous_heating(self):
+        self.assertNotIn("previous_heating", self.run_cost([])["timeline"]["scales"]["cost"])
+
     def test_comparison_on_without_sensors_gives_empty_list(self):
         self.assertEqual(self.run_cost([])["timeline"]["scales"]["cost"]["references"], [])
 

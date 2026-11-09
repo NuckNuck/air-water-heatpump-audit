@@ -178,6 +178,7 @@
               "tariff_base_fee_period": "Grundpreis gilt",
               "meter_fee": "Zählermiete Wärmepumpenzähler (Messstellenentgelt)",
               "meter_fee_period": "Zählermiete gilt",
+              "reduced_grid_fee": "Reduziertes Netzentgelt nach § 14a EnWG (Modul 2)",
               "household_price": "Arbeitspreis Haushaltsstrom",
               "household_price_unit": "Einheit Arbeitspreis Haushaltsstrom",
               "previous_heating_system": "Frühere Heizung",
@@ -196,6 +197,7 @@
               "tariff_base_fee_period": "So, wie der Betrag im Vertrag steht. Das Audit rechnet auf das Jahr um.",
               "meter_fee": "Miete für den eigenen Zähler der Wärmepumpe, vom Messstellenbetreiber (oft der Netzbetreiber); steht auf der Stromrechnung oder einer eigenen Rechnung. Leer = nicht eingetragen, 0 = keine.",
               "meter_fee_period": "So, wie der Betrag auf der Rechnung steht. Das Audit rechnet auf das Jahr um.",
+              "reduced_grid_fee": "Nur mit eigenem Zähler: Ihr Wärmepumpentarif enthält das reduzierte Netzentgelt für steuerbare Verbrauchseinrichtungen (steht im Vertrag oder auf der Rechnung). Das Audit weist dann in K3 darauf hin, dass es beim Zusammenlegen der Zähler entfiele.",
               "household_price": "Zum Vergleich: lohnt der eigene Wärmepumpentarif (K3)? Ergibt auch die Vergleichslinie Stromdirektheizung.",
               "household_price_unit": "So, wie der Preis im Vertrag steht.",
               "previous_heating_system": "Womit vorher geheizt wurde; bei einem Neubau „Keine“. Für dieses System gilt der Nutzungsgrad unten.",
@@ -271,7 +273,8 @@
     },
     "error": {
       "invalid_capacity_table": "Die Mindestleistung hat nicht die erwartete Form. Beispiel: „35:“ und darunter eingerückt „-7: 3.9“, „2: 3.5“, „7: 3.5“.",
-      "invalid_consumption_unit": "Früherer Verbrauch: Die Einheit passt nicht zur früheren Heizung (z. B. Liter bei Gas)."
+      "invalid_consumption_unit": "Früherer Verbrauch: Die Einheit passt nicht zur früheren Heizung (z. B. Liter bei Gas).",
+      "reduced_grid_fee_needs_separate_meter": "Reduziertes Netzentgelt nach § 14a EnWG gibt es nur mit eigenem Zähler: bitte „Zähler der Wärmepumpe“ auf „eigener Zähler“ stellen oder den Haken entfernen."
     }
   },
   "entity": {

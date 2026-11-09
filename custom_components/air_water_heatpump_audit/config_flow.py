@@ -44,6 +44,7 @@ from .records import RECORDS_MINOR_VERSION, records, subentries_to_records, with
 from .const import (CONF_HOUSEHOLD_PRICE_UNIT, CONF_METER_FEE_PERIOD, CONF_REFERENCE_FUEL_PRICE_UNIT,
                     CONF_TARIFF_BASE_FEE_PERIOD, CONF_TARIFF_PRICE_UNIT, FEE_PERIOD_DEFAULTS, FEE_PERIOD_OF, FEE_PERIODS,
                     PRICE_UNIT_DEFAULT, PRICE_UNIT_OF, PRICE_UNITS)
+from .const import CONF_REDUCED_GRID_FEE
 from .const import (CONF_HEAT_PUMP_METER, CONF_METER_FEE, CONF_PREVIOUS_CONSUMPTION, CONF_PREVIOUS_CONSUMPTION_UNIT,
                     CONF_PREVIOUS_HEATING_SYSTEM, CONSUMPTION_UNITS, HEAT_PUMP_METERS, PREVIOUS_HEATING_SYSTEMS)
 from .profiles import COMMON_ROLE_SUGGESTIONS, INTERFACE_PROFILES, MODEL_PROFILES, role_candidates
@@ -253,6 +254,7 @@ def _option_selectors() -> dict[str, Any]:
         CONF_TARIFF_BASE_FEE_PERIOD: fee_period_selector(),
         CONF_METER_FEE: _number(1000, 0.01, "€"),
         CONF_METER_FEE_PERIOD: fee_period_selector(),
+        CONF_REDUCED_GRID_FEE: selector.BooleanSelector(),
         CONF_PREVIOUS_HEATING_SYSTEM: selector.SelectSelector(selector.SelectSelectorConfig(
             options=PREVIOUS_HEATING_SYSTEMS, translation_key=CONF_PREVIOUS_HEATING_SYSTEM,
             mode=selector.SelectSelectorMode.DROPDOWN)),
@@ -391,6 +393,8 @@ class AirWaterAuditOptionsFlow(OptionsFlow):
             else:
                 if consumption_error(flat):
                     errors["base"] = "invalid_consumption_unit"
+                elif flat.get(CONF_REDUCED_GRID_FEE) and flat.get(CONF_HEAT_PUMP_METER) != "separate_meter":
+                    errors["base"] = "reduced_grid_fee_needs_separate_meter"
                 else:
                     return self._save(flat)
             current |= flat

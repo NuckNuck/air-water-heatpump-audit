@@ -6,7 +6,21 @@ Assistant 2026.11) bieten sie als Update an.
 Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/): Solange die Hauptversion 0 ist, kann jede
 Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
-## [Unveröffentlicht]
+## [0.19.0] – in Arbeit
+
+### Neu
+- **K3: Lohnt sich der eigene Zähler?** (#25) Neben der Ersparnis nennt K3 jetzt, ab welchem Haushaltsstrompreis und
+  ab welchem Jahresstrom der Wärmepumpe sich der eigene Zähler lohnt. Ein Diagramm in der Tabelle zeigt die
+  Grenzkurve und die eigene Lage.
+- **Frühere Heizung im Kosten-Zeitstrahl** als durchgezogene, beschriftete Linie; bisher steckte der Vergleich nur in
+  der Bandgrenze (+ 10 %). Die Vergleichslinien anderer Heizsysteme sind dicker und am rechten Ende beschriftet.
+- Neue Einstellung **Reduziertes Netzentgelt nach § 14a EnWG (Modul 2)** im Abschnitt Kosten, Standard aus. Nur mit
+  eigenem Zähler zulässig. Ist sie an, weist K3 darauf hin, dass das reduzierte Netzentgelt beim Zusammenlegen der
+  Zähler entfiele.
+- **Zeitraum-Umschalter** im Zeitstrahl: 3 Tage, 7 Tage, 30 Tage, 90 Tage, 1 Jahr, alles (Kartenoption `range`, Standard 90).
+
+### Behoben
+- Unter dem Urteil ragte „vorläufig · x von y …“ in die Aktionsspalte; die Zeile bricht jetzt um.
 
 ## [0.18.0] – 2026-11-09
 

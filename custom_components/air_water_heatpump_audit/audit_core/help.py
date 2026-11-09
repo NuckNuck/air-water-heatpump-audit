@@ -188,7 +188,8 @@ CHECK_HELP: dict[str, dict[str, str]] = {
                      f"{k1.PROJECTION_MIN_DAYS}; mit mehr Wochen und kälteren Tagen wird sie genauer.",
            "source": "Gradtagzahl G20/15 nach VDI 4710."},
     "K3": {"what": "Ob sich der eigene Wärmepumpentarif lohnt: Preisunterschied zum Haushaltsstrom × Jahresstrom, "
-                   "abzüglich Grundpreis und Messstellenentgelt des zweiten Zählers.",
+                   "abzüglich Grundpreis und Messstellenentgelt des zweiten Zählers. Dazu die Grenzen: ab welchem "
+                   "Haushaltsstrompreis und ab welchem Jahresstrom sich der eigene Zähler lohnt.",
            "rating": "Grün, wenn der Tarif spart, sonst Gelb.",
            "source": "Rechnung aus den Stammdaten und K2."},
     "K4": {"what": "Bei dynamischem Tarif: der im Mittel gezahlte Preis im Vergleich zum mittleren Preis.",
