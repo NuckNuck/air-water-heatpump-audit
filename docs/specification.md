@@ -370,6 +370,22 @@ normal ist.
 vom Vorlauf abhängt; der Gütegrad rechnet beides heraus. Warum der Vorlauf hoch ist, beantwortet Audit 2, warum die
 Wärmepumpe taktet, Audit 3.
 
+### 4.3 Arbeitszahl der letzten 365 Tage
+
+Gleitende Jahresarbeitszahl für Übersichtsseiten (Issue #33, F307 a). Kein Urteil: Wie gut der Wert ist, hängt vom
+Jahr (Wetter) und von der Anlage ab; eine Ampel setzt, wer ihn anzeigt.
+
+- **Sensor** `sensor.air_water_heatpump_audit_cop_365_days` am Hauptgerät, Zustand = Σ Wärme ÷ Σ Strom, auf zwei
+  Nachkommastellen, ohne Einheit, `state_class: measurement`.
+- **Tage:** alle Tage des Zeitstrahls (gespeicherte Tage aus Rohdaten und Statistik-Tage, 1.11), die innerhalb der
+  letzten 365 vollen Tage vor dem heutigen Tag (Ortszeit) beginnen und einen Effizienz-Punkt mit Strom > 0 haben. Wärme
+  ist die korrigierte Wärme (`heat_kwh`, 4.1), Strom die des Zählers. Ereignisse spielen keine Rolle; der heutige,
+  noch nicht volle Tag zählt nicht.
+- **Attribute:** `days` (Zahl der Tage), `first_day` und `last_day` (ISO-Datum des ersten und letzten Tags),
+  `heat_kwh`, `electricity_kwh` (Summen, eine Nachkommastelle), `complete` (`true`, sobald der erste Tag 365 Tage vor
+  heute liegt; vorher deckt der Wert nur einen Teil des Jahres ab).
+- **Nicht verfügbar**, solange es keinen solchen Tag gibt oder Audit 1 (Effizienz) nicht zugeschaltet ist.
+
 Geplant: Hochrechnung aufs Jahr über Gradtage (frühestens nach 4 Wochen), Gütegrad je Hub-Klasse über die eigene
 Historie, getrennte Arbeitszahl für Warmwasser (braucht einen Zähler mit Nachkommastellen).
 

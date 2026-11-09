@@ -9,15 +9,17 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .audit_core.help import CHECK_HELP
 from .audit_core.audits import BY_ID
+from .audit_core.timeline import rolling_cop
 from .const import CONF_AUDIT, DOMAIN, SUBENTRY_AUDIT, VERDICTS, audit_title, language
 from .coordinator import AirWaterAuditConfigEntry, AirWaterAuditCoordinator
 
@@ -53,7 +55,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry
         entities: list[SensorEntity] = [AuditSensor(coordinator, spec.audit_id, device)]
         entities += [CheckSensor(coordinator, spec.audit_id, c.check_id, c.key, device) for c in spec.checks]
         async_add_entities(entities, config_subentry_id=sub.subentry_id)
-    async_add_entities([TimelineSensor(coordinator)])
+    async_add_entities([TimelineSensor(coordinator), RollingCopSensor(coordinator)])
 
 
 class _Entity(CoordinatorEntity[AirWaterAuditCoordinator], SensorEntity):
@@ -203,3 +205,34 @@ class TimelineSensor(_Entity):
                             "title": e.get("title"), "id": e.get("id"), "local_time": e.get("local_time")}
                            for e in data.get("events", [])],
                 "entry_id": self.coordinator.config_entry.entry_id}
+
+
+class RollingCopSensor(_Entity):
+    """Arbeitszahl der letzten 365 Tage aus den Tagen des Zeitstrahls (Spezifikation 4.3); kein Urteil."""
+
+    _attr_translation_key = "cop_365_days"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 2
+    _attr_icon = "mdi:leaf"
+
+    def __init__(self, coordinator: AirWaterAuditCoordinator) -> None:
+        super().__init__(coordinator, "cop_365_days")
+        self.entity_id = "sensor.air_water_heatpump_audit_cop_365_days"
+
+    def _result(self) -> dict | None:
+        data = self.coordinator.data
+        if "efficiency" not in data["audits"]:
+            return None
+        return rolling_cop(data["timeline"]["days"], dt_util.now().date().isoformat())
+
+    @property
+    def available(self) -> bool:
+        return super().available and self._result() is not None
+
+    @property
+    def native_value(self) -> float:
+        return self._result()["cop"]
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {k: v for k, v in self._result().items() if k != "cop"}

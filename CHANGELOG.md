@@ -18,6 +18,9 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 - **Hinweis „Wird aktualisiert …“ mit Fortschrittsbalken** in Audit- und Zeitstrahl-Karte, solange gerechnet wird,
   mit Schritt und geschätzter Restzeit (aus der Dauer des letzten Laufs). Grundlage ist das neue WebSocket-Abo
   `air_water_heatpump_audit/progress/subscribe` (Spezifikation 8.1).
+- **Arbeitszahl der letzten 365 Tage** (#33): neuer Sensor `sensor.air_water_heatpump_audit_cop_365_days`,
+  Wärme ÷ Strom über die gespeicherten Tage des Zeitstrahls (korrigierte Wärme, auch Statistik-Tage). Solange noch
+  kein volles Jahr vorliegt, nennt er im Attribut `days`, wie viele Tage er abdeckt (Spezifikation 4.3).
 
 ## [0.19.0] – 2026-11-09
 
