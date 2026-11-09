@@ -40,6 +40,7 @@ from .const import (CONF_BOOSTER_HEATER_2_KW, CONF_BOOSTER_HEATER_KW, CONF_CAPAC
                     CONF_ROOM_TEMP_TARGET, CONF_TARIFF_BASE_FEE, CONF_TARIFF_PRICE, CONF_WINDOW_DAYS, DATA_SOURCES, DEFAULT_OPTIONS, DOMAIN, EVENT_KIND_LABELS, EVENT_KINDS,
                     HYDRAULIC_SEPARATIONS, OPTION_SECTIONS, OPTIONAL_OPTIONS, ROLE_DOMAINS, ROLE_STEPS,
                     SUBENTRY_EVENT)
+from .const import (CONF_METER_FEE_PERIOD, CONF_TARIFF_BASE_FEE_PERIOD, FEE_PERIOD_DEFAULTS, FEE_PERIOD_OF, FEE_PERIODS)
 from .const import (CONF_HEAT_PUMP_METER, CONF_METER_FEE, CONF_PREVIOUS_CONSUMPTION, CONF_PREVIOUS_CONSUMPTION_UNIT,
                     CONF_PREVIOUS_HEATING_SYSTEM, CONSUMPTION_UNITS, HEAT_PUMP_METERS, PREVIOUS_HEATING_SYSTEMS)
 from .profiles import COMMON_ROLE_SUGGESTIONS, INTERFACE_PROFILES, MODEL_PROFILES, role_candidates
@@ -242,8 +243,10 @@ def _option_selectors() -> dict[str, Any]:
         CONF_TARIFF_PRICE: _number(2, 0.001, "€/kWh"),
         CONF_HEAT_PUMP_METER: selector.SelectSelector(selector.SelectSelectorConfig(
             options=HEAT_PUMP_METERS, translation_key=CONF_HEAT_PUMP_METER, mode=selector.SelectSelectorMode.LIST)),
-        CONF_TARIFF_BASE_FEE: _number(1000, 0.01, "€/a"),
-        CONF_METER_FEE: _number(1000, 0.01, "€/a"),
+        CONF_TARIFF_BASE_FEE: _number(1000, 0.01, "€"),
+        CONF_TARIFF_BASE_FEE_PERIOD: fee_period_selector(),
+        CONF_METER_FEE: _number(1000, 0.01, "€"),
+        CONF_METER_FEE_PERIOD: fee_period_selector(),
         CONF_PREVIOUS_HEATING_SYSTEM: selector.SelectSelector(selector.SelectSelectorConfig(
             options=PREVIOUS_HEATING_SYSTEMS, translation_key=CONF_PREVIOUS_HEATING_SYSTEM,
             mode=selector.SelectSelectorMode.DROPDOWN)),
@@ -263,6 +266,17 @@ def _option_selectors() -> dict[str, Any]:
         CONF_DATA_SOURCE: selector.SelectSelector(selector.SelectSelectorConfig(
             options=DATA_SOURCES, translation_key=CONF_DATA_SOURCE, mode=selector.SelectSelectorMode.LIST)),
     }
+
+
+def fee_period_selector() -> selector.SelectSelector:
+    return selector.SelectSelector(selector.SelectSelectorConfig(options=FEE_PERIODS, translation_key="fee_period",
+                                                                 mode=selector.SelectSelectorMode.LIST))
+
+
+def fee_periods(options: dict) -> dict:
+    """Zeitraum je Betrag für das Formular: gespeicherter Wert, sonst pro Jahr für alte Beträge, sonst Vorauswahl."""
+    return {period: options.get(period) or ("year" if options.get(fee) is not None else FEE_PERIOD_DEFAULTS[period])
+            for fee, period in FEE_PERIOD_OF.items()}
 
 
 def consumption_error(options: dict) -> bool:
@@ -299,6 +313,7 @@ class AirWaterAuditOptionsFlow(OptionsFlow):
                 else:
                     return self.async_create_entry(data=flat)
             current |= flat
+        current |= fee_periods(current)
         selectors = _option_selectors()
         cost_missing = bool(heat_pump_fixed_costs(current)[1])
         schema = {}

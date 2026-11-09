@@ -165,8 +165,10 @@
             "data": {
               "tariff_price": "Arbeitspreis Wärmepumpenstrom",
               "heat_pump_meter": "Zähler der Wärmepumpe",
-              "tariff_base_fee": "Grundpreis Wärmepumpentarif",
-              "meter_fee": "Messstellenentgelt Wärmepumpenzähler",
+              "tariff_base_fee": "Grundpreis Wärmepumpen-Stromtarif (Stromanbieter)",
+              "tariff_base_fee_period": "Grundpreis gilt",
+              "meter_fee": "Zählermiete Wärmepumpenzähler (Messstellenentgelt)",
+              "meter_fee_period": "Zählermiete gilt",
               "household_price": "Arbeitspreis Haushaltsstrom",
               "previous_heating_system": "Frühere Heizung",
               "previous_consumption": "Früherer Jahresverbrauch",
@@ -178,8 +180,10 @@
             "data_description": {
               "tariff_price": "Preis je kWh für den Strom der Wärmepumpe (K1, K2).",
               "heat_pump_meter": "Eigener Zähler mit Wärmepumpentarif oder Wärmepumpe am Haushaltszähler. Am Haushaltszähler gibt es keine zusätzlichen festen Kosten.",
-              "tariff_base_fee": "Grundpreis des Wärmepumpentarifs pro Jahr laut Vertrag. Leer = nicht eingetragen (Hinweis im Audit), 0 = kein Grundpreis.",
-              "meter_fee": "Messstellenentgelt (Zählermiete) des Wärmepumpenzählers pro Jahr, oft vom Messstellenbetreiber getrennt abgerechnet. Leer = nicht eingetragen, 0 = keins.",
+              "tariff_base_fee": "Fester Betrag des Stromanbieters für den Wärmepumpentarif, unabhängig vom Verbrauch; steht im Vertrag oder auf der Stromrechnung neben dem Arbeitspreis. Leer = nicht eingetragen (Hinweis im Audit), 0 = kein Grundpreis.",
+              "tariff_base_fee_period": "So, wie der Betrag im Vertrag steht. Das Audit rechnet auf das Jahr um.",
+              "meter_fee": "Miete für den eigenen Zähler der Wärmepumpe, vom Messstellenbetreiber (oft der Netzbetreiber); steht auf der Stromrechnung oder einer eigenen Rechnung. Leer = nicht eingetragen, 0 = keine.",
+              "meter_fee_period": "So, wie der Betrag auf der Rechnung steht. Das Audit rechnet auf das Jahr um.",
               "household_price": "Zum Vergleich: lohnt der eigene Wärmepumpentarif (K3)? Ergibt auch die Vergleichslinie Stromdirektheizung.",
               "previous_heating_system": "Womit vorher geheizt wurde; bei einem Neubau „Keine“. Für dieses System gilt der Nutzungsgrad unten.",
               "previous_consumption": "Jahresverbrauch so, wie er auf der letzten Abrechnung steht. Damit werden feste Kosten verteilt, solange die Hochrechnung (K2) noch nicht möglich ist.",
@@ -748,6 +752,12 @@
         "kg": "kg",
         "t": "Tonnen"
       }
+    },
+    "fee_period": {
+      "options": {
+        "month": "pro Monat",
+        "year": "pro Jahr"
+      }
     }
   },
   "config_subentries": {
@@ -906,13 +916,17 @@
             "description": "Für den Wärmepreis fehlen Angaben zu den festen Kosten der Wärmepumpe: {missing}. Bis dahin rechnet das Audit ohne sie. Leer lassen heißt „nicht eingetragen“, 0 heißt „gibt es nicht“.",
             "data": {
               "heat_pump_meter": "Zähler der Wärmepumpe",
-              "tariff_base_fee": "Grundpreis Wärmepumpentarif",
-              "meter_fee": "Messstellenentgelt Wärmepumpenzähler"
+              "tariff_base_fee": "Grundpreis Wärmepumpen-Stromtarif (Stromanbieter)",
+              "tariff_base_fee_period": "Grundpreis gilt",
+              "meter_fee": "Zählermiete Wärmepumpenzähler (Messstellenentgelt)",
+              "meter_fee_period": "Zählermiete gilt"
             },
             "data_description": {
               "heat_pump_meter": "Eigener Zähler mit Wärmepumpentarif oder Wärmepumpe am Haushaltszähler. Am Haushaltszähler gibt es keine zusätzlichen festen Kosten.",
-              "tariff_base_fee": "Grundpreis des Wärmepumpentarifs pro Jahr laut Vertrag. Leer = nicht eingetragen (Hinweis im Audit), 0 = kein Grundpreis.",
-              "meter_fee": "Messstellenentgelt (Zählermiete) des Wärmepumpenzählers pro Jahr, oft vom Messstellenbetreiber getrennt abgerechnet. Leer = nicht eingetragen, 0 = keins."
+              "tariff_base_fee": "Fester Betrag des Stromanbieters für den Wärmepumpentarif, unabhängig vom Verbrauch; steht im Vertrag oder auf der Stromrechnung neben dem Arbeitspreis. Leer = nicht eingetragen (Hinweis im Audit), 0 = kein Grundpreis.",
+              "tariff_base_fee_period": "So, wie der Betrag im Vertrag steht. Das Audit rechnet auf das Jahr um.",
+              "meter_fee": "Miete für den eigenen Zähler der Wärmepumpe, vom Messstellenbetreiber (oft der Netzbetreiber); steht auf der Stromrechnung oder einer eigenen Rechnung. Leer = nicht eingetragen, 0 = keine.",
+              "meter_fee_period": "So, wie der Betrag auf der Rechnung steht. Das Audit rechnet auf das Jahr um."
             }
           }
         },

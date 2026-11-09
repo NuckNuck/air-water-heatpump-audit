@@ -337,7 +337,9 @@ bewertbar – Stammdaten fehlen“.
 - **Standort und Komfort:** Heizstunden pro Jahr am Wohnort (aus der Klimakarte des Bundesverbands Wärmepumpe),
   Gradtage pro Jahr (z. B. aus dem Gradtagzahlen-Rechner des IWU), die gewünschte Raumtemperatur und die Wohnfläche.
 - **Kosten:** Arbeitspreis des Wärmepumpenstroms; ob die Wärmepumpe einen eigenen Zähler hat, und dann Grundpreis
-  des Wärmepumpentarifs und Messstellenentgelt (leer = nicht eingetragen, 0 = gibt es nicht); Preis des
+  des Wärmepumpen-Stromtarifs (Stromanbieter) und Zählermiete bzw. Messstellenentgelt (Messstellenbetreiber), je
+  mit Auswahl „pro Monat“ oder „pro Jahr“, so wie es im Vertrag oder auf der Rechnung steht (leer = nicht eingetragen,
+  0 = gibt es nicht); Preis des
   Haushaltsstroms; frühere Heizung mit Jahresverbrauch laut Abrechnung (z. B. 20.000 kWh Gas oder 2.000 Liter Heizöl),
   Preis und Nutzungsgrad zum Vergleich. Für Gas den Preis je abgerechneter kWh inklusive Grundpreis-Anteil
   eintragen; der vorgeschlagene Nutzungsgrad 0,86 ist das Mittel von Gas-Brennwertkesseln im Feld. Dazu der

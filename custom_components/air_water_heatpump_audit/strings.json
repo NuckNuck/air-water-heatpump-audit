@@ -165,8 +165,10 @@
             "data": {
               "tariff_price": "Heat pump electricity price",
               "heat_pump_meter": "Heat pump meter",
-              "tariff_base_fee": "Heat pump tariff standing charge",
-              "meter_fee": "Heat pump meter fee",
+              "tariff_base_fee": "Heat pump tariff standing charge (supplier)",
+              "tariff_base_fee_period": "Standing charge applies",
+              "meter_fee": "Heat pump meter rent (metering fee)",
+              "meter_fee_period": "Meter rent applies",
               "household_price": "Household electricity price",
               "previous_heating_system": "Previous heating",
               "previous_consumption": "Previous annual consumption",
@@ -178,8 +180,10 @@
             "data_description": {
               "tariff_price": "Price per kWh of heat pump electricity (K1, K2).",
               "heat_pump_meter": "Separate meter with a heat pump tariff, or heat pump on the household meter. On the household meter there are no additional fixed costs.",
-              "tariff_base_fee": "Annual standing charge of the heat pump tariff. Empty = not entered (note in the audit), 0 = none.",
-              "meter_fee": "Annual metering fee of the heat pump meter, often billed separately by the meter operator. Empty = not entered, 0 = none.",
+              "tariff_base_fee": "Fixed amount the electricity supplier charges for the heat pump tariff regardless of consumption; see contract or bill next to the unit price. Empty = not entered (note in the audit), 0 = none.",
+              "tariff_base_fee_period": "As stated in the contract. The audit converts it to a year.",
+              "meter_fee": "Rent for the separate heat pump meter, charged by the meter operator (often the grid operator); on the electricity bill or a separate one. Empty = not entered, 0 = none.",
+              "meter_fee_period": "As stated on the bill. The audit converts it to a year.",
               "household_price": "For comparison: does the heat pump tariff pay off (K3)? Also gives the comparison line for direct electric heating.",
               "previous_heating_system": "What was used for heating before; 'None' for a new building. The efficiency below applies to this system.",
               "previous_consumption": "Annual consumption as on the last bill. Used to spread fixed costs as long as the projection (K2) is not possible.",
@@ -748,6 +752,12 @@
         "kg": "kg",
         "t": "Tonnes"
       }
+    },
+    "fee_period": {
+      "options": {
+        "month": "per month",
+        "year": "per year"
+      }
     }
   },
   "config_subentries": {
@@ -906,13 +916,17 @@
             "description": "The heat price lacks information on the fixed costs of the heat pump: {missing}. Until then the audit calculates without them. Empty means 'not entered', 0 means 'there is none'.",
             "data": {
               "heat_pump_meter": "Heat pump meter",
-              "tariff_base_fee": "Heat pump tariff standing charge",
-              "meter_fee": "Heat pump meter fee"
+              "tariff_base_fee": "Heat pump tariff standing charge (supplier)",
+              "tariff_base_fee_period": "Standing charge applies",
+              "meter_fee": "Heat pump meter rent (metering fee)",
+              "meter_fee_period": "Meter rent applies"
             },
             "data_description": {
               "heat_pump_meter": "Separate meter with a heat pump tariff, or heat pump on the household meter. On the household meter there are no additional fixed costs.",
-              "tariff_base_fee": "Annual standing charge of the heat pump tariff. Empty = not entered (note in the audit), 0 = none.",
-              "meter_fee": "Annual metering fee of the heat pump meter, often billed separately by the meter operator. Empty = not entered, 0 = none."
+              "tariff_base_fee": "Fixed amount the electricity supplier charges for the heat pump tariff regardless of consumption; see contract or bill next to the unit price. Empty = not entered (note in the audit), 0 = none.",
+              "tariff_base_fee_period": "As stated in the contract. The audit converts it to a year.",
+              "meter_fee": "Rent for the separate heat pump meter, charged by the meter operator (often the grid operator); on the electricity bill or a separate one. Empty = not entered, 0 = none.",
+              "meter_fee_period": "As stated on the bill. The audit converts it to a year."
             }
           }
         },

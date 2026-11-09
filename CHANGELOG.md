@@ -26,6 +26,11 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 - Die Legende des Kosten-Zeitstrahls (Vergleichslinien, feste Kosten) steht hinter **ⓘ Legende** und öffnet sich
   beim Überfahren oder Antippen. Fehlende Stammdaten bleiben sichtbar.
 
+- Grundpreis und Zählermiete werden mit Zeitraum eingetragen: **pro Monat** oder **pro Jahr**, so wie es im Vertrag
+  oder auf der Rechnung steht. Vorauswahl beim Grundpreis „pro Monat“, bei der Zählermiete „pro Jahr“; schon
+  eingetragene Beträge gelten weiter pro Jahr. Die Felder heißen jetzt „Grundpreis Wärmepumpen-Stromtarif
+  (Stromanbieter)“ und „Zählermiete Wärmepumpenzähler (Messstellenentgelt)“.
+
 ### Behoben
 - Die Reparaturmeldung „Feste Kosten der Wärmepumpe fehlen“ schloss sich beim Öffnen sofort als behoben und leerte
   dabei Zählerart, Grundpreis und Messstellenentgelt (0.18.0b2/b3). Jetzt erscheint das Formular.

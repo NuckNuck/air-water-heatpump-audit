@@ -78,20 +78,28 @@ def reference_heat_price(master: dict) -> float | None:
 METER_SEPARATE = "separate_meter"
 METER_HOUSEHOLD = "household_meter"
 FIXED_COST_LABELS = {"heat_pump_meter": "Zähler der Wärmepumpe (eigener Zähler oder Haushaltszähler)",
-                     "tariff_base_fee": "Grundpreis des Wärmepumpentarifs",
-                     "meter_fee": "Messstellenentgelt des Wärmepumpenzählers"}
+                     "tariff_base_fee": "Grundpreis des Wärmepumpen-Stromtarifs",
+                     "meter_fee": "Zählermiete des Wärmepumpenzählers (Messstellenentgelt)"}
+
+
+# Zeitraum eines festen Betrags (Stammdatum `<feld>_period`) → Faktor auf €/Jahr; leer heißt pro Jahr
+FEE_PERIOD_FACTORS = {"month": 12, "year": 1}
 
 
 def _fee(master: dict, key: str) -> float | None:
+    """Fester Betrag in €/Jahr; eingetragen wird er so, wie er im Vertrag steht (pro Monat oder pro Jahr)."""
     value = master.get(key)
-    return None if value in (None, "") else float(value)
+    if value in (None, ""):
+        return None
+    return float(value) * FEE_PERIOD_FACTORS.get(master.get(f"{key}_period") or "year", 1)
 
 
 def heat_pump_fixed_costs(master: dict) -> tuple[float | None, tuple[str, ...]]:
     """Feste Kosten der Wärmepumpe in €/a (Mehrkosten-Sicht) und die Stammdaten, die dafür fehlen.
 
     Am Haushaltszähler gibt es keine zusätzlichen festen Kosten; der Grundpreis des Haushaltsstroms fällt auch ohne
-    Wärmepumpe an. Mit eigenem Zähler zählen Grundpreis des WP-Tarifs und Messstellenentgelt. Ein leeres Feld heißt
+    Wärmepumpe an. Mit eigenem Zähler zählen Grundpreis des WP-Tarifs und Messstellenentgelt, je mit ihrem Zeitraum
+    (`tariff_base_fee_period`, `meter_fee_period`: month oder year, leer = year). Ein leeres Feld heißt
     „nicht eingetragen“ (Hinweis), 0 ist ein gültiger Wert. Ist die Zählerart offen, aber ein Grundpreis eingetragen,
     gilt der eigene Zähler (Einträge aus Versionen ohne die Auswahl)."""
     meter = master.get("heat_pump_meter")

@@ -77,6 +77,13 @@ CONF_TARIFF_PRICE = "tariff_price"
 CONF_HEAT_PUMP_METER = "heat_pump_meter"
 CONF_TARIFF_BASE_FEE = "tariff_base_fee"
 CONF_METER_FEE = "meter_fee"
+# Zeitraum, auf den sich der eingetragene Betrag bezieht: wie er im Vertrag bzw. auf der Rechnung steht
+CONF_TARIFF_BASE_FEE_PERIOD = "tariff_base_fee_period"
+CONF_METER_FEE_PERIOD = "meter_fee_period"
+FEE_PERIODS = ["month", "year"]
+# Vorauswahl für neue Einträge: Grundpreise stehen meist pro Monat im Vertrag, Messstellenentgelte pro Jahr
+FEE_PERIOD_DEFAULTS = {CONF_TARIFF_BASE_FEE_PERIOD: "month", CONF_METER_FEE_PERIOD: "year"}
+FEE_PERIOD_OF = {CONF_TARIFF_BASE_FEE: CONF_TARIFF_BASE_FEE_PERIOD, CONF_METER_FEE: CONF_METER_FEE_PERIOD}
 CONF_HOUSEHOLD_PRICE = "household_price"
 CONF_REFERENCE_FUEL_PRICE = "reference_fuel_price"
 CONF_REFERENCE_EFFICIENCY = "reference_efficiency"
@@ -93,7 +100,8 @@ OPTION_SECTIONS: dict[str, tuple[str, ...]] = {
               CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW),
     "dhw": (CONF_DHW_TANK_VOLUME_L, CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS),
     "site": (CONF_HEATING_HOURS, CONF_HEATING_DEGREE_DAYS, CONF_ROOM_TEMP_TARGET, CONF_LIVING_AREA_M2),
-    "cost": (CONF_TARIFF_PRICE, CONF_HEAT_PUMP_METER, CONF_TARIFF_BASE_FEE, CONF_METER_FEE, CONF_HOUSEHOLD_PRICE,
+    "cost": (CONF_TARIFF_PRICE, CONF_HEAT_PUMP_METER, CONF_TARIFF_BASE_FEE, CONF_TARIFF_BASE_FEE_PERIOD, CONF_METER_FEE,
+             CONF_METER_FEE_PERIOD, CONF_HOUSEHOLD_PRICE,
              CONF_PREVIOUS_HEATING_SYSTEM, CONF_PREVIOUS_CONSUMPTION, CONF_PREVIOUS_CONSUMPTION_UNIT,
              CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY, CONF_COMPARE_HEATING_SYSTEMS),
     "evaluation": (CONF_WINDOW_DAYS, CONF_DATA_SINCE, CONF_DATA_SOURCE),
@@ -110,6 +118,7 @@ PREVIOUS_HEATING_SYSTEMS = ["natural_gas", "heating_oil", "wood_pellets", "distr
 CONSUMPTION_UNITS = ["kWh", "MWh", "L", "kg", "t"]
 # Stammdaten, die feste Kosten der Wärmepumpe bestimmen (Repairs-Issue „feste Kosten fehlen“)
 FIXED_COST_KEYS = (CONF_HEAT_PUMP_METER, CONF_TARIFF_BASE_FEE, CONF_METER_FEE)
+FIXED_COST_PERIOD_KEYS = (CONF_TARIFF_BASE_FEE_PERIOD, CONF_METER_FEE_PERIOD)
 HYDRAULIC_SEPARATIONS = ["unknown", "none", "series_buffer", "parallel_buffer", "hydraulic_separator"]
 # auto: InfluxDB 2, wenn die HA-Integration InfluxDB eingerichtet ist, sonst Recorder
 DATA_SOURCES = ["auto", "influxdb", "recorder"]
@@ -133,8 +142,12 @@ DEFAULT_OPTIONS = {
     CONF_TARIFF_PRICE: None,  # Arbeitspreis €/kWh; Vorschlag aus dem Energie-Dashboard (config_flow.energy_price)
     # Zähler der Wärmepumpe: eigener Zähler mit WP-Tarif oder Haushaltszähler; leer = nicht angegeben (Hinweis)
     CONF_HEAT_PUMP_METER: None,
-    CONF_TARIFF_BASE_FEE: None,  # Grundpreis des Wärmepumpentarifs €/Jahr; leer = nicht eingetragen, 0 = keiner
-    CONF_METER_FEE: None,  # Messstellenentgelt des Wärmepumpenzählers €/Jahr; leer = nicht eingetragen, 0 = keins
+    CONF_TARIFF_BASE_FEE: None,  # Grundpreis des Wärmepumpentarifs in €; leer = nicht eingetragen, 0 = keiner
+    CONF_METER_FEE: None,  # Messstellenentgelt des Wärmepumpenzählers in €; leer = nicht eingetragen, 0 = keins
+    # Zeitraum der beiden Beträge (month/year). Leer = pro Jahr: so wurden Einträge vor 0.18.0b5 gespeichert.
+    # Die Formulare wählen für neue Einträge FEE_PERIOD_DEFAULTS vor.
+    CONF_TARIFF_BASE_FEE_PERIOD: None,
+    CONF_METER_FEE_PERIOD: None,
     # Frühere Heizung: System und Jahresverbrauch laut Abrechnung → Jahreswärme, solange K2 nicht hochrechnen kann
     CONF_PREVIOUS_HEATING_SYSTEM: None,
     CONF_PREVIOUS_CONSUMPTION: None,
@@ -155,7 +168,8 @@ MASTER_KEYS = (CONF_HYDRAULIC_SEPARATION, CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_F
                CONF_HEATING_HOURS, CONF_DHW_TANK_VOLUME_L, CONF_HEATING_DEGREE_DAYS, CONF_TARIFF_PRICE,
                CONF_TARIFF_BASE_FEE, CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY,
                CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS, CONF_LIVING_AREA_M2, CONF_HEAT_PUMP_METER,
-               CONF_METER_FEE, CONF_PREVIOUS_HEATING_SYSTEM, CONF_PREVIOUS_CONSUMPTION, CONF_PREVIOUS_CONSUMPTION_UNIT)
+               CONF_METER_FEE, CONF_PREVIOUS_HEATING_SYSTEM, CONF_PREVIOUS_CONSUMPTION, CONF_PREVIOUS_CONSUMPTION_UNIT,
+               CONF_TARIFF_BASE_FEE_PERIOD, CONF_METER_FEE_PERIOD)
 
 # Ereignisse (Spezifikation 1.5) als Untereinträge des Config Entry
 SUBENTRY_EVENT = "event"

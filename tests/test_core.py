@@ -810,6 +810,17 @@ class FixedCostContractTest(unittest.TestCase):
         from audit_core import cost as k1
         self.assertEqual(k1.heat_pump_fixed_costs(self.SEPARATE | {"meter_fee": 0.0}), (120.0, ()))
 
+    def test_monthly_amounts_count_twelve_times_per_year(self):
+        from audit_core import cost as k1
+        monthly = {"heat_pump_meter": "separate_meter", "tariff_base_fee": 10.0, "tariff_base_fee_period": "month",
+                   "meter_fee": 2.5, "meter_fee_period": "month"}
+        self.assertEqual(k1.heat_pump_fixed_costs(monthly), (150.0, ()))
+
+    def test_amount_without_period_counts_per_year(self):
+        # Einträge vor der Zeitraum-Auswahl waren €/Jahr
+        from audit_core import cost as k1
+        self.assertEqual(k1.heat_pump_fixed_costs(self.SEPARATE | {"tariff_base_fee_period": None}), (150.0, ()))
+
     def test_unknown_meter_with_base_fee_counts_as_separate_meter(self):
         from audit_core import cost as k1
         self.assertEqual(k1.heat_pump_fixed_costs({"tariff_base_fee": 73.0}), (73.0, ("meter_fee",)))

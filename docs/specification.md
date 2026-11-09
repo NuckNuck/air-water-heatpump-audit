@@ -106,8 +106,10 @@ Options Flow in Abschnitten, dazu die Personen im Haushalt als Untereinträge (6
 | Standort und Komfort | `living_area_m2` | Wohnfläche | K2 |
 | Kosten | `tariff_price` | Arbeitspreis des Wärmepumpenstroms (€/kWh); Vorschlag aus dem Energie-Dashboard, wenn dort der Zähler der Rolle `electricity_meter` als Netzbezug steht | K1–K3 |
 | Kosten | `heat_pump_meter` | Zähler der Wärmepumpe: `separate_meter` (eigener Zähler mit WP-Tarif) oder `household_meter` (am Haushaltszähler, keine zusätzlichen festen Kosten); leer = nicht angegeben | K1–K3 |
-| Kosten | `tariff_base_fee` | Grundpreis des Wärmepumpentarifs (€/a); leer = nicht eingetragen, 0 = keiner | K1–K3 |
-| Kosten | `meter_fee` | Messstellenentgelt des Wärmepumpenzählers (€/a); leer = nicht eingetragen, 0 = keins | K1–K3 |
+| Kosten | `tariff_base_fee` | Grundpreis des Wärmepumpen-Stromtarifs (€ je `tariff_base_fee_period`); leer = nicht eingetragen, 0 = keiner | K1–K3 |
+| Kosten | `tariff_base_fee_period` | `month` oder `year`, wie im Vertrag; leer = `year` (Einträge vor 0.18.0b5); Vorauswahl `month` | K1–K3 |
+| Kosten | `meter_fee` | Zählermiete (Messstellenentgelt) des Wärmepumpenzählers (€ je `meter_fee_period`); leer = nicht eingetragen, 0 = keine | K1–K3 |
+| Kosten | `meter_fee_period` | `month` oder `year`, wie auf der Rechnung; leer = `year`; Vorauswahl `year` | K1–K3 |
 | Kosten | `household_price` | Arbeitspreis des Haushaltsstroms (€/kWh) | K3 |
 | Kosten | `previous_heating_system` | frühere Heizung (`natural_gas`, `heating_oil`, `wood_pellets`, `district_heating`, `direct_electric`, `none` = Neubau); für dieses System gilt `reference_efficiency` | K1, K2, Zeitstrahl |
 | Kosten | `previous_consumption`, `previous_consumption_unit` | früherer Jahresverbrauch so, wie er auf der Abrechnung steht (`kWh`, `MWh`, `L`, `kg`, `t`) | Jahreswärme (7.1) |
@@ -465,7 +467,7 @@ Ziel: Den gemessenen Strom in Euro umrechnen: Was kostet eine Kilowattstunde Wä
 - **Kosten eines Tages:** Mit `price_signal` jeder Zählerschritt × der Preis zu Beginn des Schritts; sonst Strom ×
   `tariff_price`.
 - **Feste Kosten der Wärmepumpe** (Mehrkosten-Sicht): nur, was die Wärmepumpe zusätzlich kostet. Am Haushaltszähler
-  keine; mit eigenem Zähler `tariff_base_fee` + `meter_fee`. Der Grundpreis des Haushaltsstroms fällt auch ohne
+  keine; mit eigenem Zähler `tariff_base_fee` + `meter_fee`, je auf das Jahr umgerechnet (pro Monat × 12). Der Grundpreis des Haushaltsstroms fällt auch ohne
   Wärmepumpe an und bleibt außen vor. Leere Felder sind „nicht eingetragen“: Die Prüfungstexte nennen sie, und ein
   fixbares Reparatur-Issue („feste Kosten fehlen“) führt zu einem Formular mit genau diesen Feldern. Ist
   `heat_pump_meter` leer, aber `tariff_base_fee` eingetragen, gilt der eigene Zähler (Einträge älterer Versionen).

@@ -699,6 +699,33 @@ async def test_fix_flow_submitted_writes_fixed_costs_to_options(hass: HomeAssist
         == ("separate_meter", 120.0, 0.0)
 
 
+def _defaults(schema) -> dict:
+    return {str(k): k.default() for k in schema.schema if callable(getattr(k, "default", None))}
+
+
+async def test_fix_flow_preselects_monthly_base_fee_and_yearly_meter_fee(hass: HomeAssistant):
+    coordinator = await _cost_coordinator(hass)
+    _, result = await _start_fix_flow(hass, coordinator.config_entry)
+    defaults = _defaults(result["data_schema"])
+    assert (defaults["tariff_base_fee_period"], defaults["meter_fee_period"]) == ("month", "year")
+
+
+async def test_fix_flow_shows_base_fee_without_period_as_yearly(hass: HomeAssistant):
+    coordinator = await _cost_coordinator(hass, tariff_base_fee=ENTERED_BASE_FEE)
+    _, result = await _start_fix_flow(hass, coordinator.config_entry)
+    assert _defaults(result["data_schema"])["tariff_base_fee_period"] == "year"
+
+
+async def test_fix_flow_submitted_stores_chosen_periods(hass: HomeAssistant):
+    coordinator = await _cost_coordinator(hass)
+    entry = coordinator.config_entry
+    manager, result = await _start_fix_flow(hass, entry)
+    await manager.async_configure(result["flow_id"], {
+        "heat_pump_meter": "separate_meter", "tariff_base_fee": 9.9, "tariff_base_fee_period": "month",
+        "meter_fee": 20.0, "meter_fee_period": "year"})
+    assert (entry.options["tariff_base_fee_period"], entry.options["meter_fee_period"]) == ("month", "year")
+
+
 async def test_options_flow_opens_cost_section_when_fixed_costs_missing(hass: HomeAssistant):
     entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR, options=DEFAULT_OPTIONS)
     entry.add_to_hass(hass)
