@@ -6,7 +6,7 @@ Assistant 2026.11) bieten sie als Update an.
 Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/): Solange die Hauptversion 0 ist, kann jede
 Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
-## [0.20.0] – unveröffentlicht
+## [0.20.0] – 2026-11-09
 
 ### Behoben
 - **Audit-Seite blieb beim Aktualisieren leer** (#31): Nach jedem gespeicherten Ereignis, nach Änderungen im Menü
