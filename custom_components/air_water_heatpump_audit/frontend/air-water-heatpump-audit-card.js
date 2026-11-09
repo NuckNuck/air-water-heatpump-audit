@@ -27,6 +27,7 @@ function enabledAudits(hass) {
 const TEXT = {
   de: {
     settings: "Einstellungen",
+    legend: "Legende",
     dq: "Datenqualität",
     dqLevels: { high: "hoch", medium: "mittel", low: "niedrig" },
     period: "Zeitraum",
@@ -87,6 +88,7 @@ const TEXT = {
   },
   en: {
     settings: "Settings",
+    legend: "Legend",
     dq: "Data quality",
     dqLevels: { high: "high", medium: "medium", low: "low" },
     period: "Period",
@@ -686,6 +688,7 @@ const TL_TEXT = {
         meter_fee: "Messstellenentgelt des Wärmepumpenzählers" },
     },
     settings: "Einstellungen",
+    legend: "Legende",
     noRefs: "Keine Preis-Sensoren für andere Heizsysteme gefunden. Sie kommen aus einer Preis-Integration oder z. B. "
       + "aus einem Scrape-Sensor mit dem Attribut heating_system (siehe README). Abschalten in den Optionen, Abschnitt Kosten.",
     none: "Noch kein voller Tag ausgewertet. Der erste Tageswert erscheint nach Mitternacht.",
@@ -741,6 +744,7 @@ const TL_TEXT = {
         meter_fee: "heat pump meter fee" },
     },
     settings: "Settings",
+    legend: "Legend",
     noRefs: "No price sensors for other heating systems found. They come from a price integration or e.g. from a "
       + "Scrape sensor with the attribute heating_system (see README). Switch off in the options, section Cost.",
     none: "No full day evaluated yet. The first daily value appears after midnight.",
@@ -808,6 +812,13 @@ class AirWaterAuditTimelineCard extends HTMLElement {
         .chart { margin-top: 14px; }
         .chart .label { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
         .chart .label b { font-weight: 500; }
+        .legend { position: relative; cursor: help; color: var(--primary-color); font-size: .9em; outline: none; }
+        .legend .tip { display: none; position: absolute; left: 0; top: 100%; z-index: 3; width: max-content;
+          max-width: min(460px, 80vw); margin-top: 4px; padding: 8px 10px; border-radius: 8px; font-size: .95em;
+          color: var(--secondary-text-color); background: var(--card-background-color, #fff);
+          border: 1px solid var(--divider-color); box-shadow: 0 2px 8px rgba(0, 0, 0, .2); }
+        .legend .tip > div + div { margin-top: 6px; }
+        .legend:hover .tip, .legend:focus .tip, .legend:focus-within .tip { display: block; }
         svg { display: block; width: 100%; overflow: visible; }
         svg text { font-size: 11px; fill: var(--secondary-text-color); }
         svg .ev text { fill: var(--primary-text-color); font-weight: 600; }
@@ -1022,9 +1033,12 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     const latest = [...days].reverse().find((d) => d[audit]?.value !== null && d[audit]?.value !== undefined);
     const now = latest ? `${this._fmt(latest[audit].value, strip ? 1 : scale.decimals)}${this._unit(scale.unit, t)} (${esc(latest.day.slice(8, 10) + "." + latest.day.slice(5, 7) + ".")})` : "–";
     const note = t.notes[audit] && (!["capacity", "cost"].includes(audit) || (scale.bands ?? []).length) ? `<div class="muted">${t.notes[audit]}</div>` : "";
+    // Legende (Vergleichslinien, feste Kosten) nur beim Überfahren; Handlungsbedarf bleibt sichtbar
+    const legend = this._refLegend(scale, refs, days, audit, t) + this._fixedNote(scale, t);
+    const tip = legend ? `<span class="legend" tabindex="0">ⓘ ${esc(t.legend)}<div class="tip">${legend}</div></span>` : "";
     return `<div class="chart">
-      <div class="label"><b>${esc(name)}</b><span class="muted">${esc(metric)} · ${t.latest} ${esc(now)}</span></div>${note}
-      <svg viewBox="0 0 ${geo.width} ${h}" height="${h}" preserveAspectRatio="none">${svg}</svg>${this._refLegend(scale, refs, days, audit, t)}${this._fixedNote(scale, t)}</div>`;
+      <div class="label"><b>${esc(name)}</b><span class="muted">${esc(metric)} · ${t.latest} ${esc(now)}</span>${tip}</div>${note}
+      <svg viewBox="0 0 ${geo.width} ${h}" height="${h}" preserveAspectRatio="none">${svg}</svg>${this._refHint(scale, refs, t)}${this._fixedMissing(scale, t)}</div>`;
   }
 
   // Farbe und Strichmuster je Preis-Sensor
@@ -1036,7 +1050,7 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     });
   }
 
-  // Was an festen Kosten im eigenen Wärmepreis steckt; fehlende Stammdaten mit Link in die Einstellungen
+  // Was an festen Kosten im eigenen Wärmepreis steckt (Teil der Legende)
   _fixedNote(scale, t) {
     const f = scale.fixed_costs;
     if (!f) return "";
@@ -1049,11 +1063,15 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     } else if (f.eur_per_year > 0) {
       lines.push(esc(t.fixed.noHeat));
     }
-    if (f.missing.length) {
-      const entryId = this._hass.states[this._config.entity]?.attributes?.entry_id;
-      lines.push(`${esc(t.fixed.missing(f.missing.map((k) => t.fixed.labels[k] ?? k).join(", ")))} ${settingsLink(entryId, t.settings)}`);
-    }
-    return lines.length ? `<div class="muted">${lines.join("<br>")}</div>` : "";
+    return lines.length ? `<div>${lines.join("<br>")}</div>` : "";
+  }
+
+  // Fehlende Stammdaten der festen Kosten: immer sichtbar, mit Link in die Einstellungen
+  _fixedMissing(scale, t) {
+    const f = scale.fixed_costs;
+    if (!f?.missing?.length) return "";
+    const entryId = this._hass.states[this._config.entity]?.attributes?.entry_id;
+    return `<div class="muted">${esc(t.fixed.missing(f.missing.map((k) => t.fixed.labels[k] ?? k).join(", ")))} ${settingsLink(entryId, t.settings)}</div>`;
   }
 
   _refLabel(r, t) {
@@ -1067,17 +1085,21 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleDateString(this._locale(), { day: "2-digit", month: "2-digit", year: "numeric" });
   }
 
-  // Legende unter dem Kosten-Zeitstrahl; Hinweis, wenn der Vergleich an ist, aber kein Preis-Sensor gefunden wurde
+  // Hinweis unter dem Kosten-Zeitstrahl, wenn der Vergleich an ist, aber kein Preis-Sensor gefunden wurde
+  _refHint(scale, refs, t) {
+    return scale.references && !refs.length ? `<div class="muted">${esc(t.noRefs)}</div>` : "";
+  }
+
+  // Legende der Vergleichslinien mit letztem Tageswert
   _refLegend(scale, refs, days, audit, t) {
-    if (!scale.references) return "";
-    if (!refs.length) return `<div class="muted">${esc(t.noRefs)}</div>`;
+    if (!scale.references || !refs.length) return "";
     const items = refs.map((r) => {
       const last = [...days].reverse().map((d) => d[audit]?.references?.[r.id]).find((v) => v !== null && v !== undefined);
       const value = last === undefined ? "–" : `${this._fmt(last, scale.decimals)}${this._unit(scale.unit, t)}`;
       return `<div><svg width="22" height="8"><line x1="0" x2="22" y1="4" y2="4" stroke="${r.color}" stroke-width="2"
         stroke-dasharray="${r.dash}"/></svg> ${esc(this._refLabel(r, t))}: ${esc(value)}</div>`;
     }).join("");
-    return `<div class="muted">${esc(t.refsIntro)}${items}</div>`;
+    return `<div>${esc(t.refsIntro)}${items}</div>`;
   }
 
   _nextMidnight(s) {

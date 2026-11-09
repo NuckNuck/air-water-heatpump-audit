@@ -23,6 +23,8 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
   rechnet ihn in Wärme um. Der eigene Nutzungsgrad gilt für dieses System.
 - **Reparaturmeldung** „Feste Kosten der Wärmepumpe fehlen“ mit kleinem Formular; in der Karte ein Link
   **⚙ Einstellungen** je Audit und bei fehlenden Stammdaten. Die Anlagendaten öffnen dann direkt den Abschnitt Kosten.
+- Die Legende des Kosten-Zeitstrahls (Vergleichslinien, feste Kosten) steht hinter **ⓘ Legende** und öffnet sich
+  beim Überfahren oder Antippen. Fehlende Stammdaten bleiben sichtbar.
 - Preis-Sensoren können `includes_fixed_charges` und `annual_base_fee` angeben. Die Vergleichslinie
   Stromdirektheizung kommt aus dem Arbeitspreis des Haushaltsstroms.
 
