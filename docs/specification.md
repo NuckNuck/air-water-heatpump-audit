@@ -219,7 +219,7 @@ damit ein Audit allein dieselbe Wirkung zeigt wie im Gesamtlauf.
 
 | Grundlage | Herkunft |
 |---|---|
-| Jahresstrom | Hochrechnung über die Gradtage wie K2 (`project_year`, ganzes Fenster plus Statistik-Tage nach dem letzten Ereignis, 1.11), ab 14 gültigen Tagen |
+| Jahresstrom | Hochrechnung über die Gradtage wie K2 (`project_year`, ganzes Fenster plus Statistik-Tage nach dem letzten Ereignis, 1.11), ab 5 gültigen Tagen (wie K2) |
 | Warmwasserstrom | Strom der Ladungen je Tag × 365 |
 | Heizstrom | Jahresstrom − Warmwasserstrom |
 | Preis | Mittel aus den Tageskosten (auch dynamisch), sonst `tariff_price`; ohne Preis nur kWh |
@@ -512,14 +512,17 @@ Ziel: Den gemessenen Strom in Euro umrechnen: Was kostet eine Kilowattstunde Wä
 - **Hochrechnung** (K2): Je Tag Gradtage G = 20 °C − Tagesmittel außen, wenn das Mittel unter 15 °C liegt, sonst 0
   (G20/15, VDI 3807/DWD-GT; Außentemperatur vom Wetterdienst bevorzugt). Ausgleichsgerade Strom bzw. Wärme = a + b·G
   über die gültigen Tage; Jahr = 365·a + b·`heating_degree_days`. Ist die Spannweite der Tages-G < 4 K oder die Gerade
-  unplausibel (a < 0 oder b ≤ 0), wird alles mit den Gradtagen skaliert („grob“).
+  unplausibel (a < 0 oder b ≤ 0), wird alles mit den Gradtagen skaliert („grob“). Gerechnet wird ab 5 Tagen mit
+  Außentemperatur (ein Drittel von 14, Datenreife 1.9; Entscheid F298: die Hochrechnung wird mit jedem Tag besser);
+  bis 14 Tage ist K2 vorläufig. Dieselbe Hochrechnung liefert die Jahreswärme für die festen Kosten und die
+  Jahreswerte der Wirkung (1.10).
 
 ### 7.2 Prüfungen
 
 | ID | Key | Kennzahl | Gate | Urteil | Herkunft |
 |---|---|---|---|---|---|
 | K1 | `heat_price` | Wärmepreis der letzten 7 gültigen Tage in ct/kWh, mit festen Kosten je kWh (7.1) | 7 gültige Tage; Preis | `ok` ≤ Vergleichspreis × 1,10 · `hint` darüber · `info` ohne Vergleichspreis | `derived`: 10 % ≈ Messunsicherheit der Wärme; Nutzungsgrad Gas-Brennwert 0,86 auf Hs (DBU-BW). Wochenwert, im Winter höher als im Jahresmittel |
-| K2 | `annual_cost` | Strom, Kosten und Wärme im Jahr, Ersparnis gegen den Vergleich | 14 gültige Tage; `heating_degree_days` | `info` (Hochrechnung) | `sourced`: Gradtagzahl G20/15 (DWD-GT); Referenz Potsdam 3.666,8 Kd. Mindestens 14 Tage `derived`. Mit `living_area_m2` dazu Wärme und Strom je m² und die Klasse des Energieausweises nach Endenergie (GEG Anlage 10: A+ < 30, A < 50, B < 75, C < 100, D < 130, E < 160, F < 200, G < 250, H darüber; Strom ÷ (1,2 × Wohnfläche) nach GEG § 82 Abs. 2); mit Personen (6.6) die Kosten je Person |
+| K2 | `annual_cost` | Strom, Kosten und Wärme im Jahr, Ersparnis gegen den Vergleich | 14 gültige Tage, vorläufig ab 5 (1.9); `heating_degree_days` | `info` (Hochrechnung) | `sourced`: Gradtagzahl G20/15 (DWD-GT); Referenz Potsdam 3.666,8 Kd. Mindestens 14 Tage `derived`. Mit `living_area_m2` dazu Wärme und Strom je m² und die Klasse des Energieausweises nach Endenergie (GEG Anlage 10: A+ < 30, A < 50, B < 75, C < 100, D < 130, E < 160, F < 200, G < 250, H darüber; Strom ÷ (1,2 × Wohnfläche) nach GEG § 82 Abs. 2); mit Personen (6.6) die Kosten je Person |
 | K3 | `tariff_benefit` | Ersparnis des eigenen Wärmepumpentarifs: (`household_price` − `tariff_price`) × Jahresstrom aus K2 − feste Kosten des eigenen Zählers | wie K2; beide Preise; kein `price_signal`; `info` am Haushaltszähler | `ok` ≥ 0 · `hint` < 0 | `physical` (Rechnung) |
 | K4 | `price_timing` | gezahlter Mittelpreis gegen das Zeitmittel von `price_signal` | 7 Tage; Rolle `price_signal` | `ok` ≤ +3 % · `hint` darüber | `derived`: 3 % eigene Festlegung (Zufall einer Woche) |
 | K5 | `grid_lock` | Sperren pro Tag, Dauer, längste Sperre; Heizstab-Stunden während und bis 2 h nach einer Sperre | 7 Tage; Rolle `grid_lock` | `ok` · `hint`, wenn der Heizstab dabei läuft. Anzahl und Dauer nur im Text | `derived`; seit 2024 keine feste Höchstdauer, nur Mindestleistung 4,2 kW (BK6-22-300 Anl. 1 Ziff. 4.5.1; präventiv höchstens 2 h täglich bis Ende 2028, Ziff. 10.5). Die frühere Tarifregel „3 × 2 h“ ist ohne Primärquelle und wird nicht verwendet |
