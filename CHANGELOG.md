@@ -34,6 +34,11 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 - Arbeitspreise (Wärmepumpenstrom, Haushaltsstrom, früherer Brennstoff) wahlweise in **ct/kWh** oder **€/kWh**,
   vorausgewählt ct/kWh. Schon eingetragene Preise gelten weiter in €/kWh.
 
+- **Ereignisse und Personen nicht mehr als einzelne Untereinträge** (#18): Auf der Integrationsseite standen sie
+  flach neben den Audits. Ereignisse verwaltet jetzt die Zeitstrahl-Karte (anlegen, ändern ✎, löschen ✕), Personen
+  das neue Menü **Konfigurieren → Haushalt**. Die Stammdaten stehen unter **Konfigurieren → Anlagendaten**.
+  Bestehende Untereinträge werden beim Update automatisch übernommen.
+
 ### Behoben
 - Die Reparaturmeldung „Feste Kosten der Wärmepumpe fehlen“ schloss sich beim Öffnen sofort als behoben und leerte
   dabei Zählerart, Grundpreis und Messstellenentgelt (0.18.0b2/b3). Jetzt erscheint das Formular.

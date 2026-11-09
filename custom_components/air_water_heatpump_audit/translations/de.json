@@ -105,6 +105,14 @@
   "options": {
     "step": {
       "init": {
+        "title": "Einstellungen",
+        "description": "Was möchtest du ändern? Ereignisse trägst du direkt in der Zeitstrahl-Karte ein, ändern und löschen geht dort auch.",
+        "menu_options": {
+          "plant": "Anlagendaten",
+          "household": "Haushalt"
+        }
+      },
+      "plant": {
         "title": "Stammdaten",
         "description": "Angaben zur Anlage, die sich nicht messen lassen. Leere Felder sind erlaubt: Die betroffene Prüfung zeigt dann „nicht bewertbar – Stammdaten fehlen“.",
         "sections": {
@@ -212,6 +220,52 @@
             },
             "description": "Der Recorder hält nur seine Aufbewahrungszeit vor (Standard 10 Tage); InfluxDB reicht weiter zurück."
           }
+        }
+      },
+      "household": {
+        "title": "Haushalt",
+        "description": "Personen im Haushalt für den Warmwasserbedarf (W5, W6); zurzeit {count}. Person zum Ändern oder Löschen wählen oder eine neue anlegen.",
+        "data": {
+          "person": "Person"
+        }
+      },
+      "person": {
+        "title": "Person im Haushalt",
+        "description": "Für den Warmwasserbedarf (W5, W6). Das Audit vergleicht den gemessenen Verbrauch mit dem, was für diesen Haushalt üblich ist.",
+        "data": {
+          "name": "Name",
+          "birth_year": "Geburtsjahr",
+          "presence": "Im Haushalt",
+          "showers_per_week": "Duschen pro Woche",
+          "baths_per_week": "Bäder pro Woche",
+          "shower_time": "Duscht meistens",
+          "delete": "Person löschen"
+        },
+        "data_description": {
+          "name": "Nur zur Unterscheidung, z. B. Vorname oder „Kind 1“.",
+          "birth_year": "Für typische Gewohnheiten nach Alter, falls Duschen und Bäder leer bleiben. Kleine Kinder baden eher, als dass sie duschen.",
+          "presence": "Wann die Person hier wohnt, z. B. abwechselnde Wochen bei Kindern, die auch beim anderen Elternteil leben.",
+          "showers_per_week": "Leer lassen für einen typischen Wert nach Alter.",
+          "baths_per_week": "Leer lassen für einen typischen Wert nach Alter.",
+          "shower_time": "Für den Ladezeitpunkt (W5): Ein Ladefenster am Nachmittag passt nicht, wenn morgens geduscht wird.",
+          "delete": "Entfernt die Person aus dem Haushalt."
+        }
+      },
+      "person_presence": {
+        "title": "Anwesenheit",
+        "description": "Angaben zum gewählten Muster.",
+        "data": {
+          "weeks_present": "Wochen hier am Stück",
+          "weeks_absent": "Wochen danach woanders",
+          "rotation_start": "Beginn einer Woche hier",
+          "weekdays": "Tage",
+          "every_n_weeks": "Jede n-te Woche",
+          "share_pct": "Anteil der Zeit hier"
+        },
+        "data_description": {
+          "rotation_start": "Ein Tag, an dem eine Phase hier beginnt (auch in der Vergangenheit); ab da wiederholt sich das Muster. Bei „Bestimmte Tage“ der Anker für „jede n-te Woche“.",
+          "every_n_weeks": "1 = jede Woche, 2 = jede zweite Woche (z. B. jedes zweite Wochenende).",
+          "share_pct": "Wenn kein festes Muster passt: grob geschätzter Anteil, z. B. 30 %."
         }
       }
     },
@@ -674,17 +728,6 @@
         "hydraulic_separator": "Hydraulische Weiche"
       }
     },
-    "kind": {
-      "options": {
-        "heating_curve": "Heizkurve geändert",
-        "valves": "Heizkörperventile verstellt",
-        "hydraulic_balancing": "Hydraulischer Abgleich",
-        "pump_setting": "Pumpe verstellt",
-        "dhw_setting": "Warmwasser-Einstellung",
-        "hardware": "Umbau an der Anlage",
-        "other": "Sonstiges"
-      }
-    },
     "interface_profile": {
       "options": {
         "none": "Keins",
@@ -793,128 +836,6 @@
       },
       "abort": {
         "all_audits_added": "Alle Audits sind schon zugeschaltet."
-      }
-    },
-    "event": {
-      "entry_type": "Ereignis",
-      "initiate_flow": {
-        "user": "Ereignis hinzufügen"
-      },
-      "step": {
-        "user": {
-          "title": "Ereignis eintragen",
-          "description": "Änderung an der Anlage, z. B. Heizkurve verstellt oder hydraulischer Abgleich. Die Audits Effizienz, Vorlauf und Leistung rechnen danach nur noch ab dem letzten Ereignis, damit nicht über eine Änderung hinweg gemittelt wird.",
-          "data": {
-            "time": "Zeitpunkt",
-            "kind": "Art",
-            "note": "Notiz"
-          },
-          "data_description": {
-            "time": "Wann die Änderung wirksam wurde.",
-            "note": "Was genau geändert wurde, z. B. „Parallelverschiebung −1 K“."
-          }
-        },
-        "reconfigure": {
-          "title": "Ereignis ändern",
-          "description": "Änderung an der Anlage, z. B. Heizkurve verstellt oder hydraulischer Abgleich. Die Audits Effizienz, Vorlauf und Leistung rechnen danach nur noch ab dem letzten Ereignis, damit nicht über eine Änderung hinweg gemittelt wird.",
-          "data": {
-            "time": "Zeitpunkt",
-            "kind": "Art",
-            "note": "Notiz"
-          },
-          "data_description": {
-            "time": "Wann die Änderung wirksam wurde.",
-            "note": "Was genau geändert wurde, z. B. „Parallelverschiebung −1 K“."
-          }
-        }
-      },
-      "abort": {
-        "reconfigure_successful": "Ereignis gespeichert."
-      }
-    },
-    "person": {
-      "entry_type": "Person im Haushalt",
-      "initiate_flow": {
-        "user": "Person hinzufügen"
-      },
-      "step": {
-        "user": {
-          "title": "Person im Haushalt",
-          "description": "Für den Warmwasserbedarf (W5, W6). Das Audit vergleicht den gemessenen Verbrauch mit dem, was für diesen Haushalt üblich ist.",
-          "data": {
-            "name": "Name",
-            "birth_year": "Geburtsjahr",
-            "presence": "Im Haushalt",
-            "showers_per_week": "Duschen pro Woche",
-            "baths_per_week": "Bäder pro Woche",
-            "shower_time": "Duscht meistens"
-          },
-          "data_description": {
-            "name": "Nur zur Unterscheidung, z. B. Vorname oder „Kind 1“.",
-            "birth_year": "Für typische Gewohnheiten nach Alter, falls Duschen und Bäder leer bleiben. Kleine Kinder baden eher, als dass sie duschen.",
-            "presence": "Wann die Person hier wohnt, z. B. abwechselnde Wochen bei Kindern, die auch beim anderen Elternteil leben.",
-            "showers_per_week": "Leer lassen für einen typischen Wert nach Alter.",
-            "baths_per_week": "Leer lassen für einen typischen Wert nach Alter.",
-            "shower_time": "Für den Ladezeitpunkt (W5): Ein Ladefenster am Nachmittag passt nicht, wenn morgens geduscht wird."
-          }
-        },
-        "reconfigure": {
-          "title": "Person ändern",
-          "description": "Für den Warmwasserbedarf (W5, W6).",
-          "data": {
-            "name": "Name",
-            "birth_year": "Geburtsjahr",
-            "presence": "Im Haushalt",
-            "showers_per_week": "Duschen pro Woche",
-            "baths_per_week": "Bäder pro Woche",
-            "shower_time": "Duscht meistens"
-          },
-          "data_description": {
-            "name": "Nur zur Unterscheidung, z. B. Vorname oder „Kind 1“.",
-            "birth_year": "Für typische Gewohnheiten nach Alter, falls Duschen und Bäder leer bleiben. Kleine Kinder baden eher, als dass sie duschen.",
-            "presence": "Wann die Person hier wohnt, z. B. abwechselnde Wochen bei Kindern, die auch beim anderen Elternteil leben.",
-            "showers_per_week": "Leer lassen für einen typischen Wert nach Alter.",
-            "baths_per_week": "Leer lassen für einen typischen Wert nach Alter.",
-            "shower_time": "Für den Ladezeitpunkt (W5): Ein Ladefenster am Nachmittag passt nicht, wenn morgens geduscht wird."
-          }
-        },
-        "presence": {
-          "title": "Anwesenheit",
-          "description": "Angaben zum gewählten Muster.",
-          "data": {
-            "weeks_present": "Wochen hier am Stück",
-            "weeks_absent": "Wochen danach woanders",
-            "rotation_start": "Beginn einer Woche hier",
-            "weekdays": "Tage",
-            "every_n_weeks": "Jede n-te Woche",
-            "share_pct": "Anteil der Zeit hier"
-          },
-          "data_description": {
-            "rotation_start": "Ein Tag, an dem eine Phase hier beginnt (auch in der Vergangenheit); ab da wiederholt sich das Muster. Bei „Bestimmte Tage“ der Anker für „jede n-te Woche“.",
-            "every_n_weeks": "1 = jede Woche, 2 = jede zweite Woche (z. B. jedes zweite Wochenende).",
-            "share_pct": "Wenn kein festes Muster passt: grob geschätzter Anteil, z. B. 30 %."
-          }
-        },
-        "reconfigure_presence": {
-          "title": "Anwesenheit",
-          "description": "Angaben zum gewählten Muster.",
-          "data": {
-            "weeks_present": "Wochen hier am Stück",
-            "weeks_absent": "Wochen danach woanders",
-            "rotation_start": "Beginn einer Woche hier",
-            "weekdays": "Tage",
-            "every_n_weeks": "Jede n-te Woche",
-            "share_pct": "Anteil der Zeit hier"
-          },
-          "data_description": {
-            "rotation_start": "Ein Tag, an dem eine Phase hier beginnt (auch in der Vergangenheit); ab da wiederholt sich das Muster. Bei „Bestimmte Tage“ der Anker für „jede n-te Woche“.",
-            "every_n_weeks": "1 = jede Woche, 2 = jede zweite Woche (z. B. jedes zweite Wochenende).",
-            "share_pct": "Wenn kein festes Muster passt: grob geschätzter Anteil, z. B. 30 %."
-          }
-        }
-      },
-      "abort": {
-        "reconfigure_successful": "Person gespeichert."
       }
     }
   },

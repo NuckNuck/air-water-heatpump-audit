@@ -184,7 +184,12 @@ MASTER_KEYS = (CONF_HYDRAULIC_SEPARATION, CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_F
                CONF_TARIFF_BASE_FEE_PERIOD, CONF_METER_FEE_PERIOD, CONF_TARIFF_PRICE_UNIT, CONF_HOUSEHOLD_PRICE_UNIT,
                CONF_REFERENCE_FUEL_PRICE_UNIT)
 
-# Ereignisse (Spezifikation 1.5) als Untereinträge des Config Entry
+# Ereignisse (Spezifikation 1.5) und Personen im Haushalt stehen als Listen in den Optionen (`events`, `household`),
+# je Eintrag mit eigener `id`. Bis 0.18.0b6 waren es Untereinträge; die Migration (records.py) zieht sie um.
+CONF_EVENTS = "events"
+CONF_HOUSEHOLD = "household"
+RECORD_ID = "id"
+RECORD_KEYS = (CONF_EVENTS, CONF_HOUSEHOLD)
 SUBENTRY_EVENT = "event"
 CONF_EVENT_TIME = "time"
 CONF_EVENT_KIND = "kind"
@@ -200,7 +205,7 @@ EVENT_KIND_LABELS = {
            "dhw_setting": "Hot water setting", "hardware": "Hardware change", "other": "Other"},
 }
 
-# Personen im Haushalt als Untereinträge (Warmwasserbedarf, Audit Warmwasser); Felder wie audit_core.household
+# Personen im Haushalt (Warmwasserbedarf, Audit Warmwasser); Felder wie audit_core.household
 SUBENTRY_PERSON = "person"
 CONF_PERSON_NAME = "name"
 CONF_BIRTH_YEAR = "birth_year"

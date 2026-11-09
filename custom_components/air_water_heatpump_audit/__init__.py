@@ -18,6 +18,7 @@ from homeassistant.loader import async_get_integration
 
 from .const import CARD_URL, DOMAIN
 from .coordinator import AirWaterAuditConfigEntry, AirWaterAuditCoordinator, timeline_store
+from .records import RECORDS_MINOR_VERSION, async_migrate_records, async_register_websocket
 from .repairs import issue_id, update_fixed_cost_issue
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,6 +35,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     card = Path(__file__).parent / "frontend" / "air-water-heatpump-audit-card.js"
     await hass.http.async_register_static_paths([StaticPathConfig(CARD_URL, str(card), False)])
     hass.async_create_task(_async_register_card(hass))
+    async_register_websocket(hass)
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry) -> bool:
+    """1.1 → 1.2: Ereignisse und Personen aus Untereinträgen in die Optionen (records.py)."""
+    if entry.version > 1:
+        return False
+    if entry.minor_version < RECORDS_MINOR_VERSION:
+        await async_migrate_records(hass, entry)
     return True
 
 

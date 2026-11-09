@@ -9,14 +9,15 @@
   ],
   "config_flow": true,
   "dependencies": [
-    "recorder",
     "http",
-    "repairs"
+    "recorder",
+    "repairs",
+    "websocket_api"
   ],
   "documentation": "https://github.com/NuckNuck/air-water-heatpump-audit",
   "integration_type": "service",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/NuckNuck/air-water-heatpump-audit/issues",
   "requirements": [],
-  "version": "0.18.0b6"
+  "version": "0.18.0b7"
 }

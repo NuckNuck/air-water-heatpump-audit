@@ -25,8 +25,9 @@ from .const import (CONF_COMPARE_HEATING_SYSTEMS, PRICE_ATTR_AS_OF, PRICE_ATTR_S
                     PRICE_ATTR_SYSTEM, PRICE_ROLE_PREFIX, PRICE_ATTR_INCLUDES_FIXED, PRICE_ATTR_BASE_FEE)
 from .const import (CONF_BOOSTER_HEATER_2_KW, CONF_BOOSTER_HEATER_KW, CONF_DATA_SINCE, CONF_DATA_SOURCE,
                     CONF_EVENT_KIND, CONF_EVENT_NOTE, CONF_EVENT_TIME, CONF_IMMERSION_HEATER_KW, CONF_WINDOW_DAYS,
-                    DEFAULT_OPTIONS, DOMAIN, MASTER_KEYS, SOURCE_INFLUXDB, SOURCE_RECORDER, SUBENTRY_EVENT, SUBENTRY_PERSON,
-                    UPDATE_INTERVAL)
+                    DEFAULT_OPTIONS, DOMAIN, MASTER_KEYS, SOURCE_INFLUXDB, SOURCE_RECORDER, UPDATE_INTERVAL)
+from .const import CONF_EVENTS, CONF_HOUSEHOLD, RECORD_ID, language
+from .records import event_title, records
 from .recorder_source import load_series
 
 _LOGGER = logging.getLogger(__name__)
@@ -133,8 +134,8 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                                                                 ("booster_heater", CONF_BOOSTER_HEATER_KW),
                                                                 ("booster_heater_2", CONF_BOOSTER_HEATER_2_KW))}
         master = {k: self._option(k) for k in MASTER_KEYS}
-        master["household"] = [dict(sub.data) for sub in self.config_entry.subentries.values()
-                               if sub.subentry_type == SUBENTRY_PERSON]
+        master["household"] = [{k: v for k, v in p.items() if k != RECORD_ID}
+                               for p in records(self.config_entry, CONF_HOUSEHOLD)]
         return run_audits(series, start, end, recorder_keep_days=keep_days, long_term_days=long_term_days,
                           heater_kw=heater_kw, master=master, events=self._events(), controls=controls,
                           tz=str(dt_util.get_default_time_zone()), audits=self.audits(),
@@ -142,17 +143,17 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                               r | {"series": series.get(PRICE_ROLE_PREFIX + r["id"], [])} for r in price_refs])
 
     def _events(self) -> list[dict[str, Any]]:
-        """Ereignisse aus den Untereinträgen; Zeit ohne Zone gilt als lokale Zeit."""
+        """Ereignisse aus den Optionen (records.py); Zeit ohne Zone gilt als lokale Zeit."""
         out = []
-        for sub in self.config_entry.subentries.values():
-            if sub.subentry_type != SUBENTRY_EVENT:
-                continue
-            when = dt_util.parse_datetime(str(sub.data.get(CONF_EVENT_TIME)))
+        lang = language(self.hass)
+        for event in records(self.config_entry, CONF_EVENTS):
+            when = dt_util.parse_datetime(str(event.get(CONF_EVENT_TIME)))
             if when is None:
                 continue
             when = when if when.tzinfo else when.replace(tzinfo=dt_util.get_default_time_zone())
-            out.append({"time": when.timestamp(), "kind": sub.data.get(CONF_EVENT_KIND, "other"),
-                        "note": sub.data.get(CONF_EVENT_NOTE, ""), "title": sub.title, "subentry_id": sub.subentry_id})
+            out.append({"time": when.timestamp(), "kind": event.get(CONF_EVENT_KIND, "other"),
+                        "note": event.get(CONF_EVENT_NOTE, ""), "title": event_title(event, lang),
+                        "id": event.get(RECORD_ID), "local_time": event.get(CONF_EVENT_TIME)})
         return out
 
     def _influx_connection(self) -> tuple[influx_source.InfluxConnection | None, str | None]:

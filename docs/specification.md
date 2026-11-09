@@ -87,7 +87,7 @@ Rollen mit Text-Zustand: `controller_date`. Alle anderen werden als Zahl gelesen
 
 ### 1.4 Stammdaten
 
-Options Flow in Abschnitten, dazu die Personen im Haushalt als Untereinträge (6.6). Leere optionale Felder heißen „unbekannt“; die abhängige Prüfung ist dann
+Options Flow mit Menü: „Anlagendaten“ in Abschnitten und „Haushalt“ mit den Personen (6.6). Leere optionale Felder heißen „unbekannt“; die abhängige Prüfung ist dann
 `not_assessable` mit dem Grund „Stammdaten fehlen“, nie ein Ersatzwert eines anderen Geräts.
 
 | Abschnitt | Key | Bedeutung | Genutzt von |
@@ -124,7 +124,8 @@ Ein Modell-Profil in `profiles.py` kann Datenblattwerte vorschlagen; der Besitze
 
 ### 1.5 Ereignisse
 
-Der Besitzer trägt Änderungen an der Anlage als Untereintrag ein: Zeitpunkt, Art (`heating_curve`, `valves`,
+Der Besitzer trägt Änderungen an der Anlage in der Zeitstrahl-Karte ein, ändert und löscht sie dort (gespeichert als
+Liste `events` in den Optionen, je Eintrag mit `id`): Zeitpunkt, Art (`heating_curve`, `valves`,
 `hydraulic_balancing`, `pump_setting`, `dhw_setting`, `hardware`, `other`) und Notiz. Ereignisse teilen die Zeit in
 Abschnitte; Audits mit Mehrtageswerten mitteln nie über einen Trenner hinweg.
 
@@ -429,7 +430,7 @@ Zirkulationsfühler nicht von Speicherverlusten trennen; sie erscheinen in W4 al
 
 ### 6.6 Haushalt
 
-Personen als Untereinträge (`person`): Name, Geburtsjahr, Duschen und Bäder pro Woche (leer = typisch fürs Alter),
+Personen in der Liste `household` der Optionen (Menü „Haushalt“, je Eintrag mit `id`): Name, Geburtsjahr, Duschen und Bäder pro Woche (leer = typisch fürs Alter),
 übliche Duschzeit (`morning`, `midday`, `evening`, `varied`) und Anwesenheit:
 
 | `presence` | Felder | Anwesend an einem Tag |

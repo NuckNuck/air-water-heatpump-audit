@@ -395,9 +395,8 @@ class AirWaterAuditCard extends HTMLElement {
       if (entryId) {
         const n = new Date();
         const time = `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())} ${pad(n.getHours())}:${pad(n.getMinutes())}:00`;
-        const flow = await hass.callApi("POST", "config/config_entries/subentries/flow", { handler: [entryId, "event"] });
-        await hass.callApi("POST", `config/config_entries/subentries/flow/${flow.flow_id}`,
-          { time, kind: p.event_kind, note: t.ctl.note(p, f) });
+        await hass.callWS({ type: "air_water_heatpump_audit/event/save", entry_id: entryId,
+          event: { time, kind: p.event_kind, note: t.ctl.note(p, f) } });
       }
       this._ctlStatus.set(key, t.ctl.ok);
     } catch (err) {
@@ -696,7 +695,12 @@ const TL_TEXT = {
     noEvents: "Noch keine Ereignisse eingetragen.",
     beforeRange: "vor dem gezeigten Zeitraum",
     add: "Ereignis hinzufügen",
-    manage: "Ereignisse ändern oder löschen →",
+    manageHint: "Ändern ✎ und Löschen ✕ direkt in der Liste oben.",
+    edit: "Ereignis ändern",
+    editTitle: "Ereignis ändern",
+    remove: "Ereignis löschen",
+    confirmDelete: (what) => `Ereignis löschen?\n\n${what}\n\nDie Audits rechnen danach neu.`,
+    deleted: "Gelöscht. Die Audits werden neu gerechnet.",
     time: "Zeitpunkt", kind: "Art", note: "Notiz", save: "Speichern", cancel: "Abbrechen",
     notePlaceholder: "z. B. Parallelverschiebung −1 K",
     saved: "Gespeichert. Die Audits werden neu gerechnet, das dauert einige Sekunden.",
@@ -752,7 +756,12 @@ const TL_TEXT = {
     noEvents: "No events recorded yet.",
     beforeRange: "before the period shown",
     add: "Add event",
-    manage: "Edit or delete events →",
+    manageHint: "Edit ✎ and delete ✕ directly in the list above.",
+    edit: "Edit event",
+    editTitle: "Edit event",
+    remove: "Delete event",
+    confirmDelete: (what) => `Delete event?\n\n${what}\n\nThe audits are recalculated afterwards.`,
+    deleted: "Deleted. The audits are being recalculated.",
     time: "Time", kind: "Kind", note: "Note", save: "Save", cancel: "Cancel",
     notePlaceholder: "e.g. parallel shift −1 K",
     saved: "Saved. The audits are being recalculated, this takes a few seconds.",
@@ -828,6 +837,9 @@ class AirWaterAuditTimelineCard extends HTMLElement {
         .events h3 { margin: 0 0 6px; font-size: 1em; font-weight: 500; }
         .events ol { margin: 0; padding-left: 0; list-style: none; }
         .events li { margin: 3px 0; }
+        .ev-tools { white-space: nowrap; }
+        button.link { background: none; border: none; padding: 0 4px; color: var(--primary-color); cursor: pointer; font: inherit; }
+        .admin form b { font-weight: 500; }
         .badge { display: inline-block; min-width: 18px; padding: 0 4px; margin-right: 6px; border-radius: 9px; text-align: center;
           background: var(--primary-color); color: var(--text-primary-color, #fff); font-size: .85em; }
         .admin { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
@@ -852,6 +864,10 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     this._charts.addEventListener("click", (ev) => {
       const nav = ev.target.closest?.("a[data-nav]");
       if (nav) { ev.preventDefault(); navigate(nav.getAttribute("href")); return; }
+      const edit = ev.target.closest?.("[data-edit]");
+      if (edit) { this._openEventForm(this._eventById(edit.dataset.edit)); return; }
+      const del = ev.target.closest?.("[data-del]");
+      if (del) { this._deleteEvent(this._eventById(del.dataset.del)); return; }
       const i = ev.target?.dataset?.day;
       if (i === undefined) return;
       this._selected = Number(i) === this._selected ? null : Number(i);
@@ -1164,13 +1180,58 @@ class AirWaterAuditTimelineCard extends HTMLElement {
 
   _eventList(events, x0, t) {
     const kinds = TEXT[(this._hass?.language || "en").startsWith("de") ? "de" : "en"].kinds;
+    // Ändern und Löschen nur für Admins (die WebSocket-Befehle verlangen Admin-Rechte)
+    const tools = (e) => this._hass?.user?.is_admin && e.id
+      ? ` <span class="ev-tools"><button type="button" class="link" data-edit="${esc(e.id)}" title="${esc(t.edit)}">✎</button>`
+        + `<button type="button" class="link" data-del="${esc(e.id)}" title="${esc(t.remove)}">✕</button></span>`
+      : "";
     const items = events.map((e) => `<li><span class="badge">${e.n}</span>${esc(this._fmtTime(e.time))} · `
       + `${esc(kinds[e.kind] ?? e.kind)}${e.note ? ` – ${esc(e.note)}` : ""}`
-      + (x0 !== null && e.t < x0 ? ` <span class="muted">(${t.beforeRange})</span>` : "") + `</li>`).join("");
+      + (x0 !== null && e.t < x0 ? ` <span class="muted">(${t.beforeRange})</span>` : "") + tools(e) + `</li>`).join("");
     return `<div class="events"><h3>${t.events}</h3>${items ? `<ol>${items}</ol>` : `<div class="muted">${t.noEvents}</div>`}</div>`;
   }
 
-  // Nur für Admins: Ereignis anlegen (Subentry-Flow) und Link zur Integrationsseite.
+  _entryId() {
+    return this._hass?.states[this._config.entity]?.attributes?.entry_id;
+  }
+
+  _eventById(id) {
+    return (this._hass?.states[this._config.entity]?.attributes?.events ?? []).find((e) => e.id === id);
+  }
+
+  // Formular füllen: ohne Ereignis „jetzt“, sonst die gespeicherten Werte (lokale Zeit wie eingetragen)
+  _openEventForm(e) {
+    const form = this._admin.querySelector("#form");
+    if (!form) return;
+    const n = new Date();
+    const now = `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}T${pad(n.getHours())}:${pad(n.getMinutes())}`;
+    form.reset();
+    form.id_.value = e?.id ?? "";
+    form.time.value = e?.local_time ? String(e.local_time).slice(0, 16).replace(" ", "T") : now;
+    if (e?.kind) form.kind.value = e.kind;
+    form.note.value = e?.note ?? "";
+    this._admin.querySelector("#formTitle").textContent = e ? this._t().editTitle : this._t().add;
+    form.classList.add("open");
+    this._admin.querySelector("#status").textContent = "";
+    form.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+  }
+
+  async _deleteEvent(e) {
+    if (!e) return;
+    const t = this._t();
+    const kinds = TEXT[(this._hass.language || "en").startsWith("de") ? "de" : "en"].kinds;
+    if (!window.confirm(t.confirmDelete(`${this._fmtTime(e.time)} · ${kinds[e.kind] ?? e.kind}`))) return;
+    const status = this._admin.querySelector("#status");
+    status.textContent = "…";
+    try {
+      await this._hass.callWS({ type: "air_water_heatpump_audit/event/delete", entry_id: this._entryId(), event_id: e.id });
+      status.textContent = t.deleted;
+    } catch (err) {
+      status.textContent = `${t.failed}: ${err?.message ?? err}`;
+    }
+  }
+
+  // Nur für Admins: Ereignis anlegen oder ändern (WebSocket-Befehl der Integration, records.py)
   _renderAdmin(st) {
     const isAdmin = !!this._hass?.user?.is_admin;
     const entryId = st?.attributes?.entry_id;
@@ -1182,9 +1243,11 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     this._admin.innerHTML = `
       <div class="row">
         <button type="button" id="open">${t.add}</button>
-        <a href="/config/integrations/integration/air_water_heatpump_audit">${t.manage}</a>
+        <span class="muted">${esc(t.manageHint)}</span>
       </div>
       <form id="form">
+        <b id="formTitle"></b>
+        <input type="hidden" name="id_">
         <label>${t.time}<input type="datetime-local" name="time" required></label>
         <label>${t.kind}<select name="kind">${Object.entries(kinds).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select></label>
         <label>${t.note}<textarea name="note" rows="2" placeholder="${esc(t.notePlaceholder)}"></textarea></label>
@@ -1193,27 +1256,20 @@ class AirWaterAuditTimelineCard extends HTMLElement {
       <div class="status muted" id="status"></div>`;
     const form = this._admin.querySelector("#form");
     const status = this._admin.querySelector("#status");
-    this._admin.querySelector("#open").addEventListener("click", () => {
-      const n = new Date();
-      form.time.value = `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}T${pad(n.getHours())}:${pad(n.getMinutes())}`;
-      form.classList.add("open");
-      status.textContent = "";
-    });
+    this._admin.querySelector("#open").addEventListener("click", () => this._openEventForm(null));
     this._admin.querySelector("#cancel").addEventListener("click", () => form.classList.remove("open"));
     form.addEventListener("submit", async (ev) => {
       ev.preventDefault();
-      const id = this._hass.states[this._config.entity]?.attributes?.entry_id;
-      const data = { time: form.time.value.replace("T", " ") + ":00", kind: form.kind.value, note: form.note.value.trim() };
+      const event = { time: form.time.value.replace("T", " ") + ":00", kind: form.kind.value, note: form.note.value.trim() };
+      if (form.id_.value) event.id = form.id_.value;
       status.textContent = "…";
       try {
-        const flow = await this._hass.callApi("POST", "config/config_entries/subentries/flow", { handler: [id, "event"] });
-        const res = await this._hass.callApi("POST", `config/config_entries/subentries/flow/${flow.flow_id}`, data);
-        if (res.type !== "create_entry") throw new Error(JSON.stringify(res.errors ?? res.reason ?? res.type));
+        await this._hass.callWS({ type: "air_water_heatpump_audit/event/save", entry_id: this._entryId(), event });
         form.reset();
         form.classList.remove("open");
         status.textContent = t.saved;
       } catch (err) {
-        status.textContent = `${t.failed}: ${err?.body?.message ?? err?.message ?? err}`;
+        status.textContent = `${t.failed}: ${err?.message ?? err}`;
       }
     });
   }

@@ -200,6 +200,6 @@ class TimelineSensor(_Entity):
                   for a in data["audits"] if BY_ID[a].timeline]
         return {"days": data["timeline"]["days"], "scales": data["timeline"]["scales"], "audits": audits,
                 "events": [{"time": _iso(e["time"]), "kind": e["kind"], "note": e.get("note"),
-                            "title": e.get("title"), "subentry_id": e.get("subentry_id")}
+                            "title": e.get("title"), "id": e.get("id"), "local_time": e.get("local_time")}
                            for e in data.get("events", [])],
                 "entry_id": self.coordinator.config_entry.entry_id}

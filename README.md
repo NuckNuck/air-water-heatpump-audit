@@ -326,7 +326,7 @@ Ereignisse und die gespeicherten Tageswerte des Zeitstrahls; alle Audits werden 
 Manches lässt sich nicht messen, sondern steht im Datenblatt. Ohne diese Angaben zeigen einzelne Prüfungen „nicht
 bewertbar – Stammdaten fehlen“.
 
-**Einstellungen → Geräte & Dienste → Luft-Wasser-Wärmepumpen-Audit → Zahnrad ⚙ (Konfigurieren):**
+**Einstellungen → Geräte & Dienste → Luft-Wasser-Wärmepumpen-Audit → Zahnrad ⚙ (Konfigurieren) → Anlagendaten:**
 
 - **Anlage:** Art der Verbindung zwischen Wärmepumpe und Heizkreis (direkt, Pufferspeicher, Weiche), Mindestdurchfluss
   der Wärmepumpe, größter Förderstrom der Heizkreispumpe, kleinste Heizleistung laut Datenblatt, Leistung von
@@ -349,8 +349,8 @@ bewertbar – Stammdaten fehlen“.
 
 ### Personen im Haushalt
 
-Für das Audit Warmwasser: **Einstellungen → Geräte & Dienste → Luft-Wasser-Wärmepumpen-Audit → ⋮ → Person
-hinzufügen**. Je Person Name, Geburtsjahr, wann sie hier wohnt und wann sie meistens duscht. Für Kinder, die
+Für das Audit Warmwasser: **Einstellungen → Geräte & Dienste → Luft-Wasser-Wärmepumpen-Audit → Zahnrad ⚙
+(Konfigurieren) → Haushalt**, dann „Neue Person anlegen“ oder eine Person zum Ändern oder Löschen wählen. Je Person Name, Geburtsjahr, wann sie hier wohnt und wann sie meistens duscht. Für Kinder, die
 abwechselnd bei beiden Eltern leben, gibt es Wechselwochen (z. B. eine Woche hier, eine Woche dort, ab einem
 Startdatum) oder bestimmte Tage (z. B. jedes zweite Wochenende). Duschen und Bäder pro Woche können leer bleiben;
 dann rechnet das Audit mit typischen Werten für das Alter.
@@ -387,10 +387,9 @@ entities:
 
 Nach jeder Änderung an der Anlage:
 
-- in der **Zeitstrahl-Karte** auf **Ereignis hinzufügen** (nur für Administratoren sichtbar), oder
-- **Einstellungen → Geräte & Dienste → Luft-Wasser-Wärmepumpen-Audit → Ereignis hinzufügen.**
-
-Zeitpunkt, Art (z. B. „Heizkurve geändert“) und eine kurze Notiz eintragen. Ändern und löschen geht auf derselben Seite.
+in der **Zeitstrahl-Karte** auf **Ereignis hinzufügen** (nur für Administratoren sichtbar). Zeitpunkt, Art (z. B.
+„Heizkurve geändert“) und eine kurze Notiz eintragen. In der Ereignisliste unter dem Zeitstrahl ändert ✎ ein Ereignis,
+✕ löscht es. Übernimmt man einen Vorschlag der Karte, trägt sie das Ereignis selbst ein.
 
 ## Häufige Fragen
 
@@ -438,7 +437,9 @@ entfernen.
   - `brand/` – Icon für Home Assistant ab 2026.3 (`icon.png` 256 px, `icon@2x.png` 512 px), erzeugt aus
     `docs/brand/icon.svg`.
 - Einträge: Haupteintrag = Anlage (Rollen, Stammdaten), Untereinträge `audit` (je zugeschaltetem Audit, mit eigenem
-  Gerät) und `event` (Änderungen an der Anlage).
+  Gerät). Ereignisse und Personen stehen als Listen `events` und `household` in den Optionen (`records.py`); die
+  Karte schreibt Ereignisse über die WebSocket-Befehle `air_water_heatpump_audit/event/save` und `…/event/delete`
+  (nur Admins). Bis 0.18.0b6 waren beide Untereinträge; die Migration auf Version 1.2 zieht sie um.
 - Sensoren: `sensor.air_water_heatpump_audit_<audit>` (Gesamturteil, Attribute `dq`, `checks`, `readiness`,
   `audit_name`, `color`), `sensor.air_water_heatpump_audit_<id>_<key>` je Prüfung (Zustand = Urteil, Attribute
   `value`, `unit`, `text`, `origin`, `details`, `progress`, `help`, `action`),
