@@ -67,8 +67,11 @@ class TariffBreakEvenTest(unittest.TestCase):
         self.assertIn("ct/kWh Haushaltsstrom", r.text)
         self.assertIn("kWh Wärmepumpenstrom im Jahr", r.text)
 
-    def test_separate_meter_text_mentions_section_14a(self):
-        self.assertIn("§ 14a EnWG", k1.check_tariff(annual(), master(), False).text)
+    def test_reduced_grid_fee_set_text_mentions_section_14a(self):
+        self.assertIn("§ 14a EnWG", k1.check_tariff(annual(), master(reduced_grid_fee=True), False).text)
+
+    def test_reduced_grid_fee_unset_text_has_no_section_14a(self):
+        self.assertNotIn("§ 14a", k1.check_tariff(annual(), master(), False).text)
 
     def test_details_give_annual_electricity_and_fixed_costs(self):
         d = k1.check_tariff(annual(), master(), False).details

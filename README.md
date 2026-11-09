@@ -345,7 +345,8 @@ bewertbar – Stammdaten fehlen“.
 - **Kosten:** Arbeitspreis des Wärmepumpenstroms (Arbeitspreise wahlweise in ct/kWh oder €/kWh, wie im Vertrag); ob die Wärmepumpe einen eigenen Zähler hat, und dann Grundpreis
   des Wärmepumpen-Stromtarifs (Stromanbieter) und Zählermiete bzw. Messstellenentgelt (Messstellenbetreiber), je
   mit Auswahl „pro Monat“ oder „pro Jahr“, so wie es im Vertrag oder auf der Rechnung steht (leer = nicht eingetragen,
-  0 = gibt es nicht); Preis des
+  0 = gibt es nicht); bei eigenem Zähler der Haken, ob der Tarif das reduzierte Netzentgelt nach § 14a EnWG
+  (Modul 2) enthält (Standard: aus; K3 weist dann darauf hin, dass es beim Zusammenlegen entfiele); Preis des
   Haushaltsstroms; frühere Heizung mit Jahresverbrauch laut Abrechnung (z. B. 20.000 kWh Gas oder 2.000 Liter Heizöl),
   Preis und Nutzungsgrad zum Vergleich. Für Gas den Preis je abgerechneter kWh inklusive Grundpreis-Anteil
   eintragen; der vorgeschlagene Nutzungsgrad 0,86 ist das Mittel von Gas-Brennwertkesseln im Feld. Dazu der

@@ -826,3 +826,30 @@ async def test_options_flow_rejects_consumption_unit_not_matching_system(hass: H
         result = await _open_plant(hass, entry)
         result = await hass.config_entries.options.async_configure(result["flow_id"], _sections(values))
     assert result["type"] is FlowResultType.FORM and result["errors"] == {"base": "invalid_consumption_unit"}
+
+
+# Vertrag: Spezifikation 1.4 – reduced_grid_fee nur mit eigenem Zähler
+async def test_options_flow_rejects_reduced_grid_fee_on_household_meter(hass: HomeAssistant):
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR, options=DEFAULT_OPTIONS)
+    entry.add_to_hass(hass)
+    values = DEFAULT_OPTIONS | {"heat_pump_meter": "household_meter", "reduced_grid_fee": True}
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
+        result = await _open_plant(hass, entry)
+        result = await hass.config_entries.options.async_configure(result["flow_id"], _sections(values))
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "reduced_grid_fee_needs_separate_meter"}
+
+
+async def test_options_flow_saves_reduced_grid_fee_with_separate_meter(hass: HomeAssistant):
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR, options=DEFAULT_OPTIONS)
+    entry.add_to_hass(hass)
+    values = DEFAULT_OPTIONS | {"heat_pump_meter": "separate_meter", "reduced_grid_fee": True}
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
+        result = await _open_plant(hass, entry)
+        result = await hass.config_entries.options.async_configure(result["flow_id"], _sections(values))
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options["reduced_grid_fee"] is True
+
+
+async def test_reduced_grid_fee_defaults_to_off():
+    assert DEFAULT_OPTIONS["reduced_grid_fee"] is False

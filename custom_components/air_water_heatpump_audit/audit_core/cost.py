@@ -367,8 +367,9 @@ def check_tariff(annual: CheckResult, master: dict, dynamic: bool) -> CheckResul
               else "bei keinem Verbrauch")
     if break_ct is not None:
         text += (f" Der eigene Zähler lohnt sich ab {num(break_ct, '.1f')} ct/kWh Haushaltsstrom oder {by_kwh}.")
-    text += (" Hinweis: Ein reduziertes Netzentgelt nach § 14a EnWG (Modul 2) gibt es nur mit eigenem Zähler; es "
-             "steckt oft schon im Wärmepumpentarif und entfiele beim Zusammenlegen.")
+    if master.get("reduced_grid_fee"):
+        text += (" Ihr Tarif enthält das reduzierte Netzentgelt nach § 14a EnWG (Modul 2). Es gibt es nur mit eigenem "
+                 "Zähler; beim Zusammenlegen entfiele es.")
     if missing:
         text += " Stammdaten fehlen: " + ", ".join(FIXED_COST_LABELS[k] for k in missing) + "."
     details = {"electricity_kwh": kwh, "base_fee_eur": base, "tariff_ct": round(100 * p_t, 2),

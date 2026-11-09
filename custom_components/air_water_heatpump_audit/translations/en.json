@@ -178,6 +178,7 @@
               "tariff_base_fee_period": "Standing charge applies",
               "meter_fee": "Heat pump meter rent (metering fee)",
               "meter_fee_period": "Meter rent applies",
+              "reduced_grid_fee": "Reduced grid fee under § 14a EnWG (module 2)",
               "household_price": "Household electricity price",
               "household_price_unit": "Unit of household electricity price",
               "previous_heating_system": "Previous heating",
@@ -196,6 +197,7 @@
               "tariff_base_fee_period": "As stated in the contract. The audit converts it to a year.",
               "meter_fee": "Rent for the separate heat pump meter, charged by the meter operator (often the grid operator); on the electricity bill or a separate one. Empty = not entered, 0 = none.",
               "meter_fee_period": "As stated on the bill. The audit converts it to a year.",
+              "reduced_grid_fee": "Separate meter only: your heat pump tariff includes the reduced grid fee for controllable consumers (see contract or bill). K3 then notes that it would be lost when merging the meters.",
               "household_price": "For comparison: does the heat pump tariff pay off (K3)? Also gives the comparison line for direct electric heating.",
               "household_price_unit": "As stated in the contract.",
               "previous_heating_system": "What was used for heating before; 'None' for a new building. The efficiency below applies to this system.",
@@ -271,7 +273,8 @@
     },
     "error": {
       "invalid_capacity_table": "The minimum capacity does not have the expected format. Example: \"35:\" followed by indented \"-7: 3.9\", \"2: 3.5\", \"7: 3.5\".",
-      "invalid_consumption_unit": "Previous consumption: the unit does not match the previous heating (e.g. litres for gas)."
+      "invalid_consumption_unit": "Previous consumption: the unit does not match the previous heating (e.g. litres for gas).",
+      "reduced_grid_fee_needs_separate_meter": "The reduced grid fee under § 14a EnWG requires a separate meter: set “Heat pump meter” to “separate meter” or untick the box."
     }
   },
   "entity": {
