@@ -17,7 +17,7 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 - Neue Einstellung **Reduziertes Netzentgelt nach § 14a EnWG (Modul 2)** im Abschnitt Kosten, Standard aus. Nur mit
   eigenem Zähler zulässig. Ist sie an, weist K3 darauf hin, dass das reduzierte Netzentgelt beim Zusammenlegen der
   Zähler entfiele.
-- **Zeitraum-Umschalter** im Zeitstrahl: 30 Tage, 90 Tage, 1 Jahr, alles (Kartenoption `range`, Standard 90).
+- **Zeitraum-Umschalter** im Zeitstrahl: 3 Tage, 7 Tage, 30 Tage, 90 Tage, 1 Jahr, alles (Kartenoption `range`, Standard 90).
 
 ### Behoben
 - Unter dem Urteil ragte „vorläufig · x von y …“ in die Aktionsspalte; die Zeile bricht jetzt um.

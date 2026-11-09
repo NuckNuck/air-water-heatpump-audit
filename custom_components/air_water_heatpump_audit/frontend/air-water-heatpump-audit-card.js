@@ -720,7 +720,7 @@ const REF_COLORS = { heating_oil: "#6d4c41", natural_gas: "#1e88e5", wood_pellet
   direct_electric: "#c2185b" };
 const REF_DASHES = ["6 3", "2 3", "10 3 2 3"];
 // Zeitraum-Umschalter (F285 a): Tage oder "all"; Auswahl je Browser in localStorage
-const TL_RANGES = ["30", "90", "365", "all"];
+const TL_RANGES = ["3", "7", "30", "90", "365", "all"];
 const TL_RANGE_KEY = "air-water-heatpump-audit-timeline-range";
 
 const TL_TEXT = {
@@ -753,7 +753,7 @@ const TL_TEXT = {
     previous: (sys, v) => `Ihre frühere Heizung${sys ? ` (${sys})` : ""}: ${v}`,
     market: "Markt",
     previousLegend: "Durchgezogen: Ihre frühere Heizung (Preis laut Ihren Angaben ÷ Nutzungsgrad, ohne Toleranz).",
-    range: { label: "Zeitraum", 30: "30 Tage", 90: "90 Tage", 365: "1 Jahr", all: "Alles" },
+    range: { label: "Zeitraum", 3: "3 Tage", 7: "7 Tage", 30: "30 Tage", 90: "90 Tage", 365: "1 Jahr", all: "Alles" },
     fixedCharges: { included: "inkl. Grundpreis", added: "inkl. Grundpreis", missing_heat: "ohne Grundpreis" },
     fixed: {
       added: (ct, eur, kwh, src) => `Eigener Wärmepreis inklusive fester Kosten: +${ct} ct/kWh (${eur} € im Jahr auf ${kwh} kWh Wärme, ${src}).`,
@@ -819,7 +819,7 @@ const TL_TEXT = {
     previous: (sys, v) => `Your previous heating${sys ? ` (${sys})` : ""}: ${v}`,
     market: "market",
     previousLegend: "Solid: your previous heating (price as entered ÷ efficiency, without tolerance).",
-    range: { label: "Period", 30: "30 days", 90: "90 days", 365: "1 year", all: "All" },
+    range: { label: "Period", 3: "3 days", 7: "7 days", 30: "30 days", 90: "90 days", 365: "1 year", all: "All" },
     fixedCharges: { included: "incl. standing charge", added: "incl. standing charge", missing_heat: "without standing charge" },
     fixed: {
       added: (ct, eur, kwh, src) => `Own heat price including fixed costs: +${ct} ct/kWh (€${eur} a year over ${kwh} kWh of heat, ${src}).`,

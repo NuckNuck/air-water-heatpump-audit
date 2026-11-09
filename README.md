@@ -205,7 +205,7 @@ Eine zweite Karte zeigt je Tag einen Wert pro Audit (Gütegrad, Pufferverlust, S
 Wärmepreis, Datenabdeckung) mit
 denselben Ampelgrenzen, dazu die Ereignisse als senkrechte Linien. Die Tageswerte speichert die Integration selbst,
 sie bleiben also auch erhalten, wenn Home Assistant die alten Rohdaten löscht. Der Zeitstrahl beginnt mit dem
-ersten Tag, an dem Messwerte ankamen; Lücken danach bleiben sichtbar. Oben wählt man den gezeigten Zeitraum: 30 Tage,
+ersten Tag, an dem Messwerte ankamen; Lücken danach bleiben sichtbar. Oben wählt man den gezeigten Zeitraum: 3 Tage, 7 Tage, 30 Tage,
 90 Tage (Vorgabe, änderbar mit der Kartenoption `range`), 1 Jahr oder alles; der Browser merkt sich die Auswahl. Im
 Kosten-Zeitstrahl zeigt eine durchgezogene Linie den Wärmepreis der früheren Heizung, die gestrichelten Linien die
 aktuellen Marktpreise anderer Heizsysteme, jeweils mit Beschriftung an der Linie.
