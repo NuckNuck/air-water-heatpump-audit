@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from . import days
+from . import cost, days
 from . import readiness as rd
 from . import timeline as tl
 from .actions import attach_actions
@@ -45,7 +45,9 @@ def run_audits(s: dict[str, Series], start: float, end: float, *, recorder_keep_
     controls: heutiger Zustand der Stellgrößen-Rollen (actions.CONTROL_ROLES); daraus entstehen Vorschläge.
     audits: IDs der zugeschalteten Audits, None = alle.
     price_refs: Preis-Sensoren anderer Heizsysteme für den Kosten-Zeitstrahl (heating_prices), None = abgeschaltet.
+    Arbeitspreise in master dürfen in ct/kWh stehen (`<feld>_unit`); die Audits sehen sie in €/kWh.
     """
+    master = None if master is None else cost.prices_in_euro(master)
     def context(until: float, upto: list[dict] | None, ctl: dict | None) -> Context:
         return Context(s, start, until, recorder_keep_days=recorder_keep_days, long_term_days=long_term_days,
                        heater_kw=heater_kw, master=master, events=upto, controls=ctl, tz=tz,

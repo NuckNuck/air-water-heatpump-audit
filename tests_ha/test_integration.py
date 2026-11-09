@@ -735,6 +735,17 @@ async def test_options_flow_opens_cost_section_when_fixed_costs_missing(hass: Ho
     assert collapsed["cost"] is False and all(v for k, v in collapsed.items() if k != "cost")
 
 
+async def test_options_flow_preselects_cents_for_new_price_and_euro_for_stored_price(hass: HomeAssistant):
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR,
+                            options=DEFAULT_OPTIONS | {"tariff_price": 0.25})
+    entry.add_to_hass(hass)
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+    cost = next(v for k, v in result["data_schema"].schema.items() if str(k) == "cost").schema
+    defaults = _defaults(cost)
+    assert (defaults["tariff_price_unit"], defaults["household_price_unit"]) == ("eur_per_kwh", "ct_per_kwh")
+
+
 async def test_options_flow_rejects_consumption_unit_not_matching_system(hass: HomeAssistant):
     entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR, options=DEFAULT_OPTIONS)
     entry.add_to_hass(hass)

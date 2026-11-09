@@ -86,6 +86,14 @@ FEE_PERIOD_DEFAULTS = {CONF_TARIFF_BASE_FEE_PERIOD: "month", CONF_METER_FEE_PERI
 FEE_PERIOD_OF = {CONF_TARIFF_BASE_FEE: CONF_TARIFF_BASE_FEE_PERIOD, CONF_METER_FEE: CONF_METER_FEE_PERIOD}
 CONF_HOUSEHOLD_PRICE = "household_price"
 CONF_REFERENCE_FUEL_PRICE = "reference_fuel_price"
+# Einheit der Arbeitspreise, wie im Vertrag: ct/kWh oder €/kWh; leer = €/kWh (Einträge vor 0.18.0b6)
+CONF_TARIFF_PRICE_UNIT = "tariff_price_unit"
+CONF_HOUSEHOLD_PRICE_UNIT = "household_price_unit"
+CONF_REFERENCE_FUEL_PRICE_UNIT = "reference_fuel_price_unit"
+PRICE_UNITS = ["ct_per_kwh", "eur_per_kwh"]
+PRICE_UNIT_DEFAULT = "ct_per_kwh"  # Vorauswahl für neue Einträge: Verträge nennen Arbeitspreise meist in ct/kWh
+PRICE_UNIT_OF = {CONF_TARIFF_PRICE: CONF_TARIFF_PRICE_UNIT, CONF_HOUSEHOLD_PRICE: CONF_HOUSEHOLD_PRICE_UNIT,
+                 CONF_REFERENCE_FUEL_PRICE: CONF_REFERENCE_FUEL_PRICE_UNIT}
 CONF_REFERENCE_EFFICIENCY = "reference_efficiency"
 CONF_PREVIOUS_HEATING_SYSTEM = "previous_heating_system"
 CONF_PREVIOUS_CONSUMPTION = "previous_consumption"
@@ -100,10 +108,11 @@ OPTION_SECTIONS: dict[str, tuple[str, ...]] = {
               CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW),
     "dhw": (CONF_DHW_TANK_VOLUME_L, CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS),
     "site": (CONF_HEATING_HOURS, CONF_HEATING_DEGREE_DAYS, CONF_ROOM_TEMP_TARGET, CONF_LIVING_AREA_M2),
-    "cost": (CONF_TARIFF_PRICE, CONF_HEAT_PUMP_METER, CONF_TARIFF_BASE_FEE, CONF_TARIFF_BASE_FEE_PERIOD, CONF_METER_FEE,
-             CONF_METER_FEE_PERIOD, CONF_HOUSEHOLD_PRICE,
+    "cost": (CONF_TARIFF_PRICE, CONF_TARIFF_PRICE_UNIT, CONF_HEAT_PUMP_METER, CONF_TARIFF_BASE_FEE, CONF_TARIFF_BASE_FEE_PERIOD, CONF_METER_FEE,
+             CONF_METER_FEE_PERIOD, CONF_HOUSEHOLD_PRICE, CONF_HOUSEHOLD_PRICE_UNIT,
              CONF_PREVIOUS_HEATING_SYSTEM, CONF_PREVIOUS_CONSUMPTION, CONF_PREVIOUS_CONSUMPTION_UNIT,
-             CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY, CONF_COMPARE_HEATING_SYSTEMS),
+             CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_FUEL_PRICE_UNIT, CONF_REFERENCE_EFFICIENCY,
+             CONF_COMPARE_HEATING_SYSTEMS),
     "evaluation": (CONF_WINDOW_DAYS, CONF_DATA_SINCE, CONF_DATA_SOURCE),
 }
 # Optionale Stammdaten: leer heißt „unbekannt“, die abhängige Prüfung ist dann nicht bewertbar.
@@ -139,7 +148,7 @@ DEFAULT_OPTIONS = {
     CONF_HEATING_HOURS: None,  # Klimakarte des Bundesverbands Wärmepumpe für den Standort
     CONF_DHW_TANK_VOLUME_L: None,  # Typenschild des Speichers; ohne Wert ist W4 nicht bewertbar
     CONF_HEATING_DEGREE_DAYS: None,  # langjähriges Mittel G20/15 am Standort; ohne Wert keine Jahreshochrechnung
-    CONF_TARIFF_PRICE: None,  # Arbeitspreis €/kWh; Vorschlag aus dem Energie-Dashboard (config_flow.energy_price)
+    CONF_TARIFF_PRICE: None,  # Arbeitspreis in tariff_price_unit; Vorschlag aus dem Energie-Dashboard (config_flow.energy_price)
     # Zähler der Wärmepumpe: eigener Zähler mit WP-Tarif oder Haushaltszähler; leer = nicht angegeben (Hinweis)
     CONF_HEAT_PUMP_METER: None,
     CONF_TARIFF_BASE_FEE: None,  # Grundpreis des Wärmepumpentarifs in €; leer = nicht eingetragen, 0 = keiner
@@ -148,12 +157,15 @@ DEFAULT_OPTIONS = {
     # Die Formulare wählen für neue Einträge FEE_PERIOD_DEFAULTS vor.
     CONF_TARIFF_BASE_FEE_PERIOD: None,
     CONF_METER_FEE_PERIOD: None,
+    CONF_TARIFF_PRICE_UNIT: None,  # Einheit der Arbeitspreise; die Formulare wählen PRICE_UNIT_DEFAULT vor
+    CONF_HOUSEHOLD_PRICE_UNIT: None,
+    CONF_REFERENCE_FUEL_PRICE_UNIT: None,
     # Frühere Heizung: System und Jahresverbrauch laut Abrechnung → Jahreswärme, solange K2 nicht hochrechnen kann
     CONF_PREVIOUS_HEATING_SYSTEM: None,
     CONF_PREVIOUS_CONSUMPTION: None,
     CONF_PREVIOUS_CONSUMPTION_UNIT: None,
     CONF_HOUSEHOLD_PRICE: None,
-    CONF_REFERENCE_FUEL_PRICE: None,  # früherer Brennstoff, €/kWh inklusive Grundpreis-Anteil
+    CONF_REFERENCE_FUEL_PRICE: None,  # früherer Brennstoff je kWh inklusive Grundpreis-Anteil
     # Jahresnutzungsgrad der früheren Heizung, bezogen auf die abgerechnete Einheit: Feldmittel Gas-Brennwertkessel
     # 0,86 (DBU-Feldtest, 60 Anlagen). Gilt für den Vergleichsbrennstoff (K1, K2), für die Umrechnung des früheren
     # Verbrauchs und für die Vergleichslinie des früheren Heizsystems; alle anderen Systeme nutzen feste Werte.
@@ -169,7 +181,8 @@ MASTER_KEYS = (CONF_HYDRAULIC_SEPARATION, CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_F
                CONF_TARIFF_BASE_FEE, CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY,
                CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS, CONF_LIVING_AREA_M2, CONF_HEAT_PUMP_METER,
                CONF_METER_FEE, CONF_PREVIOUS_HEATING_SYSTEM, CONF_PREVIOUS_CONSUMPTION, CONF_PREVIOUS_CONSUMPTION_UNIT,
-               CONF_TARIFF_BASE_FEE_PERIOD, CONF_METER_FEE_PERIOD)
+               CONF_TARIFF_BASE_FEE_PERIOD, CONF_METER_FEE_PERIOD, CONF_TARIFF_PRICE_UNIT, CONF_HOUSEHOLD_PRICE_UNIT,
+               CONF_REFERENCE_FUEL_PRICE_UNIT)
 
 # Ereignisse (Spezifikation 1.5) als Untereinträge des Config Entry
 SUBENTRY_EVENT = "event"

@@ -53,9 +53,9 @@ AUDIT = AuditSpec(
            "flow_temp", "return_temp", "flow_rate", "outdoor_temp", "outdoor_temp_reference", "dhw_active",
            "heartbeat", "controller_heat_today", "compressor_running", "pump_running", "defrost"),
     required_roles=("electricity_meter", "flow_temp", "return_temp", "flow_rate"),
-    master_keys=("tariff_price", "heat_pump_meter", "tariff_base_fee", "tariff_base_fee_period", "meter_fee",
-                 "meter_fee_period", "household_price",
-                 "reference_fuel_price", "reference_efficiency", "previous_heating_system", "previous_consumption",
+    master_keys=("tariff_price", "tariff_price_unit", "heat_pump_meter", "tariff_base_fee", "tariff_base_fee_period", "meter_fee",
+                 "meter_fee_period", "household_price", "household_price_unit",
+                 "reference_fuel_price", "reference_fuel_price_unit", "reference_efficiency", "previous_heating_system", "previous_consumption",
                  "previous_consumption_unit", "heating_degree_days", "living_area_m2", "household"),
     names={"de": "Kosten", "en": "Cost"},
     checks=(

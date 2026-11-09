@@ -31,6 +31,9 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
   eingetragene Beträge gelten weiter pro Jahr. Die Felder heißen jetzt „Grundpreis Wärmepumpen-Stromtarif
   (Stromanbieter)“ und „Zählermiete Wärmepumpenzähler (Messstellenentgelt)“.
 
+- Arbeitspreise (Wärmepumpenstrom, Haushaltsstrom, früherer Brennstoff) wahlweise in **ct/kWh** oder **€/kWh**,
+  vorausgewählt ct/kWh. Schon eingetragene Preise gelten weiter in €/kWh.
+
 ### Behoben
 - Die Reparaturmeldung „Feste Kosten der Wärmepumpe fehlen“ schloss sich beim Öffnen sofort als behoben und leerte
   dabei Zählerart, Grundpreis und Messstellenentgelt (0.18.0b2/b3). Jetzt erscheint das Formular.

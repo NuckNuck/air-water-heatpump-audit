@@ -164,31 +164,37 @@
             "description": "Gross prices. The energy price is suggested from the energy dashboard if the heat pump meter is set up there.",
             "data": {
               "tariff_price": "Heat pump electricity price",
+              "tariff_price_unit": "Unit of heat pump electricity price",
               "heat_pump_meter": "Heat pump meter",
               "tariff_base_fee": "Heat pump tariff standing charge (supplier)",
               "tariff_base_fee_period": "Standing charge applies",
               "meter_fee": "Heat pump meter rent (metering fee)",
               "meter_fee_period": "Meter rent applies",
               "household_price": "Household electricity price",
+              "household_price_unit": "Unit of household electricity price",
               "previous_heating_system": "Previous heating",
               "previous_consumption": "Previous annual consumption",
               "previous_consumption_unit": "Unit of previous consumption",
               "reference_fuel_price": "Previous fuel price",
+              "reference_fuel_price_unit": "Unit of previous fuel price",
               "reference_efficiency": "Previous heating efficiency",
               "compare_heating_systems": "Compare heat prices of other heating systems"
             },
             "data_description": {
               "tariff_price": "Price per kWh of heat pump electricity (K1, K2).",
+              "tariff_price_unit": "As stated in the contract, e.g. 25 ct/kWh or 0.25 €/kWh.",
               "heat_pump_meter": "Separate meter with a heat pump tariff, or heat pump on the household meter. On the household meter there are no additional fixed costs.",
               "tariff_base_fee": "Fixed amount the electricity supplier charges for the heat pump tariff regardless of consumption; see contract or bill next to the unit price. Empty = not entered (note in the audit), 0 = none.",
               "tariff_base_fee_period": "As stated in the contract. The audit converts it to a year.",
               "meter_fee": "Rent for the separate heat pump meter, charged by the meter operator (often the grid operator); on the electricity bill or a separate one. Empty = not entered, 0 = none.",
               "meter_fee_period": "As stated on the bill. The audit converts it to a year.",
               "household_price": "For comparison: does the heat pump tariff pay off (K3)? Also gives the comparison line for direct electric heating.",
+              "household_price_unit": "As stated in the contract.",
               "previous_heating_system": "What was used for heating before; 'None' for a new building. The efficiency below applies to this system.",
               "previous_consumption": "Annual consumption as on the last bill. Used to spread fixed costs as long as the projection (K2) is not possible.",
               "previous_consumption_unit": "kWh or MWh for gas, district heating and electricity, litres for heating oil, kg or t for pellets.",
               "reference_fuel_price": "For comparison, e.g. gas: cost per kWh including the share of the standing charge (K1, K2).",
+              "reference_fuel_price_unit": "As stated on the bill.",
               "reference_efficiency": "Share of the billed fuel that arrives as heat; applies to the previous heating. Guide values: gas condensing boiler 0.86 (gross), oil boiler 0.91 (net), pellet boiler 0.80, district heating 1.",
               "compare_heating_systems": "Shows dashed lines for heating oil, natural gas, wood pellets, district heating and direct electric heating in the cost timeline. Prices come from price sensors with the attribute heating_system, e.g. from a price integration or a Scrape sensor (README)."
             }
@@ -757,6 +763,12 @@
       "options": {
         "month": "per month",
         "year": "per year"
+      }
+    },
+    "price_unit": {
+      "options": {
+        "ct_per_kwh": "ct/kWh",
+        "eur_per_kwh": "€/kWh"
       }
     }
   },

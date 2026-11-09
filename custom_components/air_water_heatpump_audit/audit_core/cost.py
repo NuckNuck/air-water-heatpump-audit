@@ -74,6 +74,21 @@ def reference_heat_price(master: dict) -> float | None:
     return float(fuel) / float(eff) if fuel and eff else None
 
 
+# Arbeitspreise werden so eingetragen, wie sie im Vertrag stehen (Stammdatum `<feld>_unit`); gerechnet wird in €/kWh.
+PRICE_KEYS = ("tariff_price", "household_price", "reference_fuel_price")
+PRICE_UNIT_FACTORS = {"ct_per_kwh": 0.01, "eur_per_kwh": 1.0}
+
+
+def prices_in_euro(master: dict) -> dict:
+    """Stammdaten mit allen Arbeitspreisen in €/kWh; ohne Einheit gilt €/kWh (Einträge vor 0.18.0b6)."""
+    out = dict(master)
+    for key in PRICE_KEYS:
+        value = master.get(key)
+        if value not in (None, ""):
+            out[key] = float(value) * PRICE_UNIT_FACTORS.get(master.get(f"{key}_unit") or "eur_per_kwh", 1.0)
+    return out
+
+
 # Zähler der Wärmepumpe (Stammdatum `heat_pump_meter`): eigener Zähler mit WP-Tarif oder am Haushaltszähler
 METER_SEPARATE = "separate_meter"
 METER_HOUSEHOLD = "household_meter"

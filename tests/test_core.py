@@ -821,6 +821,16 @@ class FixedCostContractTest(unittest.TestCase):
         from audit_core import cost as k1
         self.assertEqual(k1.heat_pump_fixed_costs(self.SEPARATE | {"tariff_base_fee_period": None}), (150.0, ()))
 
+    def test_price_in_cents_is_converted_to_euro(self):
+        from audit_core import cost as k1
+        self.assertAlmostEqual(k1.prices_in_euro({"tariff_price": 25.0, "tariff_price_unit": "ct_per_kwh"})["tariff_price"],
+                               0.25)
+
+    def test_price_without_unit_counts_as_euro(self):
+        # Einträge vor der Einheiten-Auswahl waren €/kWh
+        from audit_core import cost as k1
+        self.assertEqual(k1.prices_in_euro({"household_price": 0.28})["household_price"], 0.28)
+
     def test_unknown_meter_with_base_fee_counts_as_separate_meter(self):
         from audit_core import cost as k1
         self.assertEqual(k1.heat_pump_fixed_costs({"tariff_base_fee": 73.0}), (73.0, ("meter_fee",)))
@@ -1077,6 +1087,17 @@ class RegistryTest(unittest.TestCase):
                          heater_kw=self.syn.HEATER_KW, master=self.syn.MASTER, events=self.syn.EVENTS, controls={},
                          tz="Europe/Berlin", audits=audits)
         return __import__("json").loads(__import__("json").dumps(rep, sort_keys=True, default=str))
+
+    def test_prices_entered_in_cents_give_same_cost_audit_as_euro(self):
+        from audit_core.runner import run_audits
+        in_cents = self.syn.MASTER | {"tariff_price": 25.0, "tariff_price_unit": "ct_per_kwh",
+                                      "household_price": 30.0, "household_price_unit": "ct_per_kwh",
+                                      "reference_fuel_price": 12.0, "reference_fuel_price_unit": "ct_per_kwh"}
+        rep = run_audits(self.series, self.syn.START, self.syn.END, recorder_keep_days=10, long_term_days=None,
+                         heater_kw=self.syn.HEATER_KW, master=in_cents, events=self.syn.EVENTS, controls={},
+                         tz="Europe/Berlin", audits=["cost"])
+        rep = __import__("json").loads(__import__("json").dumps(rep, sort_keys=True, default=str))
+        self.assertEqual(rep["audits"]["cost"]["checks"], self.run_with(["cost"])["audits"]["cost"]["checks"])
 
     def test_provisional_verdict_with_state_before_event(self):
         """F239: Nach dem Ereignis urteilt E3 schon vorläufig; darunter steht das Urteil aus dem Abschnitt davor."""

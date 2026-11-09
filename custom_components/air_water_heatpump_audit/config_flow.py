@@ -40,7 +40,9 @@ from .const import (CONF_BOOSTER_HEATER_2_KW, CONF_BOOSTER_HEATER_KW, CONF_CAPAC
                     CONF_ROOM_TEMP_TARGET, CONF_TARIFF_BASE_FEE, CONF_TARIFF_PRICE, CONF_WINDOW_DAYS, DATA_SOURCES, DEFAULT_OPTIONS, DOMAIN, EVENT_KIND_LABELS, EVENT_KINDS,
                     HYDRAULIC_SEPARATIONS, OPTION_SECTIONS, OPTIONAL_OPTIONS, ROLE_DOMAINS, ROLE_STEPS,
                     SUBENTRY_EVENT)
-from .const import (CONF_METER_FEE_PERIOD, CONF_TARIFF_BASE_FEE_PERIOD, FEE_PERIOD_DEFAULTS, FEE_PERIOD_OF, FEE_PERIODS)
+from .const import (CONF_HOUSEHOLD_PRICE_UNIT, CONF_METER_FEE_PERIOD, CONF_REFERENCE_FUEL_PRICE_UNIT,
+                    CONF_TARIFF_BASE_FEE_PERIOD, CONF_TARIFF_PRICE_UNIT, FEE_PERIOD_DEFAULTS, FEE_PERIOD_OF, FEE_PERIODS,
+                    PRICE_UNIT_DEFAULT, PRICE_UNIT_OF, PRICE_UNITS)
 from .const import (CONF_HEAT_PUMP_METER, CONF_METER_FEE, CONF_PREVIOUS_CONSUMPTION, CONF_PREVIOUS_CONSUMPTION_UNIT,
                     CONF_PREVIOUS_HEATING_SYSTEM, CONSUMPTION_UNITS, HEAT_PUMP_METERS, PREVIOUS_HEATING_SYSTEMS)
 from .profiles import COMMON_ROLE_SUGGESTIONS, INTERFACE_PROFILES, MODEL_PROFILES, role_candidates
@@ -240,7 +242,8 @@ def _option_selectors() -> dict[str, Any]:
         CONF_DHW_DISINFECTION_INTERVAL_DAYS: selector.NumberSelector(selector.NumberSelectorConfig(
             min=1, max=60, step=1, unit_of_measurement="d", mode=selector.NumberSelectorMode.BOX)),
         CONF_HEATING_DEGREE_DAYS: _number(8000, 1, "Kd"),
-        CONF_TARIFF_PRICE: _number(2, 0.001, "€/kWh"),
+        CONF_TARIFF_PRICE: _price(),
+        CONF_TARIFF_PRICE_UNIT: price_unit_selector(),
         CONF_HEAT_PUMP_METER: selector.SelectSelector(selector.SelectSelectorConfig(
             options=HEAT_PUMP_METERS, translation_key=CONF_HEAT_PUMP_METER, mode=selector.SelectSelectorMode.LIST)),
         CONF_TARIFF_BASE_FEE: _number(1000, 0.01, "€"),
@@ -254,8 +257,10 @@ def _option_selectors() -> dict[str, Any]:
         CONF_PREVIOUS_CONSUMPTION_UNIT: selector.SelectSelector(selector.SelectSelectorConfig(
             options=CONSUMPTION_UNITS, translation_key=CONF_PREVIOUS_CONSUMPTION_UNIT,
             mode=selector.SelectSelectorMode.DROPDOWN)),
-        CONF_HOUSEHOLD_PRICE: _number(2, 0.001, "€/kWh"),
-        CONF_REFERENCE_FUEL_PRICE: _number(2, 0.001, "€/kWh"),
+        CONF_HOUSEHOLD_PRICE: _price(),
+        CONF_HOUSEHOLD_PRICE_UNIT: price_unit_selector(),
+        CONF_REFERENCE_FUEL_PRICE: _price(),
+        CONF_REFERENCE_FUEL_PRICE_UNIT: price_unit_selector(),
         CONF_REFERENCE_EFFICIENCY: _number(1.2, 0.01, ""),
         CONF_COMPARE_HEATING_SYSTEMS: selector.BooleanSelector(),
         CONF_ROOM_TEMP_TARGET: selector.NumberSelector(selector.NumberSelectorConfig(
@@ -266,6 +271,22 @@ def _option_selectors() -> dict[str, Any]:
         CONF_DATA_SOURCE: selector.SelectSelector(selector.SelectSelectorConfig(
             options=DATA_SOURCES, translation_key=CONF_DATA_SOURCE, mode=selector.SelectSelectorMode.LIST)),
     }
+
+
+def _price() -> selector.NumberSelector:
+    """Arbeitspreis ohne feste Einheit: die steht im Auswahlfeld daneben (ct/kWh oder €/kWh)."""
+    return _number(200, 0.001, "")
+
+
+def price_unit_selector() -> selector.SelectSelector:
+    return selector.SelectSelector(selector.SelectSelectorConfig(options=PRICE_UNITS, translation_key="price_unit",
+                                                                 mode=selector.SelectSelectorMode.LIST))
+
+
+def price_units(options: dict) -> dict:
+    """Einheit je Arbeitspreis für das Formular: gespeichert, sonst €/kWh für alte Werte, sonst Vorauswahl ct/kWh."""
+    return {unit: options.get(unit) or ("eur_per_kwh" if options.get(price) is not None else PRICE_UNIT_DEFAULT)
+            for price, unit in PRICE_UNIT_OF.items()}
 
 
 def fee_period_selector() -> selector.SelectSelector:
@@ -313,7 +334,7 @@ class AirWaterAuditOptionsFlow(OptionsFlow):
                 else:
                     return self.async_create_entry(data=flat)
             current |= flat
-        current |= fee_periods(current)
+        current |= fee_periods(current) | price_units(current)
         selectors = _option_selectors()
         cost_missing = bool(heat_pump_fixed_costs(current)[1])
         schema = {}

@@ -104,16 +104,17 @@ Options Flow in Abschnitten, dazu die Personen im Haushalt als Untereinträge (6
 | Standort und Komfort | `heating_degree_days` | langjähriges Mittel der Gradtagzahl G20/15 am Standort (Kd/a) | K2 |
 | Standort und Komfort | `room_temp_target` | gewünschte Raumtemperatur | T6 |
 | Standort und Komfort | `living_area_m2` | Wohnfläche | K2 |
-| Kosten | `tariff_price` | Arbeitspreis des Wärmepumpenstroms (€/kWh); Vorschlag aus dem Energie-Dashboard, wenn dort der Zähler der Rolle `electricity_meter` als Netzbezug steht | K1–K3 |
+| Kosten | `tariff_price` | Arbeitspreis des Wärmepumpenstroms (je `tariff_price_unit`); Vorschlag aus dem Energie-Dashboard, wenn dort der Zähler der Rolle `electricity_meter` als Netzbezug steht | K1–K3 |
 | Kosten | `heat_pump_meter` | Zähler der Wärmepumpe: `separate_meter` (eigener Zähler mit WP-Tarif) oder `household_meter` (am Haushaltszähler, keine zusätzlichen festen Kosten); leer = nicht angegeben | K1–K3 |
 | Kosten | `tariff_base_fee` | Grundpreis des Wärmepumpen-Stromtarifs (€ je `tariff_base_fee_period`); leer = nicht eingetragen, 0 = keiner | K1–K3 |
 | Kosten | `tariff_base_fee_period` | `month` oder `year`, wie im Vertrag; leer = `year` (Einträge vor 0.18.0b5); Vorauswahl `month` | K1–K3 |
 | Kosten | `meter_fee` | Zählermiete (Messstellenentgelt) des Wärmepumpenzählers (€ je `meter_fee_period`); leer = nicht eingetragen, 0 = keine | K1–K3 |
 | Kosten | `meter_fee_period` | `month` oder `year`, wie auf der Rechnung; leer = `year`; Vorauswahl `year` | K1–K3 |
-| Kosten | `household_price` | Arbeitspreis des Haushaltsstroms (€/kWh) | K3 |
+| Kosten | `household_price` | Arbeitspreis des Haushaltsstroms (je `household_price_unit`) | K3 |
 | Kosten | `previous_heating_system` | frühere Heizung (`natural_gas`, `heating_oil`, `wood_pellets`, `district_heating`, `direct_electric`, `none` = Neubau); für dieses System gilt `reference_efficiency` | K1, K2, Zeitstrahl |
 | Kosten | `previous_consumption`, `previous_consumption_unit` | früherer Jahresverbrauch so, wie er auf der Abrechnung steht (`kWh`, `MWh`, `L`, `kg`, `t`) | Jahreswärme (7.1) |
-| Kosten | `reference_fuel_price` | Preis des früheren Brennstoffs je abgerechneter kWh, mit Grundpreis-Anteil | K1, K2 |
+| Kosten | `reference_fuel_price` | Preis des früheren Brennstoffs je abgerechneter kWh, mit Grundpreis-Anteil (je `reference_fuel_price_unit`) | K1, K2 |
+| Kosten | `tariff_price_unit`, `household_price_unit`, `reference_fuel_price_unit` | `ct_per_kwh` oder `eur_per_kwh`, wie im Vertrag; leer = `eur_per_kwh` (Einträge vor 0.18.0b6); Vorauswahl `ct_per_kwh`, bei einem Vorschlag aus dem Energie-Dashboard `eur_per_kwh`. `run_audits` rechnet alle Arbeitspreise vorab in €/kWh um | K1–K3 |
 | Kosten | `reference_efficiency` | Jahresnutzungsgrad der früheren Heizung, bezogen auf die abgerechnete kWh; Vorgabe 0,86 (Gas-Brennwertkessel, DBU-BW S. 7/39: Mittel 86,2 % auf Hs, n = 60; Gas wird nach Brennwert abgerechnet) | K1, K2 |
 | Auswertung | `window_days` | Auswertefenster in Tagen (Standard 30; mit Recorder wirkt höchstens dessen Aufbewahrung) | alle |
 | Auswertung | `data_since` | Daten gelten ab (z. B. Einbau der Schnittstelle) | alle |
