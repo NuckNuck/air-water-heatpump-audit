@@ -12,7 +12,7 @@ from ..series import intervals_where, normalize
 
 
 def _point(ctx: Context, a: float, b: float, day: str) -> dict:
-    row = next((r for r in ctx.daily_rows_window if r["day"] == day), None)
+    row = ctx.timeline_row(day)
     point = k1.daily_point(row, ctx.day_costs.get(day), ctx.master, ctx.fixed_costs)
     if ctx.price_refs:
         # Wärmepreise anderer Heizsysteme an diesem Tag, auch ohne eigenen Wert (Sensor-ID → ct/kWh Wärme)
@@ -38,7 +38,7 @@ def _scale(master: dict) -> dict:
 
 def _annual(ctx: Context):
     persons = hh.persons_mean(ctx.persons, hh.local_dates(ctx.section_start, ctx.end, ctx.tz)) if ctx.persons else None
-    return k1.check_annual_cost(ctx.daily_rows, ctx.outdoor_daily, ctx.day_costs, ctx.master, ctx.tz,
+    return k1.check_annual_cost(ctx.year_rows, ctx.outdoor_daily, ctx.day_costs, ctx.master, ctx.tz,
                                 ctx.section_start, persons)
 
 
@@ -70,5 +70,6 @@ AUDIT = AuditSpec(
         CheckSpec("K5", "grid_lock", lambda ctx: k1.check_grid_lock(ctx.s["grid_lock"], _heaters(ctx),
                                                                      ctx.section_start, ctx.end)),
     ),
-    timeline=TimelineSpec(scale=_scale, point=_point, metric_names={"de": "Wärmepreis", "en": "Heat price"}),
+    timeline=TimelineSpec(scale=_scale, point=_point, metric_names={"de": "Wärmepreis", "en": "Heat price"},
+                          statistics=True),
 )

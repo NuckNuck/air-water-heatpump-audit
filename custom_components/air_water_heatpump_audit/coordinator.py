@@ -28,7 +28,8 @@ from .const import (CONF_BOOSTER_HEATER_2_KW, CONF_BOOSTER_HEATER_KW, CONF_DATA_
                     DEFAULT_OPTIONS, DOMAIN, MASTER_KEYS, SOURCE_INFLUXDB, SOURCE_RECORDER, UPDATE_INTERVAL)
 from .const import CONF_EVENTS, CONF_HOUSEHOLD, RECORD_ID, language
 from .records import event_title, records
-from .recorder_source import load_series
+from .audit_core import days
+from .recorder_source import load_series, load_statistics
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -128,8 +129,27 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _load_recorder(self, roles: dict[str, str], start: float, end: float) -> dict:
         return load_series(self.hass, roles, dt_util.utc_from_timestamp(start), dt_util.utc_from_timestamp(end))
 
+    def _statistics_start(self, end: float) -> float:
+        """Beginn der Statistik-Tage (Spezifikation 1.11): so weit, wie der Zeitstrahl Tage hält, nicht vor data_since."""
+        start = end - timeline.KEEP_DAYS * 86400
+        raw_since = self._option(CONF_DATA_SINCE)
+        since = dt_util.parse_datetime(str(raw_since)) if raw_since else None
+        if since is not None:
+            since = dt_util.as_utc(since if since.tzinfo else since.replace(tzinfo=dt_util.get_default_time_zone()))
+            start = max(start, since.timestamp())
+        # Nur volle Tage (1.11): ein angebrochener Tag, z. B. der Einbautag ab data_since, zählt nicht
+        midnight = dt_util.start_of_local_day(dt_util.utc_from_timestamp(start))
+        return start if midnight.timestamp() == start else days.next_midnight(start, str(dt_util.get_default_time_zone()))
+
+    def _load_statistics(self, roles: dict[str, str], start: float, end: float) -> dict | None:
+        """Tageswerte der Langzeitstatistik vom Statistik-Beginn bis zum Ende (auch fürs Fenster: Faktor, 1.11)."""
+        tz = str(dt_util.get_default_time_zone())
+        return load_statistics(self.hass, roles, dt_util.utc_from_timestamp(self._statistics_start(end)),
+                               dt_util.utc_from_timestamp(end), lambda t: days.label(t, tz))
+
     def _compute(self, series: dict, start: float, end: float, keep_days: float, long_term_days: float | None,
-                 controls: dict[str, dict], price_refs: list[dict] | None = None) -> dict[str, Any]:
+                 controls: dict[str, dict], price_refs: list[dict] | None = None,
+                 statistics: dict | None = None) -> dict[str, Any]:
         heater_kw = {role: self._option(key) for role, key in (("immersion_heater", CONF_IMMERSION_HEATER_KW),
                                                                 ("booster_heater", CONF_BOOSTER_HEATER_KW),
                                                                 ("booster_heater_2", CONF_BOOSTER_HEATER_2_KW))}
@@ -138,7 +158,7 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                                for p in records(self.config_entry, CONF_HOUSEHOLD)]
         return run_audits(series, start, end, recorder_keep_days=keep_days, long_term_days=long_term_days,
                           heater_kw=heater_kw, master=master, events=self._events(), controls=controls,
-                          tz=str(dt_util.get_default_time_zone()), audits=self.audits(),
+                          tz=str(dt_util.get_default_time_zone()), audits=self.audits(), statistics=statistics,
                           price_refs=None if price_refs is None else [
                               r | {"series": series.get(PRICE_ROLE_PREFIX + r["id"], [])} for r in price_refs])
 
@@ -201,9 +221,10 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # Datenbankzugriff im Executor des Recorders, das Rechnen im allgemeinen Executor.
             series |= await recorder.async_add_executor_job(
                 self._load_recorder, {r: roles[r] for r in from_recorder}, start, end)
+        stats = await recorder.async_add_executor_job(self._load_statistics, roles, start, end)
         t1 = time.monotonic()
         report = await self.hass.async_add_executor_job(self._compute, series, start, end, recorder.keep_days,
-                                                        long_term_days, self._controls(), price_refs)
+                                                        long_term_days, self._controls(), price_refs, stats)
         report["runtime_s"] = {"load": round(t1 - t0, 2), "audits": round(time.monotonic() - t1, 2)}
         report["timeline"]["days"] = await self._merge_timeline(report["timeline"]["days"])
         report["events"] = sorted(self._events(), key=lambda e: e["time"])

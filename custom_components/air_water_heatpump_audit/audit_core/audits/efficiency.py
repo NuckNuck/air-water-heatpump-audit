@@ -16,9 +16,13 @@ def _finish(ctx: Context, results: list[CheckResult]) -> None:
 
 
 def _point(ctx: Context, a: float, b: float, day: str) -> dict:
-    row = next((r for r in ctx.daily_rows_window if r["day"] == day), None)
+    row = ctx.timeline_row(day)
     if not row or not row["electricity_kwh"]:
         return {"value": None, "verdict": NOT_ASSESSABLE}
+    if row["ideal_kwh"] is None:  # Statistik-Tag (Spezifikation 1.11): Arbeitszahl ohne Gütegrad
+        return {"value": None, "verdict": NOT_ASSESSABLE, "cop": row["cop"], "cop_raw": row["cop_raw"],
+                "electricity_kwh": row["electricity_kwh"], "heat_kwh": row["heat_kwh"],
+                "outdoor_mean": row["outdoor_mean"], "source": row.get("source")}
     eta = row["ideal_kwh"] / row["electricity_kwh"]
     return {"value": round(eta, 3), "verdict": e1.carnot_verdict(eta, ctx.offset_robust), "cop": row["cop"],
             "cop_raw": row["cop_raw"], "electricity_kwh": row["electricity_kwh"], "heat_kwh": row["heat_kwh"],
@@ -49,6 +53,7 @@ AUDIT = AuditSpec(
                                                                                      ctx.offset_robust)),
         CheckSpec("E4", "dhw_share", lambda ctx: e1.check_dhw_share(ctx.daily_rows)),
     ),
-    timeline=TimelineSpec(scale=_scale, point=_point, metric_names={"de": "Gütegrad", "en": "Carnot efficiency"}),
+    timeline=TimelineSpec(scale=_scale, point=_point, metric_names={"de": "Gütegrad", "en": "Carnot efficiency"},
+                          statistics=True),
     finish=_finish,
 )

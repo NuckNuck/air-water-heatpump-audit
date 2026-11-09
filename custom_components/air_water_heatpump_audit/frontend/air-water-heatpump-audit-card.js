@@ -671,6 +671,7 @@ const TL_TEXT = {
     verdicts: { ok: "grün", hint: "gelb", warn: "rot", info: "Info", not_assessable: "nicht bewertbar" },
     cop: "Arbeitszahl",
     cost: "Stromkosten",
+    statisticsDay: "Aus der Langzeitstatistik: Wärme laut Steuerung, korrigiert; ohne Gütegrad.",
     systems: { heating_oil: "Heizöl", natural_gas: "Erdgas", wood_pellets: "Holzpellets", district_heating: "Fernwärme",
       direct_electric: "Stromdirektheizung" },
     sourceKinds: { official: "amtlich", association: "Verband", commercial: "Preisportal", local: "lokal" },
@@ -732,6 +733,7 @@ const TL_TEXT = {
     verdicts: { ok: "green", hint: "yellow", warn: "red", info: "info", not_assessable: "not assessable" },
     cop: "COP",
     cost: "electricity cost",
+    statisticsDay: "From long-term statistics: heat as reported by the controller, corrected; no Carnot efficiency.",
     systems: { heating_oil: "Heating oil", natural_gas: "Natural gas", wood_pellets: "Wood pellets",
       district_heating: "District heating", direct_electric: "Direct electric heating" },
     sourceKinds: { official: "official", association: "association", commercial: "price portal", local: "local" },
@@ -1175,7 +1177,9 @@ class AirWaterAuditTimelineCard extends HTMLElement {
       return `<div><b>${esc(name)}:</b> ${esc(text)}</div>`;
     }).join("");
     const mixed = this._mixed(d, events ?? []) ? `<div class="muted">${esc(t.mixed)}</div>` : "";
-    return `<div class="day"><div><b>${esc(new Date(d.start * 1000).toLocaleDateString(this._locale(), { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }))}</b></div>${mixed}${parts}</div>`;
+    // Statistik-Tag (Spezifikation 1.11): Wärme vom Zähler der Steuerung, mit den Rohdaten-Tagen korrigiert
+    const stats = d.source === "statistics" ? `<div class="muted">${esc(t.statisticsDay)}</div>` : "";
+    return `<div class="day"><div><b>${esc(new Date(d.start * 1000).toLocaleDateString(this._locale(), { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }))}</b></div>${mixed}${stats}${parts}</div>`;
   }
 
   _eventList(events, x0, t) {

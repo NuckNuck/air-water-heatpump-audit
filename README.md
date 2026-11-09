@@ -58,7 +58,7 @@ allen anderen Audits mit angezeigt wird.
 
 | Prüfung | Was wird geprüft? |
 |---|---|
-| D1 Rohdatentiefe | Wie viele Tage Messwerte vorliegen. Grün ab 30 Tagen oder mit Langzeitspeicher (InfluxDB). |
+| D1 Rohdatentiefe | Wie viele Tage Messwerte vorliegen. Grün ab 30 Tagen oder mit Langzeitspeicher (InfluxDB). Nennt auch die Tage aus der Langzeitstatistik. |
 | D2 Abdeckung | Ob die Messwerte lückenlos kamen. Grün ab 98 % der Zeit. |
 | D3 Auflösung | In welchen Schritten Temperaturen und Durchfluss gemeldet werden; die Schwankung einzelner Werte steht als Anmerkung dabei. |
 | D4 Fühler-Offset | Vor- und Rücklauffühler im Vergleich, wenn nur die Pumpe läuft – dann müssten beide gleich viel zeigen. |
@@ -220,7 +220,9 @@ ersten Tag, an dem Messwerte ankamen; Lücken danach bleiben sichtbar.
 3. **Ein eigener Stromzähler für die Wärmepumpe**, dessen Zählerstand (kWh) in Home Assistant ankommt – z. B. über
    einen Infrarot-Lesekopf am Zähler. Schätzungen der Wärmepumpe selbst reichen nicht für ein Urteil.
 4. Empfohlen: **InfluxDB** als Langzeitspeicher (Home-Assistant-Integration „InfluxDB“, Version 2). Ohne InfluxDB nutzt
-   das Audit die normale Aufzeichnung von Home Assistant, die standardmäßig nur 10 Tage zurückreicht.
+   das Audit die normale Aufzeichnung von Home Assistant, die standardmäßig nur 10 Tage zurückreicht. Für die Tage
+   davor nimmt es Arbeitszahl und Kosten aus der Langzeitstatistik von Home Assistant, sobald es eine Woche eigene
+   Messwerte hat (Wärme dann vom Wärmezähler der Steuerung, mit den eigenen Messwerten korrigiert).
 5. Optional: **ein Raumthermometer** im wichtigsten Raum (für T6) und die **Speichertemperatur** des Warmwassers
    (für das Audit Warmwasser).
 

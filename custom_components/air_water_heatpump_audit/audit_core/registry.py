@@ -33,6 +33,7 @@ class TimelineSpec:
     scale: Callable[[dict], dict]  # Stammdaten → {metric, unit, min, max, bands, …}
     point: Callable[[Context, float, float, str], dict]  # (ctx, Tagesbeginn, Tagesende, Tag) → {value, verdict, …}
     metric_names: dict[str, str] = field(default_factory=dict)  # Sprache → Name der Kennzahl
+    statistics: bool = False  # Punkt auch für Statistik-Tage (Spezifikation 1.11); sonst dort „nicht bewertbar“
 
 
 @dataclass(frozen=True)

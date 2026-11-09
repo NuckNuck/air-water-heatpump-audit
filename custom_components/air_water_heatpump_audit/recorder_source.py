@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from homeassistant.components.recorder import history
+from homeassistant.components.recorder import history, statistics
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant, State
 
@@ -60,3 +60,31 @@ def load_series(hass: HomeAssistant, roles: dict[str, str], start: datetime, end
         for role, eid in group.items():
             out[role] = to_series(role, found.get(eid, []))
     return out
+
+
+# Statistik-Tage (Spezifikation 1.11): Rolle → (Schlüssel im Kern, Art des Tageswerts)
+STATISTIC_ROLES = {"electricity_meter": ("electricity_kwh", "change"),
+                   "controller_heat_today": ("controller_heat_kwh", "change")}
+OUTDOOR_ROLES = ("outdoor_temp_reference", "outdoor_temp")  # Tagesmittel, Wetterdienst bevorzugt
+STATISTIC_UNITS = {"energy": "kWh", "temperature": "°C"}
+
+
+def load_statistics(hass: HomeAssistant, roles: dict[str, str], start: datetime, end: datetime,
+                    label) -> dict[str, dict[str, float]] | None:
+    """Tageswerte der Langzeitstatistik je Rolle als {Kern-Schlüssel: {Tag: Wert}}; Tag = label(Tagesbeginn).
+
+    Strom und Steuerungswärme als Änderung je Tag (Summenstatistik), Außentemperatur als Tagesmittel. None, wenn
+    Strom oder Steuerungswärme keine Statistik haben (dann gibt es keine Statistik-Tage). Läuft im Executor."""
+    wanted = {role: (key, kind) for role, (key, kind) in STATISTIC_ROLES.items() if role in roles}
+    outdoor = next((r for r in OUTDOOR_ROLES if roles.get(r, "").startswith("sensor.")), None)
+    if outdoor:
+        wanted[outdoor] = ("outdoor_mean", "mean")
+    if not all(r in wanted for r in STATISTIC_ROLES):
+        return None
+    found = statistics.statistics_during_period(hass, start, end, {roles[r] for r in wanted}, "day",
+                                                STATISTIC_UNITS, {"change", "mean"})
+    out: dict[str, dict[str, float]] = {}
+    for role, (key, kind) in wanted.items():
+        out[key] = {label(row["start"]): float(row[kind]) for row in found.get(roles[role], [])
+                    if row.get(kind) is not None}
+    return out if all(out.get(STATISTIC_ROLES[r][0]) for r in STATISTIC_ROLES) else None
