@@ -1,13 +1,14 @@
 # Changelog
 
 Alle Änderungen an der Integration, neueste zuerst. Jede Version gibt es als
-[GitHub-Release](https://github.com/NuckNuck/air-water-heatpump-audit/releases); HACS bietet sie als Update an.
+[GitHub-Release](https://github.com/NuckNuck/air-water-heatpump-audit/releases); HACS bzw. der Marketplace (ab Home
+Assistant 2026.11) bieten sie als Update an.
 Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/): Solange die Hauptversion 0 ist, kann jede
 Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
-## [0.18.0] – in Arbeit
+## [0.18.0] – 2026-11-09
 
 ### Neu
 - **Wärmepreise anderer Heizsysteme im Kosten-Zeitstrahl** (#15): gestrichelte Linien für Heizöl, Erdgas,
@@ -25,26 +26,21 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
   **⚙ Einstellungen** je Audit und bei fehlenden Stammdaten. Die Anlagendaten öffnen dann direkt den Abschnitt Kosten.
 - Die Legende des Kosten-Zeitstrahls (Vergleichslinien, feste Kosten) steht hinter **ⓘ Legende** und öffnet sich
   beim Überfahren oder Antippen. Fehlende Stammdaten bleiben sichtbar.
-
 - Grundpreis und Zählermiete werden mit Zeitraum eingetragen: **pro Monat** oder **pro Jahr**, so wie es im Vertrag
   oder auf der Rechnung steht. Vorauswahl beim Grundpreis „pro Monat“, bei der Zählermiete „pro Jahr“; schon
   eingetragene Beträge gelten weiter pro Jahr. Die Felder heißen jetzt „Grundpreis Wärmepumpen-Stromtarif
   (Stromanbieter)“ und „Zählermiete Wärmepumpenzähler (Messstellenentgelt)“.
-
 - Arbeitspreise (Wärmepumpenstrom, Haushaltsstrom, früherer Brennstoff) wahlweise in **ct/kWh** oder **€/kWh**,
   vorausgewählt ct/kWh. Schon eingetragene Preise gelten weiter in €/kWh.
-
 - **Ereignisse und Personen nicht mehr als einzelne Untereinträge** (#18): Auf der Integrationsseite standen sie
   flach neben den Audits. Ereignisse verwaltet jetzt die Zeitstrahl-Karte (anlegen, ändern ✎, löschen ✕), Personen
   das neue Menü **Konfigurieren → Haushalt**. Die Stammdaten stehen unter **Konfigurieren → Anlagendaten**.
   Bestehende Untereinträge werden beim Update automatisch übernommen.
-
 - **Tage aus der Langzeitstatistik** (#19): Nach einer Neuinstallation zeigt der Zeitstrahl auch die Tage vor den
   Rohdaten (bis 400 Tage zurück) mit Arbeitszahl und Wärmepreis. Strom kommt vom Zähler, die Wärme vom Wärmezähler
   der Steuerung, korrigiert mit dem Verhältnis zur selbst gerechneten Wärme (ab einer Woche eigener Messwerte). Die
   Hochrechnung K2 und die Jahreswärme für die festen Kosten nutzen diese Tage ab dem letzten Ereignis; alle anderen
   Prüfungen bleiben bei Rohdaten. Das Tagesdetail der Karte kennzeichnet solche Tage.
-
 - **Hochrechnung K2 schon ab 5 gültigen Tagen** (#21), als vorläufig gekennzeichnet bis 14 Tage; sie wird mit jedem
   Tag genauer. Jahreswärme für die festen Kosten und die Wirkung je Aktion folgen derselben Hochrechnung. Das Audit
   Vorlauf liest dafür auch die Außentemperatur, damit es allein dieselbe Wirkung zeigt wie im Gesamtlauf.
