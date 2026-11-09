@@ -16,7 +16,8 @@ Quellen stehen als Kurzschlüssel in Klammern, das Verzeichnis folgt in Abschnit
    Schätzungen und erscheinen nur als Vergleich in Audit 0 (D5).
 2. **Wärme selbst gerechnet** aus Durchfluss × Spreizung × ρ·cp (4,153 kJ/(l·K)). Der Fühler-Offset aus D4 wird
    abgezogen; solange er nicht belastbar ist (< 20 Fenster), steht „vorläufig“ dabei. Angezeigt werden immer beide
-   Werte, roh und korrigiert; Urteile rechnen mit dem korrigierten, pessimistischeren Wert.
+   Werte, roh und korrigiert; Urteile rechnen mit dem korrigierten, pessimistischeren Wert. Einzige Ausnahme sind
+   Tage aus der Langzeitstatistik (1.11); sie urteilen nicht.
 3. **Jede Schwelle trägt eine Herkunft:**
    - `sourced`: aus einer gelesenen Quelle übernommen (Kurzschlüssel + Seite)
    - `derived`: aus belegten Zahlen abgeleitet (die Ableitung steht dabei)
@@ -59,13 +60,13 @@ es in der Instanz gibt. Beispiel einer vollständigen Anlage: [`examples/mitsubi
 
 | Rolle | Bedeutung | Genutzt von |
 |---|---|---|
-| `electricity_meter` | Zählerstand Strom der Wärmepumpe (kWh) | D5, D8, Audit 1, C5 |
+| `electricity_meter` | Zählerstand Strom der Wärmepumpe (kWh) | D5, D8, Audit 1, C5, Statistik-Tage (1.11) |
 | `compressor_running` | Verdichter läuft (an/aus) | Zyklen, Audit 1–3 |
 | `compressor_frequency` | Verdichterfrequenz (Hz) | C7 |
 | `flow_temp`, `return_temp` | Vor- und Rücklauf am Wärmeerzeuger | D3, D4, Wärme, T1–T5 |
 | `flow_rate` | Durchfluss am Wärmeerzeuger (l/min) | Wärme, T3, T4 |
 | `outdoor_temp` | Außenfühler der Wärmepumpe | D10, Audit 1, C4 |
-| `outdoor_temp_reference` | Außentemperatur eines Wetterdienstes (`sensor` oder `weather`, Attribut `temperature`) | D10 |
+| `outdoor_temp_reference` | Außentemperatur eines Wetterdienstes (`sensor` oder `weather`, Attribut `temperature`) | D10, Gradtage, Statistik-Tage (1.11) |
 | `pump_running` | Pumpe der Wärmepumpe läuft | D4, T2 |
 | `defrost` | Abtauung aktiv | Zyklen, D4, D10, C6 |
 | `dhw_active` | Warmwasserbereitung aktiv | Zyklus-Klassen, E4, Audit 2 |
@@ -73,7 +74,7 @@ es in der Instanz gibt. Beispiel einer vollständigen Anlage: [`examples/mitsubi
 | `heartbeat` | regelmäßig wechselnder Wert der Schnittstelle (z. B. Laufzeit) | D2, D9, gültige Tage |
 | `controller_heating_consumed`, `controller_dhw_consumed` | Tageswerte Strom laut Steuerung | D5 |
 | `controller_date` | Datum der Steuerung | D6 |
-| `controller_heat_today` | Wärmezähler der Steuerung, Tageswert (zählt ohne Home Assistant weiter) | E1–E4: Lücken auffüllen |
+| `controller_heat_today` | Wärmezähler der Steuerung, Tageswert (zählt ohne Home Assistant weiter) | E1–E4: Lücken auffüllen; Statistik-Tage (1.11) |
 | `flow_setpoint` | Soll-Vorlauf aus der Heizkurve | T5 |
 | `circuit_flow_temp`, `circuit_return_temp` | Vor- und Rücklauf im Heizkreis hinter Puffer oder Weiche (optional) | T1–T3 |
 | `circuit_pump_running` | Heizkreispumpe läuft (optional) | T1 |
@@ -218,7 +219,7 @@ damit ein Audit allein dieselbe Wirkung zeigt wie im Gesamtlauf.
 
 | Grundlage | Herkunft |
 |---|---|
-| Jahresstrom | Hochrechnung über die Gradtage wie K2 (`project_year`, ganzes Fenster), ab 14 gültigen Tagen |
+| Jahresstrom | Hochrechnung über die Gradtage wie K2 (`project_year`, ganzes Fenster plus Statistik-Tage nach dem letzten Ereignis, 1.11), ab 14 gültigen Tagen |
 | Warmwasserstrom | Strom der Ladungen je Tag × 365 |
 | Heizstrom | Jahresstrom − Warmwasserstrom |
 | Preis | Mittel aus den Tageskosten (auch dynamisch), sonst `tariff_price`; ohne Preis nur kWh |
@@ -240,6 +241,34 @@ Faustwerte wie in den Prüfungen (2–3 %/K Vorlauf, 1,4 %/K Warmwasser); die Wi
 Sortieren. Zielkonflikte stehen fest je Prüfung (z. B. W2: mehr Hygiene kostet Strom, W4/W1; W5: Vorrat bis zum
 nächsten Duschen W6, günstigste gegen wärmste Stunde K4; T6: nur so weit, wie alle Räume warm bleiben).
 
+### 1.11 Tage aus der Langzeitstatistik
+
+Rohdaten reichen nach einer Neuinstallation oft nur so weit zurück, wie der Recorder sie aufbewahrt (Standard 10
+Tage). Die Langzeitstatistik von Home Assistant hält Summen und Mittel dagegen unbegrenzt vor. Für die Tage davor
+ergänzt die Integration deshalb **Statistik-Tage** (Issue #19, Entscheide F294/F295).
+
+- **Quelle:** Tageswerte der Langzeitstatistik in Ortszeit: Strom = Änderung (`change`) von `electricity_meter` in
+  kWh, Steuerungswärme = Änderung von `controller_heat_today` in kWh, Außentemperatur = Tagesmittel (`mean`) von
+  `outdoor_temp_reference`, sonst `outdoor_temp`. Fehlt eine Statistik (z. B. ohne `state_class`), gibt es keine
+  Statistik-Tage bzw. keinen Außenwert. Nur die Integration liest sie; der Prototyp nicht.
+- **Zeitraum:** volle Tage vor dem ersten vollen Tag des Fensters, höchstens 400 Tage vor dem Ende (so lange hält der
+  Zeitstrahl Tage), nicht vor `data_since`.
+- **Wärme (F294 a):** Steuerungswärme × Korrekturfaktor. Der Faktor = Σ selbst gerechnete Wärme ÷ Σ Steuerungswärme
+  über die gültigen Tage des Fensters (4.1), an denen die Statistik Steuerungswärme > 0 hat; getrennt für rohe und
+  korrigierte Wärme. Er braucht mindestens 7 solche Tage (`derived`: eine Woche wie E2, damit einzelne Tage mit
+  Lücken nicht durchschlagen). Ohne Faktor gibt es keine Statistik-Tage.
+- **Gültiger Statistik-Tag:** Strom ≥ 2 kWh (wie 4.1) und Steuerungswärme > 0. Er trägt `source: "statistics"`,
+  `electricity_kwh`, `heat_raw_kwh`, `heat_kwh`, `cop_raw`, `cop`, `outdoor_mean` und `heat_factor`; ohne Gütegrad
+  und ohne Warmwasseranteil (keine Rohdaten).
+- **Kosten eines Statistik-Tags:** Strom × `tariff_price`; mit `price_signal` Strom × mittlerer gezahlter Preis der
+  gültigen Tage des Fensters (der Preisverlauf davor wird nicht geladen).
+- **Wofür (F295):** Zeitstrahl (Effizienz: Arbeitszahl ohne Gütegrad, Kosten: Wärmepreis), Hochrechnung K2 und damit
+  Jahreswärme für feste Kosten (7.1) und Jahreswerte der Wirkung (1.10). Für K2, Jahreswärme und Wirkung zählen nur
+  Statistik-Tage nach dem letzten Ereignis (1.5), auch wenn es vor dem Fenster liegt. Alle anderen Prüfungen rechnen
+  nur mit Rohdaten; Statistik-Tage zählen nicht für deren Gates.
+- **Zeitstrahl:** Statistik-Tage stehen mit `source: "statistics"` im Tageseintrag; die Karte kennzeichnet sie als
+  „Wärme laut Steuerung, korrigiert“. Ein gespeicherter Tag aus Rohdaten wird nie durch einen Statistik-Tag ersetzt.
+
 ## 2. Audit 0 – Datenbasis
 
 Ziel: Bevor eine Prüfung urteilt, muss feststehen, ob die Daten dafür taugen. Audit 0 liefert `dq` und Korrekturwerte
@@ -247,7 +276,7 @@ an die anderen Audits.
 
 | ID | Key | Prüft | Gate | Urteil | Herkunft |
 |---|---|---|---|---|---|
-| D1 | `history_depth` | Verfügbare Rohdaten (Recorder-Aufbewahrung, InfluxDB angebunden) | – | `ok` InfluxDB oder Recorder ≥ 30 d · `hint` Recorder 7–30 d (Hinweis Datenträger) · `warn` < 7 d | `derived`: Wochen- und Monatsvergleiche brauchen 7 bzw. 30 Tage |
+| D1 | `history_depth` | Verfügbare Rohdaten (Recorder-Aufbewahrung, InfluxDB angebunden) | – | `ok` InfluxDB oder Recorder ≥ 30 d · `hint` Recorder 7–30 d (Hinweis Datenträger) · `warn` < 7 d. Der Text nennt die Statistik-Tage (1.11, `statistics_days`); das Urteil ändert sich dadurch nicht | `derived`: Wochen- und Monatsvergleiche brauchen 7 bzw. 30 Tage |
 | D2 | `coverage` | Anteil der Zeit mit lückenlosem Heartbeat (Lücke = > 180 s ohne Wechsel) | – | `ok` ≥ 98 % · `hint` 90–98 % · `warn` < 90 % | `derived`: 98 % ≈ 30 min Ausfall pro Tag (emoncms bildet „Quality“ ebenso, ohne Schwelle) |
 | D3 | `resolution` | Tatsächliche Auflösung je Eingang; daraus die Unsicherheit der Wärme | genug gespeicherte Werte | `ok`; Unsicherheit je Einzelwert als Anmerkung (mittelt sich über Tage aus) | `physical`: Quantisierung ± halbe Schrittweite je Fühler |
 | D4 | `sensor_offset` | Zeitmittel Vorlauf − Rücklauf bei laufender Pumpe, Verdichter seit ≥ 5 min aus, keine Abtauung, kein Warmwasser. Zeitmittel statt Median, weil gestufte Fühler den Median auf eine Stufe einrasten lassen | ≥ 3 Fenster à ≥ 3 min; belastbar ab 20 | `ok` \|Offset\| ≤ 0,5 K · `hint` ≤ 1,0 K · `warn` > 1,0 K | `derived`: 0,5 K = typische Auflösungsgrenze; 1 K verfälscht bei Spreizung < 4 K die Wärme deutlich (ETI-2011) |
@@ -465,7 +494,7 @@ Ziel: Den gemessenen Strom in Euro umrechnen: Was kostet eine Kilowattstunde Wä
 
 ### 7.1 Rechenweg
 
-- **Tage:** die gültigen Tage aus Audit 1 (4.1), auch mit aufgefüllten Lücken.
+- **Tage:** die gültigen Tage aus Audit 1 (4.1), auch mit aufgefüllten Lücken; für K2 dazu Statistik-Tage (1.11).
 - **Kosten eines Tages:** Mit `price_signal` jeder Zählerschritt × der Preis zu Beginn des Schritts; sonst Strom ×
   `tariff_price`.
 - **Feste Kosten der Wärmepumpe** (Mehrkosten-Sicht): nur, was die Wärmepumpe zusätzlich kostet. Am Haushaltszähler
@@ -546,7 +575,8 @@ Geplant: Anteil eigener PV-Strom (Rolle für Netzbezug bzw. Eigenverbrauch).
 - **Kern** `audit_core/`: reines Python ohne Abhängigkeiten, Funktionen auf Zeitreihen (Liste von Zeit/Wert). Je
   Audit ein Modul in `audit_core/audits/`, gemeinsame Grundgrößen (Offset, Wärme, Zyklen, `dq`) in `context.py`.
 - **Datenquellen:** Recorder von Home Assistant oder InfluxDB 2 über die vorhandene InfluxDB-Integration; fehlende
-  Rollen kommen aus dem Recorder, bei Fehlern fällt die Integration auf den Recorder zurück.
+  Rollen kommen aus dem Recorder, bei Fehlern fällt die Integration auf den Recorder zurück. Tage davor ergänzt die
+  Langzeitstatistik von Home Assistant (1.11).
 - **Texte** für Menschen deutsch mit Dezimalkomma (`num()`), Anzahlen mit `count()`; Hilfe zu jeder Prüfung in
   `help.py`, Aktionen in `actions.py`.
 - **Tests:** `python3 -m unittest` (Kern, inkl. Vergleichsbericht einer synthetischen Anlage in `tests/golden/`),
