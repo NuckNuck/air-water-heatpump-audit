@@ -46,6 +46,9 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
   Prüfungen bleiben bei Rohdaten. Das Tagesdetail der Karte kennzeichnet solche Tage.
 
 ### Behoben
+- K2 meldete bei 5–13 gültigen Tagen „Außentemperatur fehlt für die Gradtage“; jetzt nennt der Text die Tage und
+  ab wann hochgerechnet wird.
+- Statistik-Tage beginnen mit dem ersten vollen Tag nach `data_since`; der angebrochene Einbautag zählt nicht.
 - Die Reparaturmeldung „Feste Kosten der Wärmepumpe fehlen“ schloss sich beim Öffnen sofort als behoben und leerte
   dabei Zählerart, Grundpreis und Messstellenentgelt (0.18.0b2/b3). Jetzt erscheint das Formular.
 - Preis-Sensoren können `includes_fixed_charges` und `annual_base_fee` angeben. Die Vergleichslinie

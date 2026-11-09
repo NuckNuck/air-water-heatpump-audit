@@ -137,7 +137,9 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if since is not None:
             since = dt_util.as_utc(since if since.tzinfo else since.replace(tzinfo=dt_util.get_default_time_zone()))
             start = max(start, since.timestamp())
-        return start
+        # Nur volle Tage (1.11): ein angebrochener Tag, z. B. der Einbautag ab data_since, zählt nicht
+        midnight = dt_util.start_of_local_day(dt_util.utc_from_timestamp(start))
+        return start if midnight.timestamp() == start else days.next_midnight(start, str(dt_util.get_default_time_zone()))
 
     def _load_statistics(self, roles: dict[str, str], start: float, end: float) -> dict | None:
         """Tageswerte der Langzeitstatistik vom Statistik-Beginn bis zum Ende (auch fürs Fenster: Faktor, 1.11)."""

@@ -133,3 +133,10 @@ async def test_statistics_not_requested_before_data_since(hass: HomeAssistant):
     since = dt_util.start_of_local_day() - timedelta(days=50)
     start, _ = await _requested_start(hass, since.strftime("%Y-%m-%d %H:%M:%S"))
     assert start >= since
+
+
+async def test_statistics_start_at_first_full_day_after_data_since(hass: HomeAssistant):
+    midnight = dt_util.start_of_local_day() - timedelta(days=50)
+    since = midnight + timedelta(hours=13, minutes=46)  # Einbau mitten am Tag
+    start, _ = await _requested_start(hass, since.strftime("%Y-%m-%d %H:%M:%S"))
+    assert dt_util.as_local(start) == midnight + timedelta(days=1)

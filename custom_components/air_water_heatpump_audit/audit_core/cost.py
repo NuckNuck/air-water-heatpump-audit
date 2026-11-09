@@ -291,8 +291,10 @@ def check_annual_cost(rows: list[dict], outdoor: Series, costs: dict[str, float 
     year = project_year(rows, outdoor, tz, float(year_dd))
     day_costs = [costs.get(r["day"]) for r in rows]
     if year is None:
-        return CheckResult(*key, NOT_ASSESSABLE, text="Außentemperatur fehlt für die Gradtage.", origin=SOURCED,
-                           progress=prog)
+        # project_year braucht PROJECTION_MIN_DAYS Tage mit Außentemperatur; das Gate oben lässt schon früher durch
+        text = ("Außentemperatur fehlt für die Gradtage." if len(rows) >= PROJECTION_MIN_DAYS else
+                f"{count(len(rows), 'gültiger Tag', 'gültige Tage')}, Hochrechnung ab {PROJECTION_MIN_DAYS} Tagen.")
+        return CheckResult(*key, NOT_ASSESSABLE, text=text, origin=SOURCED, progress=prog)
     if any(c is None for c in day_costs):
         return _missing_price(key)
     mean_price = sum(day_costs) / sum(r["electricity_kwh"] for r in rows)

@@ -209,6 +209,21 @@ class OverallTest(unittest.TestCase):
         self.assertEqual(count(7, "gültiger Tag", "gültige Tage"), "7 gültige Tage")
 
 
+
+class AnnualCostGateTest(unittest.TestCase):
+    """K2 (Spezifikation 7.2): Gate 14 gültige Tage; darunter nennt der Text die Tage, nicht die Außentemperatur."""
+
+    def test_too_few_days_for_projection_name_days_not_outdoor(self):
+        from audit_core import cost as k1
+        days_ = [f"2026-01-{d:02d}" for d in range(5, 12)]  # 7 Tage: über dem Vorab-Gate, unter 14
+        rows = [{"day": d, "electricity_kwh": 10.0, "heat_kwh": 30.0} for d in days_]
+        outdoor = [(local(2026, 1, 1), 0.0)]
+        r = k1.check_annual_cost(rows, outdoor, {d: 2.5 for d in days_}, {"heating_degree_days": 3500},
+                                 "Europe/Berlin", local(2026, 1, 5))
+        self.assertEqual(r.verdict, NOT_ASSESSABLE)
+        self.assertIn("Hochrechnung ab 14", r.text)
+        self.assertNotIn("Außentemperatur", r.text)
+
 if __name__ == "__main__":
     unittest.main()
 
