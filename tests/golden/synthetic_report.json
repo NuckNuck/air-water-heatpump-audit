@@ -427,7 +427,8 @@
      "check_id": "D1",
      "details": {
       "long_term_days": null,
-      "recorder_keep_days": 10
+      "recorder_keep_days": 10,
+      "statistics_days": 0
      },
      "key": "history_depth",
      "origin": "derived",

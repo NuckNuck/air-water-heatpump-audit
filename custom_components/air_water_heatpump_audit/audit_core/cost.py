@@ -256,7 +256,9 @@ def project_year(rows: list[dict], outdoor: Series, tz: str, year_degree_days: f
     points = []
     for r in rows:
         a = days.parse(r["day"], tz)
-        g = degree_days(time_mean(outdoor, [(a, days.next_midnight(a, tz))]))
+        # Statistik-Tage (Spezifikation 1.11) liegen vor den Rohdaten und bringen ihr Tagesmittel mit
+        mean = r["outdoor_mean"] if r.get("source") == "statistics" else time_mean(outdoor, [(a, days.next_midnight(a, tz))])
+        g = degree_days(mean)
         if g is not None:
             points.append((g, r))
     if len(points) < PROJECTION_MIN_DAYS:

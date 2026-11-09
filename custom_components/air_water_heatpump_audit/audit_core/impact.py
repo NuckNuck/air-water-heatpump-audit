@@ -32,7 +32,7 @@ class YearBasis:
     @cached_property
     def year(self) -> dict | None:
         dd = self.ctx.master.get("heating_degree_days")
-        rows = self.ctx.daily_rows_window
+        rows = self.ctx.year_rows_window  # mit Statistik-Tagen (Spezifikation 1.11)
         if not dd or len(rows) < k1.PROJECTION_MIN_DAYS:
             return None
         return k1.project_year(rows, self.ctx.outdoor_daily, self.ctx.tz, float(dd))

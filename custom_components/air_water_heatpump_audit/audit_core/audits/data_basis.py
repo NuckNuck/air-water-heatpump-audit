@@ -33,8 +33,8 @@ AUDIT = AuditSpec(
     master_keys=(),
     names={"de": "Datenbasis", "en": "Data basis"},
     checks=(
-        CheckSpec("D1", "history_depth", lambda ctx: d0.check_history_depth(ctx.recorder_keep_days,
-                                                                             ctx.long_term_days)),
+        CheckSpec("D1", "history_depth", lambda ctx: d0.check_history_depth(
+            ctx.recorder_keep_days, ctx.long_term_days, len(ctx.statistic_rows) if ctx.statistics else 0)),
         CheckSpec("D2", "coverage", lambda ctx: ctx.coverage),
         CheckSpec("D3", "resolution", _resolution),
         CheckSpec("D4", "sensor_offset", lambda ctx: ctx.sensor_offset),

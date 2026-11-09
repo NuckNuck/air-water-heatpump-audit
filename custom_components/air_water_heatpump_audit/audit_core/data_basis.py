@@ -145,8 +145,10 @@ def check_restarts(uptime: Series, start: float, end: float) -> CheckResult:
                        DERIVED, {"restarts": found})
 
 
-def check_history_depth(recorder_keep_days: float | None, long_term_days: float | None) -> CheckResult:
-    """D1: Rohdatentiefe. long_term_days = Tage in einer Langzeitquelle (InfluxDB), None ohne Anbindung."""
+def check_history_depth(recorder_keep_days: float | None, long_term_days: float | None,
+                        statistics_days: int = 0) -> CheckResult:
+    """D1: Rohdatentiefe. long_term_days = Tage in einer Langzeitquelle (InfluxDB), None ohne Anbindung.
+    statistics_days: Statistik-Tage vor dem Fenster (Spezifikation 1.11); nur im Text, ändert das Urteil nicht."""
     best = round(long_term_days if long_term_days is not None else (recorder_keep_days or 0), 1)
     if long_term_days is not None or (recorder_keep_days or 0) >= 30:
         verdict, text = OK, "Langzeitdaten vorhanden."
@@ -155,8 +157,12 @@ def check_history_depth(recorder_keep_days: float | None, long_term_days: float 
                                "Aufbewahrung erhöhen; dafür Datenträger (USB-SSD) statt Speicherkarte/Stick.")
     else:
         verdict, text = WARN, "Weniger als 7 Tage Rohdaten, Audit 3 nicht rechenbar."
+    if statistics_days:
+        text += (f" Davor {count(statistics_days, 'Tag', 'Tage')} aus der Langzeitstatistik (Arbeitszahl und Kosten, "
+                 "Wärme laut Steuerung, korrigiert).")
     return CheckResult("D1", "history_depth", verdict, best, "d", text, DERIVED,
-                       {"recorder_keep_days": recorder_keep_days, "long_term_days": long_term_days})
+                       {"recorder_keep_days": recorder_keep_days, "long_term_days": long_term_days,
+                        "statistics_days": statistics_days})
 
 
 def check_meter_vs_controller(meter: Series, controller_consumed: list[Series], uptime: Series, start: float, end: float,

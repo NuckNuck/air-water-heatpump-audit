@@ -22,6 +22,7 @@ from . import dhw as w1
 from . import days, heat
 from . import household as hh
 from . import impact
+from . import long_term as lt
 from . import efficiency as e1
 from . import flow_temp as t2
 from . import heating_prices as hp
@@ -74,9 +75,13 @@ class Context:
     def __init__(self, s: dict[str, Series], start: float, end: float, *, recorder_keep_days: float | None,
                  long_term_days: float | None, heater_kw: dict[str, float | None], master: dict | None,
                  events: list[dict] | None, controls: dict[str, dict] | None, tz: str,
-                 price_refs: list[dict] | None = None) -> None:
+                 price_refs: list[dict] | None = None, statistics: dict | None = None) -> None:
         self.s = {k: s.get(k) or [] for k in ROLE_KEYS}
         self.start, self.end = start, end
+        # Tageswerte der Langzeitstatistik (long_term.py, Spezifikation 1.11); None = keine
+        self.statistics = statistics
+        past = [e["time"] for e in events or [] if e["time"] <= end]
+        self.last_event_time = max(past) if past else None
         self.section_start, self.event = section_start(events or [], start, end)
         self.dhw_section_start, self.dhw_event = section_start(events or [], start, end, w1.EVENT_KINDS)
         self.recorder_keep_days, self.long_term_days = recorder_keep_days, long_term_days
@@ -181,6 +186,39 @@ class Context:
     def daily_rows_window(self) -> list[dict]:
         return self.daily_rows if self.section_start <= self.start else self._daily_rows(self.start)
 
+    # --- Statistik-Tage (Spezifikation 1.11) -------------------------------------------------------------------
+    @cached_property
+    def statistic_rows(self) -> list[dict]:
+        """Gültige Statistik-Tage vor dem ersten vollen Tag des Fensters (für den Zeitstrahl alle)."""
+        first = self.full_days()
+        before = days.label(first[0][0], self.tz) if first else days.label(self.end, self.tz)
+        return lt.statistic_rows(self.statistics, self.daily_rows_window, before)
+
+    @cached_property
+    def statistic_rows_section(self) -> list[dict]:
+        """Statistik-Tage nach dem letzten Ereignis, auch wenn es vor dem Fenster liegt (für K2, Jahreswärme, Wirkung)."""
+        if self.last_event_time is None:
+            return self.statistic_rows
+        return [r for r in self.statistic_rows if days.parse(r["day"], self.tz) >= self.last_event_time]
+
+    @cached_property
+    def year_rows(self) -> list[dict]:
+        """Tage für die Hochrechnung K2 und die Jahreswärme: Statistik-Tage seit dem Ereignis + gültige Tage."""
+        return self.statistic_rows_section + self.daily_rows
+
+    @cached_property
+    def year_rows_window(self) -> list[dict]:
+        """Tage für die Jahreswerte der Wirkung (1.10): Statistik-Tage seit dem Ereignis + ganzes Fenster."""
+        return self.statistic_rows_section + self.daily_rows_window
+
+    def timeline_row(self, day: str) -> dict | None:
+        """Tageswerte für den Zeitstrahl: gültiger Tag aus Rohdaten, sonst Statistik-Tag."""
+        return self._timeline_rows.get(day)
+
+    @cached_property
+    def _timeline_rows(self) -> dict[str, dict]:
+        return {r["day"]: r for r in self.statistic_rows} | {r["day"]: r for r in self.daily_rows_window}
+
     # --- Zyklen und Heizbetrieb --------------------------------------------------------------------------------
     def _cycles(self, since: float) -> list[c3.Cycle]:
         s = self.s
@@ -265,15 +303,25 @@ class Context:
     def day_costs(self) -> dict[str, float | None]:
         """Stromkosten je gültigem Tag (ganzes Fenster): dynamischer Preis, sonst Arbeitspreis aus den Stammdaten."""
         price = self.master.get("tariff_price")
-        return {r["day"]: k1.day_cost(r, self.s["electricity_meter"], self.s["price_signal"],
-                                      None if price is None else float(price), self.tz)
-                for r in self.daily_rows_window}
+        price = None if price is None else float(price)
+        out = {r["day"]: k1.day_cost(r, self.s["electricity_meter"], self.s["price_signal"], price, self.tz)
+               for r in self.daily_rows_window}
+        if self.statistic_rows:
+            # Statistik-Tage (1.11): Arbeitspreis; mit dynamischem Preis der mittlere gezahlte Preis des Fensters
+            if self.s["price_signal"]:
+                paid = [(out[r["day"]], r["electricity_kwh"]) for r in self.daily_rows_window
+                        if out.get(r["day"]) is not None]
+                kwh = sum(k for _, k in paid)
+                price = sum(c for c, _ in paid) / kwh if paid and kwh > 0 else None
+            for r in self.statistic_rows:
+                out[r["day"]] = None if price is None else r["electricity_kwh"] * price
+        return out
 
     @cached_property
     def year_projection(self) -> dict | None:
         """Hochrechnung aufs Jahr wie K2 (Gradtage des Standorts); None ohne Gradtage oder mit zu wenigen Tagen."""
         year_dd = self.master.get("heating_degree_days")
-        return k1.project_year(self.daily_rows, self.outdoor_daily, self.tz, float(year_dd)) if year_dd else None
+        return k1.project_year(self.year_rows, self.outdoor_daily, self.tz, float(year_dd)) if year_dd else None
 
     @cached_property
     def fixed_costs(self) -> dict:
