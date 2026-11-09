@@ -523,13 +523,38 @@ Ziel: Den gemessenen Strom in Euro umrechnen: Was kostet eine Kilowattstunde Wä
 |---|---|---|---|---|---|
 | K1 | `heat_price` | Wärmepreis der letzten 7 gültigen Tage in ct/kWh, mit festen Kosten je kWh (7.1) | 7 gültige Tage; Preis | `ok` ≤ Vergleichspreis × 1,10 · `hint` darüber · `info` ohne Vergleichspreis | `derived`: 10 % ≈ Messunsicherheit der Wärme; Nutzungsgrad Gas-Brennwert 0,86 auf Hs (DBU-BW). Wochenwert, im Winter höher als im Jahresmittel |
 | K2 | `annual_cost` | Strom, Kosten und Wärme im Jahr, Ersparnis gegen den Vergleich | 14 gültige Tage, vorläufig ab 5 (1.9); `heating_degree_days` | `info` (Hochrechnung) | `sourced`: Gradtagzahl G20/15 (DWD-GT); Referenz Potsdam 3.666,8 Kd. Mindestens 14 Tage `derived`. Mit `living_area_m2` dazu Wärme und Strom je m² und die Klasse des Energieausweises nach Endenergie (GEG Anlage 10: A+ < 30, A < 50, B < 75, C < 100, D < 130, E < 160, F < 200, G < 250, H darüber; Strom ÷ (1,2 × Wohnfläche) nach GEG § 82 Abs. 2); mit Personen (6.6) die Kosten je Person |
-| K3 | `tariff_benefit` | Ersparnis des eigenen Wärmepumpentarifs: (`household_price` − `tariff_price`) × Jahresstrom aus K2 − feste Kosten des eigenen Zählers | wie K2; beide Preise; kein `price_signal`; `info` am Haushaltszähler | `ok` ≥ 0 · `hint` < 0 | `physical` (Rechnung) |
+| K3 | `tariff_benefit` | Ersparnis des eigenen Wärmepumpentarifs: (`household_price` − `tariff_price`) × Jahresstrom aus K2 − feste Kosten des eigenen Zählers; dazu die Grenzen, ab denen der eigene Zähler sich lohnt (7.2.1) | wie K2; beide Preise; kein `price_signal`; `info` am Haushaltszähler | `ok` ≥ 0 · `hint` < 0 | `physical` (Rechnung) |
 | K4 | `price_timing` | gezahlter Mittelpreis gegen das Zeitmittel von `price_signal` | 7 Tage; Rolle `price_signal` | `ok` ≤ +3 % · `hint` darüber | `derived`: 3 % eigene Festlegung (Zufall einer Woche) |
 | K5 | `grid_lock` | Sperren pro Tag, Dauer, längste Sperre; Heizstab-Stunden während und bis 2 h nach einer Sperre | 7 Tage; Rolle `grid_lock` | `ok` · `hint`, wenn der Heizstab dabei läuft. Anzahl und Dauer nur im Text | `derived`; seit 2024 keine feste Höchstdauer, nur Mindestleistung 4,2 kW (BK6-22-300 Anl. 1 Ziff. 4.5.1; präventiv höchstens 2 h täglich bis Ende 2028, Ziff. 10.5). Die frühere Tarifregel „3 × 2 h“ ist ohne Primärquelle und wird nicht verwendet |
 
+#### 7.2.1 K3: Ab wann lohnt sich der eigene Zähler?
+
+Mit F = feste Kosten des eigenen Zählers (€/a, 7.1), p_T = `tariff_price`, p_H = `household_price` (je €/kWh) und
+E = Jahresstrom aus K2 (kWh) lohnt sich der eigene Zähler genau dann, wenn (p_H − p_T) × E ≥ F. Hat K3 ein Urteil
+(`ok` oder `hint`), stehen in `details`:
+
+| Feld | Inhalt |
+|---|---|
+| `electricity_kwh` | E |
+| `base_fee_eur` | F |
+| `tariff_ct`, `household_ct` | p_T und p_H in ct/kWh |
+| `break_even_household_ct` | Haushaltsstrompreis, ab dem der eigene Zähler sich beim heutigen Jahresstrom lohnt: 100 × (p_T + F ÷ E), ct/kWh auf eine Nachkommastelle; bei F = 0 gleich `tariff_ct` |
+| `break_even_kwh` | Jahresstrom der Wärmepumpe, ab dem der eigene Zähler sich beim heutigen Haushaltsstrompreis lohnt: F ÷ (p_H − p_T), kWh gerundet; 0 bei F = 0; `null`, wenn p_H ≤ p_T und F > 0 (lohnt sich bei keinem Verbrauch) |
+
+Der Text nennt beide Grenzen in einem Satz („lohnt sich ab … ct/kWh Haushaltsstrom oder ab ≈ … kWh
+Wärmepumpenstrom im Jahr“; bei `break_even_kwh` = `null` „bei keinem Verbrauch“) und, bei eigenem Zähler, den
+Hinweis auf § 14a EnWG: Ein reduziertes Netzentgelt für steuerbare Verbrauchseinrichtungen (Modul 2, BK6-22-300
+Anl. 1) setzt einen eigenen Zähler voraus, steckt oft schon im Wärmepumpentarif und entfiele beim Zusammenlegen. Das
+Audit rechnet damit nicht. Die Tabellenkarte zeichnet aus diesen Feldern ein Diagramm: Haushaltsstrompreis (x) gegen
+Jahresstrom (y), die Grenzkurve E = F ÷ (p_H − p_T), darüber „eigener Zähler lohnt sich“, darunter „Haushaltszähler
+günstiger“, die eigene Lage (`household_ct`, `electricity_kwh`) als Punkt.
+
 **Gesamturteil Audit 5:** schlechtestes Urteil aus K1, K3–K5; K2 ist Information. Zeitstrahl: Wärmepreis je Tag (mit festen
 Kosten je kWh, sobald die Jahreswärme bekannt ist) mit dem Band von K1. Die Skala nennt unter `fixed_costs`, was
-eingerechnet ist (€/a, Jahreswärme, Herkunft) und was fehlt.
+eingerechnet ist (€/a, Jahreswärme, Herkunft) und was fehlt. Unter `previous_heating` steht der Wärmepreis der
+früheren Heizung ohne Toleranz (`system` = `previous_heating_system` oder `null`, `ct_per_kwh` = 100 ×
+Vergleichspreis der Wärme, eine Nachkommastelle); ohne Vergleichspreis fehlt der Eintrag. Die Karte zeichnet ihn
+als durchgezogene, beschriftete Linie, damit der Vergleich nicht nur in der Bandgrenze (+ 10 %) steckt.
 
 ### 7.3 Wärmepreise anderer Heizsysteme (Zeitstrahl)
 
@@ -584,6 +609,10 @@ Geplant: Anteil eigener PV-Strom (Rolle für Netzbezug bzw. Eigenverbrauch).
   `help.py`, Aktionen in `actions.py`.
 - **Tests:** `python3 -m unittest` (Kern, inkl. Vergleichsbericht einer synthetischen Anlage in `tests/golden/`),
   `pytest tests_ha` (Integration).
+- **Zeitstrahl-Karte:** Umschalter für den gezeigten Zeitraum: 30 Tage, 90 Tage, 1 Jahr, alles (F285 a). Vorgabe
+  über die Kartenoption `range` (`30`, `90`, `365`, `all`; Standard `90`); die Auswahl im Browser bleibt je Gerät
+  erhalten. Gespeichert und gerechnet wird unabhängig davon über alle Tage. Vergleichslinien im Kosten-Zeitstrahl
+  tragen ihre Beschriftung am rechten Ende der Linie.
 
 ---
 
