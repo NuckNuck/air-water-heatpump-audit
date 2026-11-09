@@ -31,6 +31,9 @@ def _scale(master: dict) -> dict:
            "bands": [[0, limit, OK], [limit, None, HINT]] if limit else []}
     if "price_references" in master:  # Vergleich eingeschaltet; leere Liste = kein Preis-Sensor gefunden
         out["references"] = master["price_references"]
+    if reference:  # Wärmepreis der früheren Heizung als eigene Linie (Spezifikation 7.2)
+        out["previous_heating"] = {"system": master.get("previous_heating_system"),
+                                   "ct_per_kwh": round(100 * reference, 1)}
     if "fixed_costs" in master:  # was an festen Kosten im eigenen Wärmepreis steckt (Text unter dem Zeitstrahl)
         out["fixed_costs"] = master["fixed_costs"]
     return out

@@ -359,11 +359,21 @@ def check_tariff(annual: CheckResult, master: dict, dynamic: bool) -> CheckResul
         verdict = HINT
         text += (f"Der Tarif kostet ≈ {num(round(-benefit, -1), ',.0f')} € im Jahr mehr als Haushaltsstrom. "
                  "Angebote vergleichen oder auf einen Zähler zusammenlegen.")
+    # Grenzen (Spezifikation 7.2.1): ab welchem Haushaltspreis bzw. Jahresstrom sich der eigene Zähler lohnt
+    p_t, p_h = float(tariff), float(household)
+    break_ct = round(100 * (p_t + base / kwh), 1) if kwh > 0 else None
+    break_kwh = 0 if base == 0 else round(base / (p_h - p_t)) if p_h > p_t else None
+    by_kwh = (f"ab ≈ {num(round(break_kwh, -1), ',.0f')} kWh Wärmepumpenstrom im Jahr" if break_kwh is not None
+              else "bei keinem Verbrauch")
+    if break_ct is not None:
+        text += (f" Der eigene Zähler lohnt sich ab {num(break_ct, '.1f')} ct/kWh Haushaltsstrom oder {by_kwh}.")
+    text += (" Hinweis: Ein reduziertes Netzentgelt nach § 14a EnWG (Modul 2) gibt es nur mit eigenem Zähler; es "
+             "steckt oft schon im Wärmepumpentarif und entfiele beim Zusammenlegen.")
     if missing:
         text += " Stammdaten fehlen: " + ", ".join(FIXED_COST_LABELS[k] for k in missing) + "."
-    return CheckResult(*key, verdict, round(benefit), "€/a", text, DERIVED, {"electricity_kwh": kwh,
-                                                                              "base_fee_eur": base},
-                       progress=annual.progress)
+    details = {"electricity_kwh": kwh, "base_fee_eur": base, "tariff_ct": round(100 * p_t, 2),
+               "household_ct": round(100 * p_h, 2), "break_even_household_ct": break_ct, "break_even_kwh": break_kwh}
+    return CheckResult(*key, verdict, round(benefit), "€/a", text, DERIVED, details, progress=annual.progress)
 
 
 def check_price_timing(meter: Series, price: Series, since: float, end: float) -> CheckResult:
