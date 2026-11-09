@@ -7,6 +7,49 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
 ## [Unveröffentlicht]
 
+## [0.18.0] – in Arbeit
+
+### Neu
+- **Wärmepreise anderer Heizsysteme im Kosten-Zeitstrahl** (#15): gestrichelte Linien für Heizöl, Erdgas,
+  Holzpellets, Fernwärme und Stromdirektheizung, in ct je kWh Wärme (Brennstoffpreis ÷ Nutzungsgrad). Die Preise
+  kommen aus Preis-Sensoren mit dem Attribut `heating_system`, z. B. aus einer Preis-Integration oder einem
+  Scrape-Sensor für den örtlichen Händler (README). Die Tageswerte bleiben im Zeitstrahl gespeichert.
+- Neue Option **Wärmepreise anderer Heizsysteme vergleichen** im Abschnitt Kosten, Standard: an.
+- **Feste Kosten im Wärmepreis** (#17): Grundpreis des Wärmepumpentarifs und neu das Messstellenentgelt des
+  Wärmepumpenzählers, neue Auswahl „eigener Zähler“ oder „Haushaltszähler“. Sie werden über die Jahreswärme verteilt
+  (Hochrechnung K2, sonst frühere Abrechnung) und stecken jetzt auch im Zeitstrahl. Leer heißt „nicht eingetragen“
+  und erzeugt einen Hinweis, 0 ist ein gültiger Wert.
+- **Frühere Heizung** als Stammdaten: System und Jahresverbrauch so, wie er auf der Abrechnung steht; das Audit
+  rechnet ihn in Wärme um. Der eigene Nutzungsgrad gilt für dieses System.
+- **Reparaturmeldung** „Feste Kosten der Wärmepumpe fehlen“ mit kleinem Formular; in der Karte ein Link
+  **⚙ Einstellungen** je Audit und bei fehlenden Stammdaten. Die Anlagendaten öffnen dann direkt den Abschnitt Kosten.
+- Die Legende des Kosten-Zeitstrahls (Vergleichslinien, feste Kosten) steht hinter **ⓘ Legende** und öffnet sich
+  beim Überfahren oder Antippen. Fehlende Stammdaten bleiben sichtbar.
+
+- Grundpreis und Zählermiete werden mit Zeitraum eingetragen: **pro Monat** oder **pro Jahr**, so wie es im Vertrag
+  oder auf der Rechnung steht. Vorauswahl beim Grundpreis „pro Monat“, bei der Zählermiete „pro Jahr“; schon
+  eingetragene Beträge gelten weiter pro Jahr. Die Felder heißen jetzt „Grundpreis Wärmepumpen-Stromtarif
+  (Stromanbieter)“ und „Zählermiete Wärmepumpenzähler (Messstellenentgelt)“.
+
+- Arbeitspreise (Wärmepumpenstrom, Haushaltsstrom, früherer Brennstoff) wahlweise in **ct/kWh** oder **€/kWh**,
+  vorausgewählt ct/kWh. Schon eingetragene Preise gelten weiter in €/kWh.
+
+- **Ereignisse und Personen nicht mehr als einzelne Untereinträge** (#18): Auf der Integrationsseite standen sie
+  flach neben den Audits. Ereignisse verwaltet jetzt die Zeitstrahl-Karte (anlegen, ändern ✎, löschen ✕), Personen
+  das neue Menü **Konfigurieren → Haushalt**. Die Stammdaten stehen unter **Konfigurieren → Anlagendaten**.
+  Bestehende Untereinträge werden beim Update automatisch übernommen.
+
+### Behoben
+- Die Reparaturmeldung „Feste Kosten der Wärmepumpe fehlen“ schloss sich beim Öffnen sofort als behoben und leerte
+  dabei Zählerart, Grundpreis und Messstellenentgelt (0.18.0b2/b3). Jetzt erscheint das Formular.
+- Preis-Sensoren können `includes_fixed_charges` und `annual_base_fee` angeben. Die Vergleichslinie
+  Stromdirektheizung kommt aus dem Arbeitspreis des Haushaltsstroms.
+
+### Geändert
+- Nutzungsgrad Holzpellets 0,80 statt 0,85, belegt mit Feldmessungen (65–90 %).
+- K1 rechnet die festen Kosten je kWh über die Jahreswärme statt je Tag; ohne Jahreswärme bleiben sie draußen, der
+  Text sagt das. K3 zieht Grundpreis und Messstellenentgelt ab und ist am Haushaltszähler nur Information.
+
 ## [0.17.0] – 2026-11-01
 
 Enthält auch alle Änderungen aus 0.16.0 (nicht einzeln veröffentlicht, siehe unten).

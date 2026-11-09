@@ -92,6 +92,10 @@ async def test_config_flow_suggests_default_german_entity_ids(hass: HomeAssistan
     assert schema["return_temp"] is None  # gibt es in dieser Instanz in keiner Schreibweise
 
 
+# Gespeicherter Tag der Vorgängerin; mit Wert, denn leere Tage vor dem ersten Messwert entfallen (#10)
+LEGACY_DAY = {"day": "2020-01-01", "capacity": {"value": 12, "verdict": "hint"}}
+
+
 async def test_import_from_legacy_wp_audit(hass: HomeAssistant, hass_storage):
     """Übernahme aus „WP-Audit“ (Domain heatpump_audit, Rollen noch mit ftc_*): Rollen, Optionen, Ereignisse, Zeitstrahl."""
     old = MockConfigEntry(domain="heatpump_audit", title="WP-Audit", version=1,
@@ -103,7 +107,7 @@ async def test_import_from_legacy_wp_audit(hass: HomeAssistant, hass_storage):
                                             "data": {"time": "2026-10-25 19:31:00", "kind": "pump_setting", "note": ""}}])
     old.add_to_hass(hass)
     hass_storage[f"heatpump_audit.timeline.{old.entry_id}"] = {"version": 1, "key": "x",
-                                                               "data": {"days": [{"day": "2020-01-01"}]}}
+                                                               "data": {"days": [LEGACY_DAY]}}
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
     assert result["type"] is FlowResultType.MENU
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {"next_step_id": "import_legacy"})
@@ -117,9 +121,10 @@ async def test_import_from_legacy_wp_audit(hass: HomeAssistant, hass_storage):
     assert entry.data["interface_profile"] == "esphome_ecodan"
     assert entry.options["heating_hours"] == 6279
     kinds = sorted(sub.subentry_type for sub in entry.subentries.values())
-    assert kinds == ["audit"] * len(REGISTRY) + ["event"]
+    assert kinds == ["audit"] * len(REGISTRY)
+    assert [(e["time"], e["kind"]) for e in entry.options["events"]] == [("2026-10-25 19:31:00", "pump_setting")]
     days = await entry.runtime_data._merge_timeline([])
-    assert days[0] == {"day": "2020-01-01"}  # Tag aus dem Speicher der Vorgängerin
+    assert days[0] == LEGACY_DAY  # Tag aus dem Speicher der Vorgängerin
 
 
 async def test_add_audit_subentry_and_entities_follow(hass: HomeAssistant):
@@ -342,6 +347,13 @@ async def test_reconfigure_leaves_reload_to_update_listener(hass: HomeAssistant,
     assert "update listener" not in caplog.text
 
 
+async def _open_plant(hass: HomeAssistant, entry):
+    """Options Flow öffnen und im Menü „Anlagendaten“ wählen."""
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] is FlowResultType.MENU
+    return await hass.config_entries.options.async_configure(result["flow_id"], {"next_step_id": "plant"})
+
+
 def _sections(values: dict) -> dict:
     """Optionen flach → Eingabe des Options-Formulars mit Abschnitten."""
     return {name: {k: values[k] for k in keys if values.get(k) is not None} for name, keys in OPTION_SECTIONS.items()}
@@ -351,7 +363,7 @@ async def test_options_flow_master_data(hass: HomeAssistant):
     entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR, options=DEFAULT_OPTIONS)
     entry.add_to_hass(hass)
     with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
-        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await _open_plant(hass, entry)
         values = DEFAULT_OPTIONS | {"hydraulic_separation": "parallel_buffer", "flow_rate_min_lpm": 14.3,
                                     "room_temp_target": 21.5, "heating_hours": None}
         result = await hass.config_entries.options.async_configure(result["flow_id"], _sections(values))
@@ -368,7 +380,7 @@ async def test_options_flow_keeps_zero_values(hass: HomeAssistant):
                             options=DEFAULT_OPTIONS | {"booster_heater_kw": 0.0})
     entry.add_to_hass(hass)
     with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
-        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await _open_plant(hass, entry)
     plant = next(v for k, v in result["data_schema"].schema.items() if str(k) == "plant").schema
     fields = {str(k): k.description for k in plant.schema}
     assert fields["booster_heater_kw"] == {"suggested_value": 0.0}
@@ -382,7 +394,7 @@ async def test_options_flow_suggests_price_from_energy_dashboard(hass: HomeAssis
         {"type": "grid", "stat_energy_from": "sensor.other", "number_energy_price": 0.30},
         {"type": "grid", "stat_energy_from": MAHTANAR["electricity_meter"], "number_energy_price": 0.25}]}})()
     with patch("homeassistant.components.energy.data.async_get_manager", new=AsyncMock(return_value=manager)):
-        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await _open_plant(hass, entry)
     cost = next(v for k, v in result["data_schema"].schema.items() if str(k) == "cost").schema
     fields = {str(k): k.description for k in cost.schema}
     assert fields["tariff_price"] == {"suggested_value": 0.25}
@@ -392,36 +404,91 @@ async def test_options_flow_rejects_bad_capacity_table(hass: HomeAssistant):
     entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR, options=DEFAULT_OPTIONS)
     entry.add_to_hass(hass)
     with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
-        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await _open_plant(hass, entry)
         result = await hass.config_entries.options.async_configure(
             result["flow_id"], _sections(DEFAULT_OPTIONS | {"capacity_min_table": {"35": "viel"}}))
     assert result["type"] is FlowResultType.FORM and result["errors"] == {"base": "invalid_capacity_table"}
 
 
-async def test_event_subentry_starts_new_section(hass: HomeAssistant):
-    hass.states.async_set("binary_sensor.heatpump_compressor", "on")
-    await async_wait_recording_done(hass)
-    entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR, options=DEFAULT_OPTIONS | {"data_since": "2000-01-01 00:00:00"})
+async def _save_event(hass: HomeAssistant, ws, entry, event: dict) -> dict:
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/event/save", "entry_id": entry.entry_id, "event": event})
+    reply = await ws.receive_json()
+    await hass.async_block_till_done()  # Update-Listener lädt neu
+    return reply
+
+
+async def _loaded_entry(hass: HomeAssistant, **kwargs):
+    entry = MockConfigEntry(domain=DOMAIN, data=MAHTANAR, options=DEFAULT_OPTIONS | {"data_since": "2000-01-01 00:00:00"},
+                            **({"subentries_data": ALL_AUDITS} | kwargs))
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
+    return entry
+
+
+async def test_event_saved_from_card_starts_new_section(hass: HomeAssistant, hass_ws_client):
+    hass.states.async_set("binary_sensor.heatpump_compressor", "on")
+    await async_wait_recording_done(hass)
+    entry = await _loaded_entry(hass)
     when = (dt_util.now() - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:00")
-    result = await hass.config_entries.subentries.async_init((entry.entry_id, "event"),
-                                                             context={"source": config_entries.SOURCE_USER})
-    assert result["type"] is FlowResultType.FORM
-    result = await hass.config_entries.subentries.async_configure(
-        result["flow_id"], {"time": when, "kind": "heating_curve", "note": "Parallelverschiebung −1 K"})
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"].endswith("· Heating curve changed")
-    await hass.async_block_till_done()  # Update-Listener lädt neu
+    reply = await _save_event(hass, await hass_ws_client(hass), entry,
+                              {"time": when, "kind": "heating_curve", "note": "Parallelverschiebung −1 K"})
+    assert reply["success"], reply
     await entry.runtime_data.async_refresh()
     await hass.async_block_till_done()
     section = hass.states.get("sensor.air_water_heatpump_audit_capacity").attributes["section"]
     assert section["kind"] == "heating_curve" and section["note"] == "Parallelverschiebung −1 K"
     assert "section" not in hass.states.get("sensor.air_water_heatpump_audit_data_basis").attributes
     events = hass.states.get("sensor.air_water_heatpump_audit_timeline").attributes["events"]
-    assert [e["kind"] for e in events] == ["heating_curve"]
-    assert events[0]["subentry_id"] in entry.subentries
+    assert [(e["kind"], e["id"], e["local_time"]) for e in events] == [("heating_curve", reply["result"]["id"], when)]
+
+
+async def test_event_saved_with_id_replaces_event(hass: HomeAssistant, hass_ws_client):
+    entry = await _loaded_entry(hass)
+    ws = await hass_ws_client(hass)
+    first = await _save_event(hass, ws, entry, {"time": "2026-10-25 14:30:00", "kind": "valves", "note": "Bad auf 4"})
+    event_id = first["result"]["id"]
+    await _save_event(hass, ws, entry, {"id": event_id, "time": "2026-10-25 15:00:00", "kind": "valves",
+                                        "note": "Bad auf 3"})
+    assert entry.options["events"] == [{"id": event_id, "time": "2026-10-25 15:00:00", "kind": "valves",
+                                        "note": "Bad auf 3"}]
+
+
+async def test_event_with_unknown_id_is_rejected(hass: HomeAssistant, hass_ws_client):
+    entry = await _loaded_entry(hass)
+    reply = await _save_event(hass, await hass_ws_client(hass), entry,
+                              {"id": "missing", "time": "2026-10-25 15:00:00", "kind": "valves"})
+    assert reply["error"]["code"] == "not_found" and entry.options.get("events") in (None, [])
+
+
+async def test_event_with_unreadable_time_is_rejected(hass: HomeAssistant, hass_ws_client):
+    entry = await _loaded_entry(hass)
+    reply = await _save_event(hass, await hass_ws_client(hass), entry, {"time": "gestern", "kind": "valves"})
+    assert reply["error"]["code"] == "invalid_format"
+
+
+async def test_event_deleted_from_card_disappears(hass: HomeAssistant, hass_ws_client):
+    entry = await _loaded_entry(hass)
+    ws = await hass_ws_client(hass)
+    saved = await _save_event(hass, ws, entry, {"time": "2026-10-25 14:30:00", "kind": "valves"})
+    await ws.send_json_auto_id({"type": f"{DOMAIN}/event/delete", "entry_id": entry.entry_id,
+                                "event_id": saved["result"]["id"]})
+    reply = await ws.receive_json()
+    await hass.async_block_till_done()
+    assert reply["success"] and entry.options["events"] == []
+
+
+async def test_subentries_from_older_version_move_into_options(hass: HomeAssistant):
+    """Bis 0.18.0b6 waren Ereignisse und Personen Untereinträge; die Migration übernimmt sie mit ihrer ID."""
+    event = {"subentry_type": "event", "title": "Pumpe", "unique_id": None, "subentry_id": "ev1",
+             "data": {"time": "2026-10-25 19:31:00", "kind": "pump_setting", "note": ""}}
+    person = {"subentry_type": "person", "title": "Kind 1", "unique_id": None, "subentry_id": "p1",
+              "data": {"name": "Kind 1", "presence": "always", "shower_time": "evening"}}
+    entry = await _loaded_entry(hass, minor_version=1, subentries_data=ALL_AUDITS + [event, person])
+    assert sorted(sub.subentry_type for sub in entry.subentries.values()) == ["audit"] * len(ALL_AUDITS)
+    assert entry.options["events"] == [{"id": "ev1"} | event["data"]]
+    assert entry.options["household"] == [{"id": "p1"} | person["data"]]
+    assert entry.minor_version == 2
 
 
 async def test_timeline_keeps_stored_days(hass: HomeAssistant, hass_storage):
@@ -442,6 +509,49 @@ async def test_timeline_keeps_stored_days(hass: HomeAssistant, hass_storage):
     assert state.attributes["entry_id"] == entry.entry_id
 
 
+OIL_PRICE = ("sensor.oil_price", "105.3", {"heating_system": "heating_oil", "unit_of_measurement": "€/100 L",
+                                         "source": "EU Weekly Oil Bulletin", "source_kind": "official",
+                                         "as_of": "2026-11-02"})
+GAS_PER_M3 = ("sensor.gas_m3", "1.2", {"heating_system": "natural_gas", "unit_of_measurement": "€/m³"})
+
+
+async def _cost_coordinator(hass: HomeAssistant, **options):
+    """Kosten-Audit einrichten und einmal rechnen (Vertrag: Spezifikation 7.3)."""
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=[AUDIT_SUBENTRY("cost"), AUDIT_SUBENTRY("efficiency")],
+                            data=MAHTANAR, options=DEFAULT_OPTIONS | {"data_since": "2000-01-01 00:00:00"} | options)
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+    assert entry.runtime_data.last_update_success, entry.runtime_data.last_exception
+    return entry.runtime_data
+
+
+async def test_price_sensor_with_heating_system_reaches_cost_timeline(hass: HomeAssistant):
+    hass.states.async_set(*OIL_PRICE)
+    hass.states.async_set("sensor.unrelated", "3", {"unit_of_measurement": "€/kWh"})
+    await async_wait_recording_done(hass)
+    coordinator = await _cost_coordinator(hass)
+    refs = coordinator.data["timeline"]["scales"]["cost"]["references"]
+    assert [(r["id"], r["system"], r["source_kind"]) for r in refs] == [("sensor.oil_price", "heating_oil", "official")]
+
+
+async def test_price_sensor_with_unsupported_unit_is_skipped_with_warning(hass: HomeAssistant, caplog):
+    hass.states.async_set(*GAS_PER_M3)
+    await async_wait_recording_done(hass)
+    coordinator = await _cost_coordinator(hass)
+    assert coordinator.data["timeline"]["scales"]["cost"]["references"] == []
+    assert "sensor.gas_m3" in caplog.text
+
+
+async def test_comparison_option_off_hides_price_sensors(hass: HomeAssistant):
+    hass.states.async_set(*OIL_PRICE)
+    await async_wait_recording_done(hass)
+    coordinator = await _cost_coordinator(hass, compare_heating_systems=False)
+    assert "references" not in coordinator.data["timeline"]["scales"]["cost"]
+
+
 async def test_flow_temperature_sensors(hass: HomeAssistant):
     hass.states.async_set("binary_sensor.heatpump_compressor", "on")
     await async_wait_recording_done(hass)
@@ -460,28 +570,6 @@ async def test_flow_temperature_sensors(hass: HomeAssistant):
     assert efficiency is not None and efficiency.state == "not_assessable"
     assert [c["check_id"] for c in efficiency.attributes["checks"]] == ["E1", "E2", "E3", "E4"]
     assert hass.states.get("sensor.air_water_heatpump_audit_e3_carnot_efficiency").state == "not_assessable"
-
-
-async def test_card_creates_event_via_rest(hass: HomeAssistant, hass_client):
-    """Der Weg der Zeitstrahl-Karte: Subentry-Flow per REST mit dem Format eines datetime-local-Felds."""
-    hass.states.async_set("binary_sensor.heatpump_compressor", "on")
-    await async_wait_recording_done(hass)
-    entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR, options=DEFAULT_OPTIONS | {"data_since": "2000-01-01 00:00:00"})
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    assert await async_setup_component(hass, "config", {})
-    client = await hass_client()
-    resp = await client.post("/api/config/config_entries/subentries/flow", json={"handler": [entry.entry_id, "event"]})
-    assert resp.status == 200, await resp.text()
-    flow_id = (await resp.json())["flow_id"]
-    resp = await client.post(f"/api/config/config_entries/subentries/flow/{flow_id}",
-                             json={"time": "2026-10-25 14:30:00", "kind": "valves", "note": "Bad auf 4"})
-    assert resp.status == 200, await resp.text()
-    assert (await resp.json())["type"] == "create_entry"
-    await hass.async_block_till_done()
-    (sub,) = [x for x in entry.subentries.values() if x.subentry_type == "event"]
-    assert sub.data == {"time": "2026-10-25 14:30:00", "kind": "valves", "note": "Bad auf 4"}
 
 
 async def test_controls_read_from_mapped_entities(hass: HomeAssistant):
@@ -570,40 +658,171 @@ async def test_card_resource_registered_and_updated(hass: HomeAssistant):
     assert len(urls) == 1 and not urls[0].endswith("v=0.0.1")
 
 
-async def test_person_subentry_with_rotation_reaches_core(hass: HomeAssistant):
+async def _household_step(hass: HomeAssistant, entry, person: str):
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"next_step_id": "household"})
+    return await hass.config_entries.options.async_configure(result["flow_id"], {"person": person})
+
+
+async def test_person_added_in_household_menu_reaches_core(hass: HomeAssistant):
     entry = MockConfigEntry(domain=DOMAIN, data=MAHTANAR, options=DEFAULT_OPTIONS | {"data_since": "2000-01-01 00:00:00"},
                             subentries_data=[AUDIT_SUBENTRY("dhw")])
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-
-    result = await hass.config_entries.subentries.async_init((entry.entry_id, "person"),
-                                                             context={"source": config_entries.SOURCE_USER})
-    assert result["step_id"] == "user"
-    result = await hass.config_entries.subentries.async_configure(result["flow_id"], {
+    result = await _household_step(hass, entry, "new")
+    assert result["step_id"] == "person" and "delete" not in {str(k) for k in result["data_schema"].schema}
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {
         "name": "Kind 1", "birth_year": 2015, "presence": "rotation", "shower_time": "evening"})
-    assert result["step_id"] == "presence"
     assert set(result["data_schema"].schema) == {"weeks_present", "weeks_absent", "rotation_start"}
-    result = await hass.config_entries.subentries.async_configure(result["flow_id"], {
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {
         "weeks_present": 1, "weeks_absent": 1, "rotation_start": "2026-11-02"})
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    (sub,) = [x for x in entry.subentries.values() if x.subentry_type == "person"]
-    assert sub.title == "Kind 1"
-    assert sub.data == {"name": "Kind 1", "birth_year": 2015, "presence": "rotation", "shower_time": "evening",
-                        "weeks_present": 1, "weeks_absent": 1, "rotation_start": "2026-11-02"}
-
-    # Ändern auf „immer“: der zweite Schritt entfällt, die Wechselwochen verschwinden aus den Daten
-    result = await entry.start_subentry_reconfigure_flow(hass, sub.subentry_id)
-    result = await hass.config_entries.subentries.async_configure(result["flow_id"], {
-        "name": "Kind 1", "birth_year": 2015, "presence": "always", "shower_time": "evening",
-        "showers_per_week": 4})
-    assert result["type"] is FlowResultType.ABORT
-    sub = entry.subentries[sub.subentry_id]
-    assert sub.data == {"name": "Kind 1", "birth_year": 2015, "presence": "always", "shower_time": "evening",
-                        "showers_per_week": 4}
     await hass.async_block_till_done()
     coordinator = hass.config_entries.async_get_entry(entry.entry_id).runtime_data
     with patch("custom_components.air_water_heatpump_audit.coordinator.run_audits", return_value={}) as run:
         coordinator._compute({}, 0, 1, 10, None, {})
-    assert run.call_args.kwargs["master"]["household"] == [sub.data]
-    assert run.call_args.kwargs["master"]["dhw_disinfection_interval_days"] == 7
+    assert run.call_args.kwargs["master"]["household"] == [
+        {"name": "Kind 1", "birth_year": 2015, "presence": "rotation", "shower_time": "evening",
+         "weeks_present": 1, "weeks_absent": 1, "rotation_start": "2026-11-02"}]
+
+
+KID = {"id": "p1", "name": "Kind 1", "birth_year": 2015, "presence": "rotation", "shower_time": "evening",
+       "weeks_present": 1, "weeks_absent": 1, "rotation_start": "2026-11-02"}
+
+
+async def test_person_changed_to_always_drops_rotation_fields(hass: HomeAssistant):
+    entry = MockConfigEntry(domain=DOMAIN, data=MAHTANAR, options=DEFAULT_OPTIONS | {"household": [KID]},
+                            subentries_data=[AUDIT_SUBENTRY("dhw")])
+    entry.add_to_hass(hass)
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
+        result = await _household_step(hass, entry, "p1")
+        result = await hass.config_entries.options.async_configure(result["flow_id"], {
+            "name": "Kind 1", "birth_year": 2015, "presence": "always", "shower_time": "evening",
+            "showers_per_week": 4})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options["household"] == [{"id": "p1", "name": "Kind 1", "birth_year": 2015, "presence": "always",
+                                           "shower_time": "evening", "showers_per_week": 4}]
+
+
+async def test_person_deleted_in_household_menu(hass: HomeAssistant):
+    entry = MockConfigEntry(domain=DOMAIN, data=MAHTANAR, options=DEFAULT_OPTIONS | {"household": [KID]},
+                            subentries_data=[AUDIT_SUBENTRY("dhw")])
+    entry.add_to_hass(hass)
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
+        result = await _household_step(hass, entry, "p1")
+        result = await hass.config_entries.options.async_configure(result["flow_id"], {
+            "name": "Kind 1", "presence": "rotation", "shower_time": "evening", "delete": True})
+    assert result["type"] is FlowResultType.CREATE_ENTRY and entry.options["household"] == []
+
+
+async def test_plant_data_saved_keeps_events_and_household(hass: HomeAssistant):
+    events = [{"id": "e1", "time": "2026-10-25 14:30:00", "kind": "valves", "note": ""}]
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR,
+                            options=DEFAULT_OPTIONS | {"events": events, "household": [KID]})
+    entry.add_to_hass(hass)
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
+        result = await _open_plant(hass, entry)
+        await hass.config_entries.options.async_configure(result["flow_id"], _sections(dict(DEFAULT_OPTIONS)))
+    assert (entry.options["events"], entry.options["household"]) == (events, [KID])
+
+
+# Feste Kosten der Wärmepumpe (Spezifikation 7.1): Reparatur-Issue, Options Flow
+async def test_cost_audit_without_fixed_costs_raises_fixable_issue(hass: HomeAssistant):
+    from homeassistant.helpers import issue_registry as ir
+    coordinator = await _cost_coordinator(hass)
+    issue = ir.async_get(hass).async_get_issue(DOMAIN, f"fixed_costs_missing_{coordinator.config_entry.entry_id}")
+    assert issue is not None and issue.is_fixable
+
+
+async def test_household_meter_raises_no_issue(hass: HomeAssistant):
+    from homeassistant.helpers import issue_registry as ir
+    coordinator = await _cost_coordinator(hass, heat_pump_meter="household_meter")
+    assert ir.async_get(hass).async_get_issue(DOMAIN, f"fixed_costs_missing_{coordinator.config_entry.entry_id}") is None
+
+
+async def _start_fix_flow(hass: HomeAssistant, entry):
+    """Fix-Flow so starten wie „Einstellungen → Reparaturen“: über den Flow-Manager der Integration repairs."""
+    from custom_components.air_water_heatpump_audit.repairs import issue_id
+    manager = hass.data["repairs"]["flow_manager"]
+    return manager, await manager.async_init(DOMAIN, data={"issue_id": issue_id(entry.entry_id)})
+
+
+ENTERED_BASE_FEE = 99.0  # irgendein schon eingetragener Grundpreis; das Messstellenentgelt fehlt noch
+
+
+async def test_fix_flow_opened_from_repairs_shows_form_and_keeps_options(hass: HomeAssistant):
+    coordinator = await _cost_coordinator(hass, tariff_base_fee=ENTERED_BASE_FEE)
+    entry = coordinator.config_entry
+    _, result = await _start_fix_flow(hass, entry)
+    assert result["type"] is FlowResultType.FORM
+    assert entry.options["tariff_base_fee"] == ENTERED_BASE_FEE and "issue_id" not in entry.options
+
+
+async def test_fix_flow_submitted_writes_fixed_costs_to_options(hass: HomeAssistant):
+    coordinator = await _cost_coordinator(hass)
+    entry = coordinator.config_entry
+    manager, result = await _start_fix_flow(hass, entry)
+    result = await manager.async_configure(result["flow_id"], {"heat_pump_meter": "separate_meter",
+                                                               "tariff_base_fee": 120.0, "meter_fee": 0.0})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert (entry.options["heat_pump_meter"], entry.options["tariff_base_fee"], entry.options["meter_fee"]) \
+        == ("separate_meter", 120.0, 0.0)
+
+
+def _defaults(schema) -> dict:
+    return {str(k): k.default() for k in schema.schema if callable(getattr(k, "default", None))}
+
+
+async def test_fix_flow_preselects_monthly_base_fee_and_yearly_meter_fee(hass: HomeAssistant):
+    coordinator = await _cost_coordinator(hass)
+    _, result = await _start_fix_flow(hass, coordinator.config_entry)
+    defaults = _defaults(result["data_schema"])
+    assert (defaults["tariff_base_fee_period"], defaults["meter_fee_period"]) == ("month", "year")
+
+
+async def test_fix_flow_shows_base_fee_without_period_as_yearly(hass: HomeAssistant):
+    coordinator = await _cost_coordinator(hass, tariff_base_fee=ENTERED_BASE_FEE)
+    _, result = await _start_fix_flow(hass, coordinator.config_entry)
+    assert _defaults(result["data_schema"])["tariff_base_fee_period"] == "year"
+
+
+async def test_fix_flow_submitted_stores_chosen_periods(hass: HomeAssistant):
+    coordinator = await _cost_coordinator(hass)
+    entry = coordinator.config_entry
+    manager, result = await _start_fix_flow(hass, entry)
+    await manager.async_configure(result["flow_id"], {
+        "heat_pump_meter": "separate_meter", "tariff_base_fee": 9.9, "tariff_base_fee_period": "month",
+        "meter_fee": 20.0, "meter_fee_period": "year"})
+    assert (entry.options["tariff_base_fee_period"], entry.options["meter_fee_period"]) == ("month", "year")
+
+
+async def test_options_flow_opens_cost_section_when_fixed_costs_missing(hass: HomeAssistant):
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR, options=DEFAULT_OPTIONS)
+    entry.add_to_hass(hass)
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
+        result = await _open_plant(hass, entry)
+    collapsed = {str(k): v.options["collapsed"] for k, v in result["data_schema"].schema.items()}
+    assert collapsed["cost"] is False and all(v for k, v in collapsed.items() if k != "cost")
+
+
+async def test_options_flow_preselects_cents_for_new_price_and_euro_for_stored_price(hass: HomeAssistant):
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR,
+                            options=DEFAULT_OPTIONS | {"tariff_price": 0.25})
+    entry.add_to_hass(hass)
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
+        result = await _open_plant(hass, entry)
+    cost = next(v for k, v in result["data_schema"].schema.items() if str(k) == "cost").schema
+    defaults = _defaults(cost)
+    assert (defaults["tariff_price_unit"], defaults["household_price_unit"]) == ("eur_per_kwh", "ct_per_kwh")
+
+
+async def test_options_flow_rejects_consumption_unit_not_matching_system(hass: HomeAssistant):
+    entry = MockConfigEntry(domain=DOMAIN, subentries_data=ALL_AUDITS, data=MAHTANAR, options=DEFAULT_OPTIONS)
+    entry.add_to_hass(hass)
+    values = DEFAULT_OPTIONS | {"previous_heating_system": "natural_gas", "previous_consumption": 2000,
+                                "previous_consumption_unit": "L"}
+    with patch("custom_components.air_water_heatpump_audit.async_setup_entry", return_value=True):
+        result = await _open_plant(hass, entry)
+        result = await hass.config_entries.options.async_configure(result["flow_id"], _sections(values))
+    assert result["type"] is FlowResultType.FORM and result["errors"] == {"base": "invalid_consumption_unit"}

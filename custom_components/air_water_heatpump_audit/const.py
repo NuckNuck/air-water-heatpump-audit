@@ -44,6 +44,15 @@ def migrate_roles(data: dict) -> dict:
     return {ROLE_RENAMES.get(k, k): v for k, v in data.items()}
 
 
+# Preis-Sensoren anderer Heizsysteme (audit_core.heating_prices): Attribute des Vertrags
+PRICE_ATTR_SYSTEM = "heating_system"
+PRICE_ATTR_SOURCE = "source"
+PRICE_ATTR_SOURCE_KIND = "source_kind"
+PRICE_ATTR_AS_OF = "as_of"
+PRICE_ATTR_INCLUDES_FIXED = "includes_fixed_charges"  # Preis enthält Grundpreis/Messung schon (z. B. Eurostat)
+PRICE_ATTR_BASE_FEE = "annual_base_fee"  # feste Kosten des Vergleichs in €/a, über die Jahreswärme verteilt
+PRICE_ROLE_PREFIX = "price_reference:"  # Schlüssel der Zeitreihen beim Laden, damit sie keine Rolle verdecken
+
 # Rollen mit Text-Zustand; alle anderen werden als Zahl gelesen (on/off → 1/0).
 TEXT_ROLES = {"controller_date"}
 # Bei einer weather-Entität wird dieses Attribut statt des Zustands gelesen.
@@ -65,10 +74,31 @@ CONF_HEATING_HOURS = "heating_hours"
 CONF_DHW_TANK_VOLUME_L = "dhw_tank_volume_l"
 CONF_HEATING_DEGREE_DAYS = "heating_degree_days"
 CONF_TARIFF_PRICE = "tariff_price"
+CONF_HEAT_PUMP_METER = "heat_pump_meter"
 CONF_TARIFF_BASE_FEE = "tariff_base_fee"
+CONF_METER_FEE = "meter_fee"
+# Zeitraum, auf den sich der eingetragene Betrag bezieht: wie er im Vertrag bzw. auf der Rechnung steht
+CONF_TARIFF_BASE_FEE_PERIOD = "tariff_base_fee_period"
+CONF_METER_FEE_PERIOD = "meter_fee_period"
+FEE_PERIODS = ["month", "year"]
+# Vorauswahl für neue Einträge: Grundpreise stehen meist pro Monat im Vertrag, Messstellenentgelte pro Jahr
+FEE_PERIOD_DEFAULTS = {CONF_TARIFF_BASE_FEE_PERIOD: "month", CONF_METER_FEE_PERIOD: "year"}
+FEE_PERIOD_OF = {CONF_TARIFF_BASE_FEE: CONF_TARIFF_BASE_FEE_PERIOD, CONF_METER_FEE: CONF_METER_FEE_PERIOD}
 CONF_HOUSEHOLD_PRICE = "household_price"
 CONF_REFERENCE_FUEL_PRICE = "reference_fuel_price"
+# Einheit der Arbeitspreise, wie im Vertrag: ct/kWh oder €/kWh; leer = €/kWh (Einträge vor 0.18.0b6)
+CONF_TARIFF_PRICE_UNIT = "tariff_price_unit"
+CONF_HOUSEHOLD_PRICE_UNIT = "household_price_unit"
+CONF_REFERENCE_FUEL_PRICE_UNIT = "reference_fuel_price_unit"
+PRICE_UNITS = ["ct_per_kwh", "eur_per_kwh"]
+PRICE_UNIT_DEFAULT = "ct_per_kwh"  # Vorauswahl für neue Einträge: Verträge nennen Arbeitspreise meist in ct/kWh
+PRICE_UNIT_OF = {CONF_TARIFF_PRICE: CONF_TARIFF_PRICE_UNIT, CONF_HOUSEHOLD_PRICE: CONF_HOUSEHOLD_PRICE_UNIT,
+                 CONF_REFERENCE_FUEL_PRICE: CONF_REFERENCE_FUEL_PRICE_UNIT}
 CONF_REFERENCE_EFFICIENCY = "reference_efficiency"
+CONF_PREVIOUS_HEATING_SYSTEM = "previous_heating_system"
+CONF_PREVIOUS_CONSUMPTION = "previous_consumption"
+CONF_PREVIOUS_CONSUMPTION_UNIT = "previous_consumption_unit"
+CONF_COMPARE_HEATING_SYSTEMS = "compare_heating_systems"
 CONF_COLD_WATER_C = "cold_water_c"
 CONF_LIVING_AREA_M2 = "living_area_m2"
 CONF_DHW_DISINFECTION_INTERVAL_DAYS = "dhw_disinfection_interval_days"
@@ -78,15 +108,26 @@ OPTION_SECTIONS: dict[str, tuple[str, ...]] = {
               CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW),
     "dhw": (CONF_DHW_TANK_VOLUME_L, CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS),
     "site": (CONF_HEATING_HOURS, CONF_HEATING_DEGREE_DAYS, CONF_ROOM_TEMP_TARGET, CONF_LIVING_AREA_M2),
-    "cost": (CONF_TARIFF_PRICE, CONF_TARIFF_BASE_FEE, CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE,
-             CONF_REFERENCE_EFFICIENCY),
+    "cost": (CONF_TARIFF_PRICE, CONF_TARIFF_PRICE_UNIT, CONF_HEAT_PUMP_METER, CONF_TARIFF_BASE_FEE, CONF_TARIFF_BASE_FEE_PERIOD, CONF_METER_FEE,
+             CONF_METER_FEE_PERIOD, CONF_HOUSEHOLD_PRICE, CONF_HOUSEHOLD_PRICE_UNIT,
+             CONF_PREVIOUS_HEATING_SYSTEM, CONF_PREVIOUS_CONSUMPTION, CONF_PREVIOUS_CONSUMPTION_UNIT,
+             CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_FUEL_PRICE_UNIT, CONF_REFERENCE_EFFICIENCY,
+             CONF_COMPARE_HEATING_SYSTEMS),
     "evaluation": (CONF_WINDOW_DAYS, CONF_DATA_SINCE, CONF_DATA_SOURCE),
 }
 # Optionale Stammdaten: leer heißt „unbekannt“, die abhängige Prüfung ist dann nicht bewertbar.
 OPTIONAL_OPTIONS = (CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_CAPACITY_MIN_TABLE, CONF_HEATING_HOURS,
                     CONF_IMMERSION_HEATER_KW, CONF_BOOSTER_HEATER_KW, CONF_BOOSTER_HEATER_2_KW, CONF_DATA_SINCE,
                     CONF_DHW_TANK_VOLUME_L, CONF_HEATING_DEGREE_DAYS, CONF_TARIFF_PRICE, CONF_TARIFF_BASE_FEE,
-                    CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY, CONF_LIVING_AREA_M2)
+                    CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY, CONF_LIVING_AREA_M2,
+                    CONF_HEAT_PUMP_METER, CONF_METER_FEE, CONF_PREVIOUS_HEATING_SYSTEM, CONF_PREVIOUS_CONSUMPTION,
+                    CONF_PREVIOUS_CONSUMPTION_UNIT)
+HEAT_PUMP_METERS = ["separate_meter", "household_meter"]
+PREVIOUS_HEATING_SYSTEMS = ["natural_gas", "heating_oil", "wood_pellets", "district_heating", "direct_electric", "none"]
+CONSUMPTION_UNITS = ["kWh", "MWh", "L", "kg", "t"]
+# Stammdaten, die feste Kosten der Wärmepumpe bestimmen (Repairs-Issue „feste Kosten fehlen“)
+FIXED_COST_KEYS = (CONF_HEAT_PUMP_METER, CONF_TARIFF_BASE_FEE, CONF_METER_FEE)
+FIXED_COST_PERIOD_KEYS = (CONF_TARIFF_BASE_FEE_PERIOD, CONF_METER_FEE_PERIOD)
 HYDRAULIC_SEPARATIONS = ["unknown", "none", "series_buffer", "parallel_buffer", "hydraulic_separator"]
 # auto: InfluxDB 2, wenn die HA-Integration InfluxDB eingerichtet ist, sonst Recorder
 DATA_SOURCES = ["auto", "influxdb", "recorder"]
@@ -107,13 +148,30 @@ DEFAULT_OPTIONS = {
     CONF_HEATING_HOURS: None,  # Klimakarte des Bundesverbands Wärmepumpe für den Standort
     CONF_DHW_TANK_VOLUME_L: None,  # Typenschild des Speichers; ohne Wert ist W4 nicht bewertbar
     CONF_HEATING_DEGREE_DAYS: None,  # langjähriges Mittel G20/15 am Standort; ohne Wert keine Jahreshochrechnung
-    CONF_TARIFF_PRICE: None,  # Arbeitspreis €/kWh; Vorschlag aus dem Energie-Dashboard (config_flow.energy_price)
-    CONF_TARIFF_BASE_FEE: None,  # zusätzlicher Grundpreis €/Jahr für den Wärmepumpenzähler
+    CONF_TARIFF_PRICE: None,  # Arbeitspreis in tariff_price_unit; Vorschlag aus dem Energie-Dashboard (config_flow.energy_price)
+    # Zähler der Wärmepumpe: eigener Zähler mit WP-Tarif oder Haushaltszähler; leer = nicht angegeben (Hinweis)
+    CONF_HEAT_PUMP_METER: None,
+    CONF_TARIFF_BASE_FEE: None,  # Grundpreis des Wärmepumpentarifs in €; leer = nicht eingetragen, 0 = keiner
+    CONF_METER_FEE: None,  # Messstellenentgelt des Wärmepumpenzählers in €; leer = nicht eingetragen, 0 = keins
+    # Zeitraum der beiden Beträge (month/year). Leer = pro Jahr: so wurden Einträge vor 0.18.0b5 gespeichert.
+    # Die Formulare wählen für neue Einträge FEE_PERIOD_DEFAULTS vor.
+    CONF_TARIFF_BASE_FEE_PERIOD: None,
+    CONF_METER_FEE_PERIOD: None,
+    CONF_TARIFF_PRICE_UNIT: None,  # Einheit der Arbeitspreise; die Formulare wählen PRICE_UNIT_DEFAULT vor
+    CONF_HOUSEHOLD_PRICE_UNIT: None,
+    CONF_REFERENCE_FUEL_PRICE_UNIT: None,
+    # Frühere Heizung: System und Jahresverbrauch laut Abrechnung → Jahreswärme, solange K2 nicht hochrechnen kann
+    CONF_PREVIOUS_HEATING_SYSTEM: None,
+    CONF_PREVIOUS_CONSUMPTION: None,
+    CONF_PREVIOUS_CONSUMPTION_UNIT: None,
     CONF_HOUSEHOLD_PRICE: None,
-    CONF_REFERENCE_FUEL_PRICE: None,  # früherer Brennstoff, €/kWh inklusive Grundpreis-Anteil
-    # Jahresnutzungsgrad der früheren Heizung, bezogen auf den abgerechneten Brennwert: Feldmittel Gas-Brennwertkessel
-    # 0,86 (DBU-Feldtest, 60 Anlagen); nur wirksam, wenn auch ein Brennstoffpreis eingetragen ist
+    CONF_REFERENCE_FUEL_PRICE: None,  # früherer Brennstoff je kWh inklusive Grundpreis-Anteil
+    # Jahresnutzungsgrad der früheren Heizung, bezogen auf die abgerechnete Einheit: Feldmittel Gas-Brennwertkessel
+    # 0,86 (DBU-Feldtest, 60 Anlagen). Gilt für den Vergleichsbrennstoff (K1, K2), für die Umrechnung des früheren
+    # Verbrauchs und für die Vergleichslinie des früheren Heizsystems; alle anderen Systeme nutzen feste Werte.
     CONF_REFERENCE_EFFICIENCY: 0.86,
+    # Kosten-Zeitstrahl: Wärmepreise anderer Heizsysteme aus Preis-Sensoren (Attribut `heating_system`)
+    CONF_COMPARE_HEATING_SYSTEMS: True,
     CONF_LIVING_AREA_M2: None,  # K2: Verbrauch je m² und Klasse des Energieausweises
     CONF_COLD_WATER_C: 10.0,  # Kaltwasser im Jahresmittel (W6)
     CONF_DHW_DISINFECTION_INTERVAL_DAYS: 7,  # W2: Abstand der Aufheizungen auf 60 °C, wenn der Speicher kühler ist
@@ -121,9 +179,17 @@ DEFAULT_OPTIONS = {
 MASTER_KEYS = (CONF_HYDRAULIC_SEPARATION, CONF_FLOW_RATE_MIN_LPM, CONF_CIRCUIT_FLOW_MAX_LPM, CONF_ROOM_TEMP_TARGET, CONF_CAPACITY_MIN_TABLE,
                CONF_HEATING_HOURS, CONF_DHW_TANK_VOLUME_L, CONF_HEATING_DEGREE_DAYS, CONF_TARIFF_PRICE,
                CONF_TARIFF_BASE_FEE, CONF_HOUSEHOLD_PRICE, CONF_REFERENCE_FUEL_PRICE, CONF_REFERENCE_EFFICIENCY,
-               CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS, CONF_LIVING_AREA_M2)
+               CONF_COLD_WATER_C, CONF_DHW_DISINFECTION_INTERVAL_DAYS, CONF_LIVING_AREA_M2, CONF_HEAT_PUMP_METER,
+               CONF_METER_FEE, CONF_PREVIOUS_HEATING_SYSTEM, CONF_PREVIOUS_CONSUMPTION, CONF_PREVIOUS_CONSUMPTION_UNIT,
+               CONF_TARIFF_BASE_FEE_PERIOD, CONF_METER_FEE_PERIOD, CONF_TARIFF_PRICE_UNIT, CONF_HOUSEHOLD_PRICE_UNIT,
+               CONF_REFERENCE_FUEL_PRICE_UNIT)
 
-# Ereignisse (Spezifikation 1.5) als Untereinträge des Config Entry
+# Ereignisse (Spezifikation 1.5) und Personen im Haushalt stehen als Listen in den Optionen (`events`, `household`),
+# je Eintrag mit eigener `id`. Bis 0.18.0b6 waren es Untereinträge; die Migration (records.py) zieht sie um.
+CONF_EVENTS = "events"
+CONF_HOUSEHOLD = "household"
+RECORD_ID = "id"
+RECORD_KEYS = (CONF_EVENTS, CONF_HOUSEHOLD)
 SUBENTRY_EVENT = "event"
 CONF_EVENT_TIME = "time"
 CONF_EVENT_KIND = "kind"
@@ -139,7 +205,7 @@ EVENT_KIND_LABELS = {
            "dhw_setting": "Hot water setting", "hardware": "Hardware change", "other": "Other"},
 }
 
-# Personen im Haushalt als Untereinträge (Warmwasserbedarf, Audit Warmwasser); Felder wie audit_core.household
+# Personen im Haushalt (Warmwasserbedarf, Audit Warmwasser); Felder wie audit_core.household
 SUBENTRY_PERSON = "person"
 CONF_PERSON_NAME = "name"
 CONF_BIRTH_YEAR = "birth_year"

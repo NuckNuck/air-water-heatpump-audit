@@ -136,6 +136,45 @@ Stromzähler der Wärmepumpe im Energie-Dashboard, wird dessen Preis vorgeschlag
 | K4 Strompreis dynamisch | Nur bei dynamischem Tarif: ob die Wärmepumpe bevorzugt in teuren Stunden läuft. |
 | K5 Sperrzeiten | Nur mit Sperrsignal des Netzbetreibers: wie oft und wie lange gesperrt oder gedimmt wird; gelb, wenn währenddessen oder danach der Heizstab nachheizt. |
 
+#### Vergleich mit anderen Heizsystemen
+
+Im Zeitstrahl zeigt das Audit Kosten zum eigenen Wärmepreis gestrichelte Linien für andere Heizsysteme: Heizöl,
+Erdgas, Holzpellets, Fernwärme, Stromdirektheizung. Gerechnet wird Brennstoffpreis ÷ Nutzungsgrad, in ct je kWh
+Wärme (Werte und Quellen: [Spezifikation 7.3](docs/specification.md#73-wärmepreise-anderer-heizsysteme-zeitstrahl)).
+Für die frühere Heizung gilt der eigene Nutzungsgrad aus den Anlagendaten. Die Linie für die Stromdirektheizung
+entsteht aus dem Arbeitspreis des Haushaltsstroms, dafür braucht es keinen Sensor.
+
+Die übrigen Preise holt das Audit nicht selbst. Es nimmt jeden Sensor, der das Attribut `heating_system` trägt, z. B.
+aus der Integration [heating-energy-prices](https://github.com/NuckNuck/heating-energy-prices) (amtliche und
+Verbandspreise, eigene Vergleichspreise) oder einem eigenen Sensor für den Heizölpreis des örtlichen Händlers. Mit
+der Home-Assistant-Integration [Scrape](https://www.home-assistant.io/integrations/scrape/) geht das ohne
+Programmieren:
+
+```yaml
+# configuration.yaml – Scrape-Sensor anlegen (Einstellungen → Geräte & Dienste → Scrape), dann:
+homeassistant:
+  customize:
+    sensor.heizoel_haendler:
+      heating_system: heating_oil       # heating_oil, natural_gas, wood_pellets, district_heating, direct_electric
+      source: Händler vor Ort
+      source_kind: local                # official, association, commercial, local
+```
+
+Der Sensor braucht eine Einheit, z. B. `€/100 L` für Heizöl, `ct/kWh` für Gas, `€/t` für Pellets. Enthält der Preis
+schon Grundpreis und Messung, setzt man zusätzlich `includes_fixed_charges: true`; hat ein Angebot einen eigenen
+Grundpreis, kommt er als `annual_base_fee` (€ im Jahr) dazu. Abschalten lässt sich der Vergleich in den Anlagendaten,
+Abschnitt Kosten.
+
+#### Feste Kosten im Wärmepreis
+
+Der eigene Wärmepreis enthält, was die Wärmepumpe zusätzlich kostet: mit eigenem Zähler den Grundpreis des
+Wärmepumpentarifs und das Messstellenentgelt, am Haushaltszähler nichts (der Grundpreis des Haushaltsstroms fällt
+auch ohne Wärmepumpe an). Die festen Kosten werden über die Wärme eines Jahres verteilt, damit Sommertage mit wenig
+Wärme nicht ausschlagen. Die Jahreswärme kommt aus der Hochrechnung (K2), vorher aus dem früheren Jahresverbrauch laut
+Abrechnung. Fehlt beides, steht im Audit „Grundpreis noch nicht eingerechnet“. Fehlt eine Angabe, erscheint unter
+**Einstellungen → Reparaturen** „Feste Kosten der Wärmepumpe fehlen“ mit einem kleinen Formular, und jedes Audit in
+der Karte hat einen Link **⚙ Einstellungen**.
+
 
 ### Was bringt eine Aktion?
 
@@ -287,7 +326,7 @@ Ereignisse und die gespeicherten Tageswerte des Zeitstrahls; alle Audits werden 
 Manches lässt sich nicht messen, sondern steht im Datenblatt. Ohne diese Angaben zeigen einzelne Prüfungen „nicht
 bewertbar – Stammdaten fehlen“.
 
-**Einstellungen → Geräte & Dienste → Luft-Wasser-Wärmepumpen-Audit → Zahnrad ⚙ (Konfigurieren):**
+**Einstellungen → Geräte & Dienste → Luft-Wasser-Wärmepumpen-Audit → Zahnrad ⚙ (Konfigurieren) → Anlagendaten:**
 
 - **Anlage:** Art der Verbindung zwischen Wärmepumpe und Heizkreis (direkt, Pufferspeicher, Weiche), Mindestdurchfluss
   der Wärmepumpe, größter Förderstrom der Heizkreispumpe, kleinste Heizleistung laut Datenblatt, Leistung von
@@ -297,16 +336,21 @@ bewertbar – Stammdaten fehlen“.
   die Legionellenschaltung den Speicher auf 60 °C aufheizt.
 - **Standort und Komfort:** Heizstunden pro Jahr am Wohnort (aus der Klimakarte des Bundesverbands Wärmepumpe),
   Gradtage pro Jahr (z. B. aus dem Gradtagzahlen-Rechner des IWU), die gewünschte Raumtemperatur und die Wohnfläche.
-- **Kosten:** Arbeitspreis und zusätzlicher Grundpreis des Wärmepumpenstroms, Preis des Haushaltsstroms, Preis und
-  Nutzungsgrad der früheren Heizung zum Vergleich. Für Gas den Preis je abgerechneter kWh inklusive Grundpreis-Anteil
-  eintragen; der vorgeschlagene Nutzungsgrad 0,86 ist das Mittel von Gas-Brennwertkesseln im Feld.
+- **Kosten:** Arbeitspreis des Wärmepumpenstroms (Arbeitspreise wahlweise in ct/kWh oder €/kWh, wie im Vertrag); ob die Wärmepumpe einen eigenen Zähler hat, und dann Grundpreis
+  des Wärmepumpen-Stromtarifs (Stromanbieter) und Zählermiete bzw. Messstellenentgelt (Messstellenbetreiber), je
+  mit Auswahl „pro Monat“ oder „pro Jahr“, so wie es im Vertrag oder auf der Rechnung steht (leer = nicht eingetragen,
+  0 = gibt es nicht); Preis des
+  Haushaltsstroms; frühere Heizung mit Jahresverbrauch laut Abrechnung (z. B. 20.000 kWh Gas oder 2.000 Liter Heizöl),
+  Preis und Nutzungsgrad zum Vergleich. Für Gas den Preis je abgerechneter kWh inklusive Grundpreis-Anteil
+  eintragen; der vorgeschlagene Nutzungsgrad 0,86 ist das Mittel von Gas-Brennwertkesseln im Feld. Dazu der
+  Schalter, ob der Zeitstrahl die Wärmepreise anderer Heizsysteme zeigt (Standard: an).
 - **Auswertung:** wie viele Tage zurück gerechnet wird, ab wann Daten gelten (z. B. ab Einbau der Schnittstelle) und
   ob InfluxDB oder die normale Aufzeichnung genutzt wird („auto“ wählt selbst).
 
 ### Personen im Haushalt
 
-Für das Audit Warmwasser: **Einstellungen → Geräte & Dienste → Luft-Wasser-Wärmepumpen-Audit → ⋮ → Person
-hinzufügen**. Je Person Name, Geburtsjahr, wann sie hier wohnt und wann sie meistens duscht. Für Kinder, die
+Für das Audit Warmwasser: **Einstellungen → Geräte & Dienste → Luft-Wasser-Wärmepumpen-Audit → Zahnrad ⚙
+(Konfigurieren) → Haushalt**, dann „Neue Person anlegen“ oder eine Person zum Ändern oder Löschen wählen. Je Person Name, Geburtsjahr, wann sie hier wohnt und wann sie meistens duscht. Für Kinder, die
 abwechselnd bei beiden Eltern leben, gibt es Wechselwochen (z. B. eine Woche hier, eine Woche dort, ab einem
 Startdatum) oder bestimmte Tage (z. B. jedes zweite Wochenende). Duschen und Bäder pro Woche können leer bleiben;
 dann rechnet das Audit mit typischen Werten für das Alter.
@@ -343,10 +387,9 @@ entities:
 
 Nach jeder Änderung an der Anlage:
 
-- in der **Zeitstrahl-Karte** auf **Ereignis hinzufügen** (nur für Administratoren sichtbar), oder
-- **Einstellungen → Geräte & Dienste → Luft-Wasser-Wärmepumpen-Audit → Ereignis hinzufügen.**
-
-Zeitpunkt, Art (z. B. „Heizkurve geändert“) und eine kurze Notiz eintragen. Ändern und löschen geht auf derselben Seite.
+in der **Zeitstrahl-Karte** auf **Ereignis hinzufügen** (nur für Administratoren sichtbar). Zeitpunkt, Art (z. B.
+„Heizkurve geändert“) und eine kurze Notiz eintragen. In der Ereignisliste unter dem Zeitstrahl ändert ✎ ein Ereignis,
+✕ löscht es. Übernimmt man einen Vorschlag der Karte, trägt sie das Ereignis selbst ein.
 
 ## Häufige Fragen
 
@@ -394,7 +437,9 @@ entfernen.
   - `brand/` – Icon für Home Assistant ab 2026.3 (`icon.png` 256 px, `icon@2x.png` 512 px), erzeugt aus
     `docs/brand/icon.svg`.
 - Einträge: Haupteintrag = Anlage (Rollen, Stammdaten), Untereinträge `audit` (je zugeschaltetem Audit, mit eigenem
-  Gerät) und `event` (Änderungen an der Anlage).
+  Gerät). Ereignisse und Personen stehen als Listen `events` und `household` in den Optionen (`records.py`); die
+  Karte schreibt Ereignisse über die WebSocket-Befehle `air_water_heatpump_audit/event/save` und `…/event/delete`
+  (nur Admins). Bis 0.18.0b6 waren beide Untereinträge; die Migration auf Version 1.2 zieht sie um.
 - Sensoren: `sensor.air_water_heatpump_audit_<audit>` (Gesamturteil, Attribute `dq`, `checks`, `readiness`,
   `audit_name`, `color`), `sensor.air_water_heatpump_audit_<id>_<key>` je Prüfung (Zustand = Urteil, Attribute
   `value`, `unit`, `text`, `origin`, `details`, `progress`, `help`, `action`),

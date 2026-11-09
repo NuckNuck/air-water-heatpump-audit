@@ -105,6 +105,14 @@
   "options": {
     "step": {
       "init": {
+        "title": "Einstellungen",
+        "description": "Was möchtest du ändern? Ereignisse trägst du direkt in der Zeitstrahl-Karte ein, ändern und löschen geht dort auch.",
+        "menu_options": {
+          "plant": "Anlagendaten",
+          "household": "Haushalt"
+        }
+      },
+      "plant": {
         "title": "Stammdaten",
         "description": "Angaben zur Anlage, die sich nicht messen lassen. Leere Felder sind erlaubt: Die betroffene Prüfung zeigt dann „nicht bewertbar – Stammdaten fehlen“.",
         "sections": {
@@ -164,17 +172,39 @@
             "description": "Preise brutto. Der Arbeitspreis wird aus dem Energie-Dashboard vorgeschlagen, wenn der Stromzähler der Wärmepumpe dort eingetragen ist.",
             "data": {
               "tariff_price": "Arbeitspreis Wärmepumpenstrom",
-              "tariff_base_fee": "Grundpreis Wärmepumpenzähler",
+              "tariff_price_unit": "Einheit Arbeitspreis Wärmepumpenstrom",
+              "heat_pump_meter": "Zähler der Wärmepumpe",
+              "tariff_base_fee": "Grundpreis Wärmepumpen-Stromtarif (Stromanbieter)",
+              "tariff_base_fee_period": "Grundpreis gilt",
+              "meter_fee": "Zählermiete Wärmepumpenzähler (Messstellenentgelt)",
+              "meter_fee_period": "Zählermiete gilt",
               "household_price": "Arbeitspreis Haushaltsstrom",
+              "household_price_unit": "Einheit Arbeitspreis Haushaltsstrom",
+              "previous_heating_system": "Frühere Heizung",
+              "previous_consumption": "Früherer Jahresverbrauch",
+              "previous_consumption_unit": "Einheit des früheren Verbrauchs",
               "reference_fuel_price": "Preis früherer Brennstoff",
-              "reference_efficiency": "Nutzungsgrad frühere Heizung"
+              "reference_fuel_price_unit": "Einheit Preis früherer Brennstoff",
+              "reference_efficiency": "Nutzungsgrad frühere Heizung",
+              "compare_heating_systems": "Wärmepreise anderer Heizsysteme vergleichen"
             },
             "data_description": {
               "tariff_price": "Preis je kWh für den Strom der Wärmepumpe (K1, K2).",
-              "tariff_base_fee": "Nur der zusätzliche Grundpreis pro Jahr für einen eigenen Wärmepumpenzähler; ohne eigenen Zähler leer lassen.",
-              "household_price": "Zum Vergleich: lohnt der eigene Wärmepumpentarif (K3)?",
+              "tariff_price_unit": "So, wie der Preis im Vertrag steht, z. B. 25 ct/kWh oder 0,25 €/kWh.",
+              "heat_pump_meter": "Eigener Zähler mit Wärmepumpentarif oder Wärmepumpe am Haushaltszähler. Am Haushaltszähler gibt es keine zusätzlichen festen Kosten.",
+              "tariff_base_fee": "Fester Betrag des Stromanbieters für den Wärmepumpentarif, unabhängig vom Verbrauch; steht im Vertrag oder auf der Stromrechnung neben dem Arbeitspreis. Leer = nicht eingetragen (Hinweis im Audit), 0 = kein Grundpreis.",
+              "tariff_base_fee_period": "So, wie der Betrag im Vertrag steht. Das Audit rechnet auf das Jahr um.",
+              "meter_fee": "Miete für den eigenen Zähler der Wärmepumpe, vom Messstellenbetreiber (oft der Netzbetreiber); steht auf der Stromrechnung oder einer eigenen Rechnung. Leer = nicht eingetragen, 0 = keine.",
+              "meter_fee_period": "So, wie der Betrag auf der Rechnung steht. Das Audit rechnet auf das Jahr um.",
+              "household_price": "Zum Vergleich: lohnt der eigene Wärmepumpentarif (K3)? Ergibt auch die Vergleichslinie Stromdirektheizung.",
+              "household_price_unit": "So, wie der Preis im Vertrag steht.",
+              "previous_heating_system": "Womit vorher geheizt wurde; bei einem Neubau „Keine“. Für dieses System gilt der Nutzungsgrad unten.",
+              "previous_consumption": "Jahresverbrauch so, wie er auf der letzten Abrechnung steht. Damit werden feste Kosten verteilt, solange die Hochrechnung (K2) noch nicht möglich ist.",
+              "previous_consumption_unit": "kWh oder MWh für Gas, Fernwärme und Strom, Liter für Heizöl, kg oder t für Pellets.",
               "reference_fuel_price": "Zum Vergleich, z. B. Gas: Kosten je kWh inklusive Grundpreis-Anteil (K1, K2).",
-              "reference_efficiency": "Anteil des abgerechneten Brennstoffs, der als Wärme ankommt. Gas-Brennwertkessel erreichen im Feld im Mittel 0,86, bezogen auf den Brennwert, nach dem Gas abgerechnet wird."
+              "reference_fuel_price_unit": "So, wie der Preis auf der Abrechnung steht.",
+              "reference_efficiency": "Anteil des abgerechneten Brennstoffs, der als Wärme ankommt; gilt für die frühere Heizung. Richtwerte: Gas-Brennwertkessel 0,86 (Brennwert), Ölkessel 0,91 (Heizwert), Pelletkessel 0,80, Fernwärme 1.",
+              "compare_heating_systems": "Zeigt im Kosten-Zeitstrahl gestrichelte Linien für Heizöl, Erdgas, Holzpellets, Fernwärme und Stromdirektheizung. Die Preise kommen aus Preis-Sensoren mit dem Attribut heating_system, z. B. aus einer Preis-Integration oder einem Scrape-Sensor (README)."
             }
           },
           "evaluation": {
@@ -191,10 +221,57 @@
             "description": "Der Recorder hält nur seine Aufbewahrungszeit vor (Standard 10 Tage); InfluxDB reicht weiter zurück."
           }
         }
+      },
+      "household": {
+        "title": "Haushalt",
+        "description": "Personen im Haushalt für den Warmwasserbedarf (W5, W6); zurzeit {count}. Person zum Ändern oder Löschen wählen oder eine neue anlegen.",
+        "data": {
+          "person": "Person"
+        }
+      },
+      "person": {
+        "title": "Person im Haushalt",
+        "description": "Für den Warmwasserbedarf (W5, W6). Das Audit vergleicht den gemessenen Verbrauch mit dem, was für diesen Haushalt üblich ist.",
+        "data": {
+          "name": "Name",
+          "birth_year": "Geburtsjahr",
+          "presence": "Im Haushalt",
+          "showers_per_week": "Duschen pro Woche",
+          "baths_per_week": "Bäder pro Woche",
+          "shower_time": "Duscht meistens",
+          "delete": "Person löschen"
+        },
+        "data_description": {
+          "name": "Nur zur Unterscheidung, z. B. Vorname oder „Kind 1“.",
+          "birth_year": "Für typische Gewohnheiten nach Alter, falls Duschen und Bäder leer bleiben. Kleine Kinder baden eher, als dass sie duschen.",
+          "presence": "Wann die Person hier wohnt, z. B. abwechselnde Wochen bei Kindern, die auch beim anderen Elternteil leben.",
+          "showers_per_week": "Leer lassen für einen typischen Wert nach Alter.",
+          "baths_per_week": "Leer lassen für einen typischen Wert nach Alter.",
+          "shower_time": "Für den Ladezeitpunkt (W5): Ein Ladefenster am Nachmittag passt nicht, wenn morgens geduscht wird.",
+          "delete": "Entfernt die Person aus dem Haushalt."
+        }
+      },
+      "person_presence": {
+        "title": "Anwesenheit",
+        "description": "Angaben zum gewählten Muster.",
+        "data": {
+          "weeks_present": "Wochen hier am Stück",
+          "weeks_absent": "Wochen danach woanders",
+          "rotation_start": "Beginn einer Woche hier",
+          "weekdays": "Tage",
+          "every_n_weeks": "Jede n-te Woche",
+          "share_pct": "Anteil der Zeit hier"
+        },
+        "data_description": {
+          "rotation_start": "Ein Tag, an dem eine Phase hier beginnt (auch in der Vergangenheit); ab da wiederholt sich das Muster. Bei „Bestimmte Tage“ der Anker für „jede n-te Woche“.",
+          "every_n_weeks": "1 = jede Woche, 2 = jede zweite Woche (z. B. jedes zweite Wochenende).",
+          "share_pct": "Wenn kein festes Muster passt: grob geschätzter Anteil, z. B. 30 %."
+        }
       }
     },
     "error": {
-      "invalid_capacity_table": "Die Mindestleistung hat nicht die erwartete Form. Beispiel: „35:“ und darunter eingerückt „-7: 3.9“, „2: 3.5“, „7: 3.5“."
+      "invalid_capacity_table": "Die Mindestleistung hat nicht die erwartete Form. Beispiel: „35:“ und darunter eingerückt „-7: 3.9“, „2: 3.5“, „7: 3.5“.",
+      "invalid_consumption_unit": "Früherer Verbrauch: Die Einheit passt nicht zur früheren Heizung (z. B. Liter bei Gas)."
     }
   },
   "entity": {
@@ -651,17 +728,6 @@
         "hydraulic_separator": "Hydraulische Weiche"
       }
     },
-    "kind": {
-      "options": {
-        "heating_curve": "Heizkurve geändert",
-        "valves": "Heizkörperventile verstellt",
-        "hydraulic_balancing": "Hydraulischer Abgleich",
-        "pump_setting": "Pumpe verstellt",
-        "dhw_setting": "Warmwasser-Einstellung",
-        "hardware": "Umbau an der Anlage",
-        "other": "Sonstiges"
-      }
-    },
     "interface_profile": {
       "options": {
         "none": "Keins",
@@ -710,6 +776,43 @@
         "sat": "Samstag",
         "sun": "Sonntag"
       }
+    },
+    "heat_pump_meter": {
+      "options": {
+        "separate_meter": "Eigener Zähler mit Wärmepumpentarif",
+        "household_meter": "Haushaltszähler (kein eigener Tarif)"
+      }
+    },
+    "previous_heating_system": {
+      "options": {
+        "natural_gas": "Erdgas",
+        "heating_oil": "Heizöl",
+        "wood_pellets": "Holzpellets",
+        "district_heating": "Fernwärme",
+        "direct_electric": "Stromdirektheizung",
+        "none": "Keine (Neubau)"
+      }
+    },
+    "previous_consumption_unit": {
+      "options": {
+        "kWh": "kWh",
+        "MWh": "MWh",
+        "L": "Liter",
+        "kg": "kg",
+        "t": "Tonnen"
+      }
+    },
+    "fee_period": {
+      "options": {
+        "month": "pro Monat",
+        "year": "pro Jahr"
+      }
+    },
+    "price_unit": {
+      "options": {
+        "ct_per_kwh": "ct/kWh",
+        "eur_per_kwh": "€/kWh"
+      }
     }
   },
   "config_subentries": {
@@ -734,127 +837,35 @@
       "abort": {
         "all_audits_added": "Alle Audits sind schon zugeschaltet."
       }
-    },
-    "event": {
-      "entry_type": "Ereignis",
-      "initiate_flow": {
-        "user": "Ereignis hinzufügen"
-      },
-      "step": {
-        "user": {
-          "title": "Ereignis eintragen",
-          "description": "Änderung an der Anlage, z. B. Heizkurve verstellt oder hydraulischer Abgleich. Die Audits Effizienz, Vorlauf und Leistung rechnen danach nur noch ab dem letzten Ereignis, damit nicht über eine Änderung hinweg gemittelt wird.",
-          "data": {
-            "time": "Zeitpunkt",
-            "kind": "Art",
-            "note": "Notiz"
-          },
-          "data_description": {
-            "time": "Wann die Änderung wirksam wurde.",
-            "note": "Was genau geändert wurde, z. B. „Parallelverschiebung −1 K“."
+    }
+  },
+  "issues": {
+    "fixed_costs_missing": {
+      "title": "Feste Kosten der Wärmepumpe fehlen",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Feste Kosten der Wärmepumpe",
+            "description": "Für den Wärmepreis fehlen Angaben zu den festen Kosten der Wärmepumpe: {missing}. Bis dahin rechnet das Audit ohne sie. Leer lassen heißt „nicht eingetragen“, 0 heißt „gibt es nicht“.",
+            "data": {
+              "heat_pump_meter": "Zähler der Wärmepumpe",
+              "tariff_base_fee": "Grundpreis Wärmepumpen-Stromtarif (Stromanbieter)",
+              "tariff_base_fee_period": "Grundpreis gilt",
+              "meter_fee": "Zählermiete Wärmepumpenzähler (Messstellenentgelt)",
+              "meter_fee_period": "Zählermiete gilt"
+            },
+            "data_description": {
+              "heat_pump_meter": "Eigener Zähler mit Wärmepumpentarif oder Wärmepumpe am Haushaltszähler. Am Haushaltszähler gibt es keine zusätzlichen festen Kosten.",
+              "tariff_base_fee": "Fester Betrag des Stromanbieters für den Wärmepumpentarif, unabhängig vom Verbrauch; steht im Vertrag oder auf der Stromrechnung neben dem Arbeitspreis. Leer = nicht eingetragen (Hinweis im Audit), 0 = kein Grundpreis.",
+              "tariff_base_fee_period": "So, wie der Betrag im Vertrag steht. Das Audit rechnet auf das Jahr um.",
+              "meter_fee": "Miete für den eigenen Zähler der Wärmepumpe, vom Messstellenbetreiber (oft der Netzbetreiber); steht auf der Stromrechnung oder einer eigenen Rechnung. Leer = nicht eingetragen, 0 = keine.",
+              "meter_fee_period": "So, wie der Betrag auf der Rechnung steht. Das Audit rechnet auf das Jahr um."
+            }
           }
         },
-        "reconfigure": {
-          "title": "Ereignis ändern",
-          "description": "Änderung an der Anlage, z. B. Heizkurve verstellt oder hydraulischer Abgleich. Die Audits Effizienz, Vorlauf und Leistung rechnen danach nur noch ab dem letzten Ereignis, damit nicht über eine Änderung hinweg gemittelt wird.",
-          "data": {
-            "time": "Zeitpunkt",
-            "kind": "Art",
-            "note": "Notiz"
-          },
-          "data_description": {
-            "time": "Wann die Änderung wirksam wurde.",
-            "note": "Was genau geändert wurde, z. B. „Parallelverschiebung −1 K“."
-          }
+        "abort": {
+          "entry_missing": "Der Eintrag existiert nicht mehr."
         }
-      },
-      "abort": {
-        "reconfigure_successful": "Ereignis gespeichert."
-      }
-    },
-    "person": {
-      "entry_type": "Person im Haushalt",
-      "initiate_flow": {
-        "user": "Person hinzufügen"
-      },
-      "step": {
-        "user": {
-          "title": "Person im Haushalt",
-          "description": "Für den Warmwasserbedarf (W5, W6). Das Audit vergleicht den gemessenen Verbrauch mit dem, was für diesen Haushalt üblich ist.",
-          "data": {
-            "name": "Name",
-            "birth_year": "Geburtsjahr",
-            "presence": "Im Haushalt",
-            "showers_per_week": "Duschen pro Woche",
-            "baths_per_week": "Bäder pro Woche",
-            "shower_time": "Duscht meistens"
-          },
-          "data_description": {
-            "name": "Nur zur Unterscheidung, z. B. Vorname oder „Kind 1“.",
-            "birth_year": "Für typische Gewohnheiten nach Alter, falls Duschen und Bäder leer bleiben. Kleine Kinder baden eher, als dass sie duschen.",
-            "presence": "Wann die Person hier wohnt, z. B. abwechselnde Wochen bei Kindern, die auch beim anderen Elternteil leben.",
-            "showers_per_week": "Leer lassen für einen typischen Wert nach Alter.",
-            "baths_per_week": "Leer lassen für einen typischen Wert nach Alter.",
-            "shower_time": "Für den Ladezeitpunkt (W5): Ein Ladefenster am Nachmittag passt nicht, wenn morgens geduscht wird."
-          }
-        },
-        "reconfigure": {
-          "title": "Person ändern",
-          "description": "Für den Warmwasserbedarf (W5, W6).",
-          "data": {
-            "name": "Name",
-            "birth_year": "Geburtsjahr",
-            "presence": "Im Haushalt",
-            "showers_per_week": "Duschen pro Woche",
-            "baths_per_week": "Bäder pro Woche",
-            "shower_time": "Duscht meistens"
-          },
-          "data_description": {
-            "name": "Nur zur Unterscheidung, z. B. Vorname oder „Kind 1“.",
-            "birth_year": "Für typische Gewohnheiten nach Alter, falls Duschen und Bäder leer bleiben. Kleine Kinder baden eher, als dass sie duschen.",
-            "presence": "Wann die Person hier wohnt, z. B. abwechselnde Wochen bei Kindern, die auch beim anderen Elternteil leben.",
-            "showers_per_week": "Leer lassen für einen typischen Wert nach Alter.",
-            "baths_per_week": "Leer lassen für einen typischen Wert nach Alter.",
-            "shower_time": "Für den Ladezeitpunkt (W5): Ein Ladefenster am Nachmittag passt nicht, wenn morgens geduscht wird."
-          }
-        },
-        "presence": {
-          "title": "Anwesenheit",
-          "description": "Angaben zum gewählten Muster.",
-          "data": {
-            "weeks_present": "Wochen hier am Stück",
-            "weeks_absent": "Wochen danach woanders",
-            "rotation_start": "Beginn einer Woche hier",
-            "weekdays": "Tage",
-            "every_n_weeks": "Jede n-te Woche",
-            "share_pct": "Anteil der Zeit hier"
-          },
-          "data_description": {
-            "rotation_start": "Ein Tag, an dem eine Phase hier beginnt (auch in der Vergangenheit); ab da wiederholt sich das Muster. Bei „Bestimmte Tage“ der Anker für „jede n-te Woche“.",
-            "every_n_weeks": "1 = jede Woche, 2 = jede zweite Woche (z. B. jedes zweite Wochenende).",
-            "share_pct": "Wenn kein festes Muster passt: grob geschätzter Anteil, z. B. 30 %."
-          }
-        },
-        "reconfigure_presence": {
-          "title": "Anwesenheit",
-          "description": "Angaben zum gewählten Muster.",
-          "data": {
-            "weeks_present": "Wochen hier am Stück",
-            "weeks_absent": "Wochen danach woanders",
-            "rotation_start": "Beginn einer Woche hier",
-            "weekdays": "Tage",
-            "every_n_weeks": "Jede n-te Woche",
-            "share_pct": "Anteil der Zeit hier"
-          },
-          "data_description": {
-            "rotation_start": "Ein Tag, an dem eine Phase hier beginnt (auch in der Vergangenheit); ab da wiederholt sich das Muster. Bei „Bestimmte Tage“ der Anker für „jede n-te Woche“.",
-            "every_n_weeks": "1 = jede Woche, 2 = jede zweite Woche (z. B. jedes zweite Wochenende).",
-            "share_pct": "Wenn kein festes Muster passt: grob geschätzter Anteil, z. B. 30 %."
-          }
-        }
-      },
-      "abort": {
-        "reconfigure_successful": "Person gespeichert."
       }
     }
   }

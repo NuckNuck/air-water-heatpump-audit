@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from . import days
+from . import cost, days
 from . import readiness as rd
 from . import timeline as tl
 from .actions import attach_actions
@@ -38,15 +38,20 @@ def roles_for(audit_ids: list[str] | None) -> set[str]:
 def run_audits(s: dict[str, Series], start: float, end: float, *, recorder_keep_days: float | None,
                long_term_days: float | None, heater_kw: dict[str, float | None], master: dict | None = None,
                events: list[dict] | None = None, controls: dict[str, dict] | None = None,
-               tz: str = days.DEFAULT_TZ, audits: list[str] | None = None) -> dict:
+               tz: str = days.DEFAULT_TZ, audits: list[str] | None = None,
+               price_refs: list[dict] | None = None) -> dict:
     """master: Stammdaten (Spezifikation 1.4). events: Änderungen an der Anlage ({time, kind, note}); Audits mit
     `section == "section"` rechnen nur ab dem letzten Ereignis, damit nie über eine Änderung hinweg gemittelt wird.
     controls: heutiger Zustand der Stellgrößen-Rollen (actions.CONTROL_ROLES); daraus entstehen Vorschläge.
     audits: IDs der zugeschalteten Audits, None = alle.
+    price_refs: Preis-Sensoren anderer Heizsysteme für den Kosten-Zeitstrahl (heating_prices), None = abgeschaltet.
+    Arbeitspreise in master dürfen in ct/kWh stehen (`<feld>_unit`); die Audits sehen sie in €/kWh.
     """
+    master = None if master is None else cost.prices_in_euro(master)
     def context(until: float, upto: list[dict] | None, ctl: dict | None) -> Context:
         return Context(s, start, until, recorder_keep_days=recorder_keep_days, long_term_days=long_term_days,
-                       heater_kw=heater_kw, master=master, events=upto, controls=ctl, tz=tz)
+                       heater_kw=heater_kw, master=master, events=upto, controls=ctl, tz=tz,
+                       price_refs=price_refs)
 
     ctx = context(end, events, controls)
     prior: dict[float, Context] = {}  # Ereigniszeit → Lauf bis zu diesem Ereignis, für attach_before()
@@ -71,7 +76,7 @@ def run_audits(s: dict[str, Series], start: float, end: float, *, recorder_keep_
     report = {
         "period": {"start": start, "end": end},
         "timeline": {"days": tl.daily_points(ctx, with_timeline),
-                     "scales": {a.audit_id: a.timeline.scale(ctx.master) for a in with_timeline}},
+                     "scales": {a.audit_id: a.timeline.scale(ctx.timeline_master) for a in with_timeline}},
         "section": {"start": ctx.section_start, "event": ctx.event},
         "readiness": readiness,
         "audits": report_audits,

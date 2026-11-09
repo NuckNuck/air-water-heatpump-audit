@@ -18,6 +18,8 @@ from homeassistant.loader import async_get_integration
 
 from .const import CARD_URL, DOMAIN
 from .coordinator import AirWaterAuditConfigEntry, AirWaterAuditCoordinator, timeline_store
+from .records import RECORDS_MINOR_VERSION, async_migrate_records, async_register_websocket
+from .repairs import issue_id, update_fixed_cost_issue
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.SENSOR]
@@ -33,6 +35,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     card = Path(__file__).parent / "frontend" / "air-water-heatpump-audit-card.js"
     await hass.http.async_register_static_paths([StaticPathConfig(CARD_URL, str(card), False)])
     hass.async_create_task(_async_register_card(hass))
+    async_register_websocket(hass)
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry) -> bool:
+    """1.1 → 1.2: Ereignisse und Personen aus Untereinträgen in die Optionen (records.py)."""
+    if entry.version > 1:
+        return False
+    if entry.minor_version < RECORDS_MINOR_VERSION:
+        await async_migrate_records(hass, entry)
     return True
 
 
@@ -65,6 +77,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry
     coordinator = AirWaterAuditCoordinator(hass, entry)
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    update_fixed_cost_issue(hass, entry, coordinator.audits())
 
     # Erste Rechnung erst nach dem HA-Start, damit die Recorder-Abfrage den Start nicht bremst.
     async def _first_refresh(_hass: HomeAssistant) -> None:
@@ -85,5 +98,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntr
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry) -> None:
-    """Gespeicherte Tageswerte des Zeitstrahls mit dem Eintrag entfernen."""
+    """Gespeicherte Tageswerte des Zeitstrahls und ein offenes Reparatur-Issue mit dem Eintrag entfernen."""
     await timeline_store(hass, entry.entry_id).async_remove()
+    from homeassistant.helpers import issue_registry as ir
+    ir.async_delete_issue(hass, DOMAIN, issue_id(entry.entry_id))

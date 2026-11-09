@@ -26,6 +26,8 @@ function enabledAudits(hass) {
 
 const TEXT = {
   de: {
+    settings: "Einstellungen",
+    legend: "Legende",
     dq: "Datenqualität",
     dqLevels: { high: "hoch", medium: "mittel", low: "niedrig" },
     period: "Zeitraum",
@@ -85,6 +87,8 @@ const TEXT = {
     },
   },
   en: {
+    settings: "Settings",
+    legend: "Legend",
     dq: "Data quality",
     dqLevels: { high: "high", medium: "medium", low: "low" },
     period: "Period",
@@ -146,6 +150,18 @@ const TEXT = {
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
+// Link auf die Integrationsseite mit hervorgehobenem Eintrag; dort ist „Konfigurieren“ ein Klick. Einen öffentlichen
+// Weg, den Options Flow direkt zu öffnen, gibt es nicht (Frontend 2026.10).
+const settingsUrl = (entryId) => `/config/integrations/integration/air_water_heatpump_audit${entryId ? `?config_entry=${encodeURIComponent(entryId)}` : ""}`;
+const settingsLink = (entryId, label) => `<a class="settings" data-nav href="${esc(settingsUrl(entryId))}">⚙ ${esc(label)}</a>`;
+// Navigation innerhalb von HA ohne Neuladen der Seite
+function navigate(path) {
+  history.pushState(null, "", path);
+  window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
+}
+// Prüftexte, die auf fehlende Stammdaten hinweisen, bekommen einen Link in die Einstellungen.
+const NEEDS_SETTINGS = /Stammdaten fehlen|Grundpreis noch nicht eingerechnet|master data missing|standing charge not yet included/i;
+
 function formatValue(value, unit, locale) {
   if (value === null || value === undefined || typeof value === "object") return "";
   const text = typeof value === "number" ? value.toLocaleString(locale, { maximumFractionDigits: 2 }) : value;
@@ -201,6 +217,8 @@ class AirWaterAuditCard extends HTMLElement {
     root.addEventListener("focusin", (ev) => { const q = ev.target.closest?.(TIP); if (q && !this._tipPinned) show(q, false); });
     root.addEventListener("focusout", (ev) => { if (ev.target.closest?.(TIP)) hide(); });
     root.addEventListener("click", (ev) => {
+      const nav = ev.target.closest?.("a[data-nav]");
+      if (nav) { ev.preventDefault(); navigate(nav.getAttribute("href")); return; }
       const toggle = ev.target.closest?.("[data-days]");
       if (toggle) {
         const id = toggle.dataset.days;
@@ -251,7 +269,7 @@ class AirWaterAuditCard extends HTMLElement {
       <td>${this._pill(verdict, st, at.progress, t)}${this._provisional(at, t)}</td>
       <td class="action">${action}</td>
       <td class="num">${esc(formatValue(at.value, at.unit, hass.language))}</td>
-      <td class="text">${esc(at.text)}${toggle}</td>
+      <td class="text">${esc(at.text)}${NEEDS_SETTINGS.test(at.text ?? "") ? ` ${settingsLink(this._entryId, t.settings)}` : ""}${toggle}</td>
       <td class="origin">${esc(t.origin[at.origin] ?? at.origin)}</td>
     </tr>${days}`;
   }
@@ -377,9 +395,8 @@ class AirWaterAuditCard extends HTMLElement {
       if (entryId) {
         const n = new Date();
         const time = `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())} ${pad(n.getHours())}:${pad(n.getMinutes())}:00`;
-        const flow = await hass.callApi("POST", "config/config_entries/subentries/flow", { handler: [entryId, "event"] });
-        await hass.callApi("POST", `config/config_entries/subentries/flow/${flow.flow_id}`,
-          { time, kind: p.event_kind, note: t.ctl.note(p, f) });
+        await hass.callWS({ type: "air_water_heatpump_audit/event/save", entry_id: entryId,
+          event: { time, kind: p.event_kind, note: t.ctl.note(p, f) } });
       }
       this._ctlStatus.set(key, t.ctl.ok);
     } catch (err) {
@@ -477,10 +494,12 @@ class AirWaterAuditCard extends HTMLElement {
         <div class="light" style="background:${COLORS[audit.state] ?? COLORS.not_assessable}"></div>
         <div class="title">${esc(title)}</div>
         <div class="state">${esc(hass.formatEntityState(audit))}</div>
+        ${a.entry_id ? settingsLink(a.entry_id, t.settings) : ""}
       </div>${a.heat ? `<div class="heat">${esc(t.heat(a.heat))}</div>` : ""}</td></tr>`;
     if (audit.state === "unavailable" || audit.state === "unknown") {
       return head + `<tr><td colspan="${span}" class="msg">${t.waiting}</td></tr>`;
     }
+    this._entryId = a.entry_id;
     return head + (a.checks ?? []).map((c) => this._checkRow(c, t)).join("");
   }
 
@@ -507,6 +526,8 @@ class AirWaterAuditCard extends HTMLElement {
         .light { width: 24px; height: 24px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 2px rgba(0,0,0,.15); }
         .title { font-size: 1.15em; font-weight: 500; flex: 1; }
         .state { font-weight: 500; }
+        a.settings { color: var(--primary-color); font-size: .85em; white-space: nowrap; text-decoration: none; }
+        tr.audit a.settings { color: inherit; }
         .meta, .heat { color: var(--secondary-text-color); font-size: .9em; }
         .meta { margin-bottom: 6px; }
         .heat { margin-top: 4px; }
@@ -623,6 +644,11 @@ if (!customElements.get("air-water-heatpump-audit-card")) {
 // Admins können Ereignisse direkt hier eintragen (Subentry-Flow der Integration, REST-API nur für Admins).
 
 const TL_AUDITS = ["efficiency", "flow_temperature", "capacity", "data_basis"];
+// Vergleichslinien im Kosten-Zeitstrahl: feste Farbe je Heizsystem, keine Ampelfarbe; mehrere Sensoren eines Systems
+// unterscheiden sich im Strichmuster.
+const REF_COLORS = { heating_oil: "#6d4c41", natural_gas: "#1e88e5", wood_pellets: "#8e24aa", district_heating: "#00897b",
+  direct_electric: "#c2185b" };
+const REF_DASHES = ["6 3", "2 3", "10 3 2 3"];
 
 const TL_TEXT = {
   de: {
@@ -639,18 +665,42 @@ const TL_TEXT = {
       efficiency: "Tageswert; das Urteil in der Tabelle gilt erst für eine Woche. Blau oben: unplausibel hoch, eher ein Messfehler.",
       capacity: "Grenze aus Prüfung C1 (2.000 Starts pro Jahr, umgerechnet auf die Heizstunden des Standorts).",
       dhw: "Aus den Warmwasserladungen des Tages; dieselbe Ampel wie beim Heizen.",
-      cost: "Ohne Grundpreis. Grenze: früherer Brennstoff plus 10 % Messtoleranz (Prüfung K1).",
+      cost: "Grenze: früherer Brennstoff plus 10 % Messtoleranz (Prüfung K1).",
     },
     units: { "1/d": "/Tag" },
     verdicts: { ok: "grün", hint: "gelb", warn: "rot", info: "Info", not_assessable: "nicht bewertbar" },
     cop: "Arbeitszahl",
     cost: "Stromkosten",
+    systems: { heating_oil: "Heizöl", natural_gas: "Erdgas", wood_pellets: "Holzpellets", district_heating: "Fernwärme",
+      direct_electric: "Stromdirektheizung" },
+    sourceKinds: { official: "amtlich", association: "Verband", commercial: "Preisportal", local: "lokal" },
+    asOf: "Stand",
+    refsIntro: "Gestrichelt: Wärmepreis anderer Heizsysteme (Brennstoffpreis ÷ Nutzungsgrad).",
+    fixedCharges: { included: "inkl. Grundpreis", added: "inkl. Grundpreis", missing_heat: "ohne Grundpreis" },
+    fixed: {
+      added: (ct, eur, kwh, src) => `Eigener Wärmepreis inklusive fester Kosten: +${ct} ct/kWh (${eur} € im Jahr auf ${kwh} kWh Wärme, ${src}).`,
+      none: "Keine festen Kosten: Die Wärmepumpe hängt am Haushaltszähler.",
+      noHeat: "Grundpreis noch nicht eingerechnet: Jahreswärme unbekannt (Hochrechnung K2 noch nicht möglich, frühere Abrechnung nicht eingetragen).",
+      missing: (list) => `Stammdaten fehlen: ${list}.`,
+      sources: { projection: "Hochrechnung K2", bill: "frühere Abrechnung" },
+      labels: { heat_pump_meter: "Zähler der Wärmepumpe", tariff_base_fee: "Grundpreis des Wärmepumpen-Stromtarifs",
+        meter_fee: "Zählermiete des Wärmepumpenzählers (Messstellenentgelt)" },
+    },
+    settings: "Einstellungen",
+    legend: "Legende",
+    noRefs: "Keine Preis-Sensoren für andere Heizsysteme gefunden. Sie kommen aus einer Preis-Integration oder z. B. "
+      + "aus einem Scrape-Sensor mit dem Attribut heating_system (siehe README). Abschalten in den Optionen, Abschnitt Kosten.",
     none: "Noch kein voller Tag ausgewertet. Der erste Tageswert erscheint nach Mitternacht.",
     events: "Ereignisse",
     noEvents: "Noch keine Ereignisse eingetragen.",
     beforeRange: "vor dem gezeigten Zeitraum",
     add: "Ereignis hinzufügen",
-    manage: "Ereignisse ändern oder löschen →",
+    manageHint: "Ändern ✎ und Löschen ✕ direkt in der Liste oben.",
+    edit: "Ereignis ändern",
+    editTitle: "Ereignis ändern",
+    remove: "Ereignis löschen",
+    confirmDelete: (what) => `Ereignis löschen?\n\n${what}\n\nDie Audits rechnen danach neu.`,
+    deleted: "Gelöscht. Die Audits werden neu gerechnet.",
     time: "Zeitpunkt", kind: "Art", note: "Notiz", save: "Speichern", cancel: "Abbrechen",
     notePlaceholder: "z. B. Parallelverschiebung −1 K",
     saved: "Gespeichert. Die Audits werden neu gerechnet, das dauert einige Sekunden.",
@@ -676,18 +726,42 @@ const TL_TEXT = {
       efficiency: "Daily value; the verdict in the table needs a full week. Blue at the top: implausibly high, more likely a measurement error.",
       capacity: "Limit from check C1 (2,000 starts per year, scaled to the site's heating hours).",
       dhw: "From the day's hot water charges; same colours as for space heating.",
-      cost: "Without standing charge. Limit: previous fuel plus 10 % measurement tolerance (check K1).",
+      cost: "Limit: previous fuel plus 10 % measurement tolerance (check K1).",
     },
     units: { "1/d": "/day" },
     verdicts: { ok: "green", hint: "yellow", warn: "red", info: "info", not_assessable: "not assessable" },
     cop: "COP",
     cost: "electricity cost",
+    systems: { heating_oil: "Heating oil", natural_gas: "Natural gas", wood_pellets: "Wood pellets",
+      district_heating: "District heating", direct_electric: "Direct electric heating" },
+    sourceKinds: { official: "official", association: "association", commercial: "price portal", local: "local" },
+    asOf: "as of",
+    refsIntro: "Dashed: heat price of other heating systems (fuel price ÷ efficiency).",
+    fixedCharges: { included: "incl. standing charge", added: "incl. standing charge", missing_heat: "without standing charge" },
+    fixed: {
+      added: (ct, eur, kwh, src) => `Own heat price including fixed costs: +${ct} ct/kWh (€${eur} a year over ${kwh} kWh of heat, ${src}).`,
+      none: "No fixed costs: the heat pump is on the household meter.",
+      noHeat: "Standing charge not yet included: annual heat unknown (projection K2 not yet possible, previous bill not entered).",
+      missing: (list) => `Master data missing: ${list}.`,
+      sources: { projection: "projection K2", bill: "previous bill" },
+      labels: { heat_pump_meter: "heat pump meter", tariff_base_fee: "heat pump tariff standing charge",
+        meter_fee: "heat pump meter rent (metering fee)" },
+    },
+    settings: "Settings",
+    legend: "Legend",
+    noRefs: "No price sensors for other heating systems found. They come from a price integration or e.g. from a "
+      + "Scrape sensor with the attribute heating_system (see README). Switch off in the options, section Cost.",
     none: "No full day evaluated yet. The first daily value appears after midnight.",
     events: "Events",
     noEvents: "No events recorded yet.",
     beforeRange: "before the period shown",
     add: "Add event",
-    manage: "Edit or delete events →",
+    manageHint: "Edit ✎ and delete ✕ directly in the list above.",
+    edit: "Edit event",
+    editTitle: "Edit event",
+    remove: "Delete event",
+    confirmDelete: (what) => `Delete event?\n\n${what}\n\nThe audits are recalculated afterwards.`,
+    deleted: "Deleted. The audits are being recalculated.",
     time: "Time", kind: "Kind", note: "Note", save: "Save", cancel: "Cancel",
     notePlaceholder: "e.g. parallel shift −1 K",
     saved: "Saved. The audits are being recalculated, this takes a few seconds.",
@@ -747,6 +821,13 @@ class AirWaterAuditTimelineCard extends HTMLElement {
         .chart { margin-top: 14px; }
         .chart .label { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
         .chart .label b { font-weight: 500; }
+        .legend { position: relative; cursor: help; color: var(--primary-color); font-size: .9em; outline: none; }
+        .legend .tip { display: none; position: absolute; left: 0; top: 100%; z-index: 3; width: max-content;
+          max-width: min(460px, 80vw); margin-top: 4px; padding: 8px 10px; border-radius: 8px; font-size: .95em;
+          color: var(--secondary-text-color); background: var(--card-background-color, #fff);
+          border: 1px solid var(--divider-color); box-shadow: 0 2px 8px rgba(0, 0, 0, .2); }
+        .legend .tip > div + div { margin-top: 6px; }
+        .legend:hover .tip, .legend:focus .tip, .legend:focus-within .tip { display: block; }
         svg { display: block; width: 100%; overflow: visible; }
         svg text { font-size: 11px; fill: var(--secondary-text-color); }
         svg .ev text { fill: var(--primary-text-color); font-weight: 600; }
@@ -756,6 +837,9 @@ class AirWaterAuditTimelineCard extends HTMLElement {
         .events h3 { margin: 0 0 6px; font-size: 1em; font-weight: 500; }
         .events ol { margin: 0; padding-left: 0; list-style: none; }
         .events li { margin: 3px 0; }
+        .ev-tools { white-space: nowrap; }
+        button.link { background: none; border: none; padding: 0 4px; color: var(--primary-color); cursor: pointer; font: inherit; }
+        .admin form b { font-weight: 500; }
         .badge { display: inline-block; min-width: 18px; padding: 0 4px; margin-right: 6px; border-radius: 9px; text-align: center;
           background: var(--primary-color); color: var(--text-primary-color, #fff); font-size: .85em; }
         .admin { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
@@ -778,6 +862,12 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     this._charts = this.shadowRoot.getElementById("charts");
     this._admin = this.shadowRoot.getElementById("admin");
     this._charts.addEventListener("click", (ev) => {
+      const nav = ev.target.closest?.("a[data-nav]");
+      if (nav) { ev.preventDefault(); navigate(nav.getAttribute("href")); return; }
+      const edit = ev.target.closest?.("[data-edit]");
+      if (edit) { this._openEventForm(this._eventById(edit.dataset.edit)); return; }
+      const del = ev.target.closest?.("[data-del]");
+      if (del) { this._deleteEvent(this._eventById(del.dataset.del)); return; }
       const i = ev.target?.dataset?.day;
       if (i === undefined) return;
       this._selected = Number(i) === this._selected ? null : Number(i);
@@ -862,7 +952,9 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     const plotH = strip ? 16 : 90;
     const axisH = 16;
     const h = top + plotH + axisH;
-    const values = days.map((d) => d[audit]?.value).filter((v) => v !== null && v !== undefined);
+    const refs = this._refStyles(scale.references ?? []);
+    const values = days.flatMap((d) => [d[audit]?.value, ...refs.map((r) => d[audit]?.references?.[r.id])])
+      .filter((v) => v !== null && v !== undefined);
     const lo = scale.min ?? 0;
     let hi = scale.max;
     if (hi === null || hi === undefined) {
@@ -908,6 +1000,17 @@ class AirWaterAuditTimelineCard extends HTMLElement {
         path += `${open ? "L" : "M"}${geo.x((d.start + d.end) / 2).toFixed(1)},${y(v).toFixed(1)}`;
         open = true;
       });
+      // Vergleichslinien anderer Heizsysteme unter der eigenen Linie
+      for (const r of refs) {
+        let rp = "", ro = false;
+        days.forEach((d) => {
+          const v = d[audit]?.references?.[r.id];
+          if (v === null || v === undefined) { ro = false; return; }
+          rp += `${ro ? "L" : "M"}${geo.x(d.start).toFixed(1)},${y(v).toFixed(1)}L${geo.x(d.end).toFixed(1)},${y(v).toFixed(1)}`;
+          ro = true;
+        });
+        if (rp) svg += `<path d="${rp}" fill="none" stroke="${r.color}" stroke-width="1.5" stroke-dasharray="${r.dash}"><title>${esc(this._refLabel(r, t))}</title></path>`;
+      }
       svg += `<path d="${path}" fill="none" stroke="var(--primary-text-color)" stroke-opacity=".55" stroke-width="1.5"/>`;
       days.forEach((d, i) => {
         const p = d[audit];
@@ -946,9 +1049,73 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     const latest = [...days].reverse().find((d) => d[audit]?.value !== null && d[audit]?.value !== undefined);
     const now = latest ? `${this._fmt(latest[audit].value, strip ? 1 : scale.decimals)}${this._unit(scale.unit, t)} (${esc(latest.day.slice(8, 10) + "." + latest.day.slice(5, 7) + ".")})` : "–";
     const note = t.notes[audit] && (!["capacity", "cost"].includes(audit) || (scale.bands ?? []).length) ? `<div class="muted">${t.notes[audit]}</div>` : "";
+    // Legende (Vergleichslinien, feste Kosten) nur beim Überfahren; Handlungsbedarf bleibt sichtbar
+    const legend = this._refLegend(scale, refs, days, audit, t) + this._fixedNote(scale, t);
+    const tip = legend ? `<span class="legend" tabindex="0">ⓘ ${esc(t.legend)}<div class="tip">${legend}</div></span>` : "";
     return `<div class="chart">
-      <div class="label"><b>${esc(name)}</b><span class="muted">${esc(metric)} · ${t.latest} ${esc(now)}</span></div>${note}
-      <svg viewBox="0 0 ${geo.width} ${h}" height="${h}" preserveAspectRatio="none">${svg}</svg></div>`;
+      <div class="label"><b>${esc(name)}</b><span class="muted">${esc(metric)} · ${t.latest} ${esc(now)}</span>${tip}</div>${note}
+      <svg viewBox="0 0 ${geo.width} ${h}" height="${h}" preserveAspectRatio="none">${svg}</svg>${this._refHint(scale, refs, t)}${this._fixedMissing(scale, t)}</div>`;
+  }
+
+  // Farbe und Strichmuster je Preis-Sensor
+  _refStyles(references) {
+    const seen = {};
+    return references.map((r) => {
+      const k = seen[r.system] = (seen[r.system] ?? -1) + 1;
+      return { ...r, color: REF_COLORS[r.system] ?? "var(--secondary-text-color)", dash: REF_DASHES[k % REF_DASHES.length] };
+    });
+  }
+
+  // Was an festen Kosten im eigenen Wärmepreis steckt (Teil der Legende)
+  _fixedNote(scale, t) {
+    const f = scale.fixed_costs;
+    if (!f) return "";
+    const lines = [];
+    if (f.eur_per_kwh > 0) {
+      lines.push(esc(t.fixed.added(this._fmt(100 * f.eur_per_kwh, 1), this._fmt(f.eur_per_year, 0),
+        this._fmt(f.annual_heat_kwh, 0), t.fixed.sources[f.heat_source] ?? f.heat_source)));
+    } else if (f.eur_per_year === 0 && !f.missing.length) {
+      lines.push(esc(t.fixed.none));
+    } else if (f.eur_per_year > 0) {
+      lines.push(esc(t.fixed.noHeat));
+    }
+    return lines.length ? `<div>${lines.join("<br>")}</div>` : "";
+  }
+
+  // Fehlende Stammdaten der festen Kosten: immer sichtbar, mit Link in die Einstellungen
+  _fixedMissing(scale, t) {
+    const f = scale.fixed_costs;
+    if (!f?.missing?.length) return "";
+    const entryId = this._hass.states[this._config.entity]?.attributes?.entry_id;
+    return `<div class="muted">${esc(t.fixed.missing(f.missing.map((k) => t.fixed.labels[k] ?? k).join(", ")))} ${settingsLink(entryId, t.settings)}</div>`;
+  }
+
+  _refLabel(r, t) {
+    const parts = [r.source, t.sourceKinds[r.source_kind] ?? r.source_kind, t.fixedCharges[r.fixed_charges]].filter(Boolean);
+    if (r.as_of) parts.push(`${t.asOf} ${this._refDate(r.as_of)}`);
+    return `${t.systems[r.system] ?? r.system}${parts.length ? ` (${parts.join(", ")})` : ""}`;
+  }
+
+  _refDate(v) {
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleDateString(this._locale(), { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+
+  // Hinweis unter dem Kosten-Zeitstrahl, wenn der Vergleich an ist, aber kein Preis-Sensor gefunden wurde
+  _refHint(scale, refs, t) {
+    return scale.references && !refs.length ? `<div class="muted">${esc(t.noRefs)}</div>` : "";
+  }
+
+  // Legende der Vergleichslinien mit letztem Tageswert
+  _refLegend(scale, refs, days, audit, t) {
+    if (!scale.references || !refs.length) return "";
+    const items = refs.map((r) => {
+      const last = [...days].reverse().map((d) => d[audit]?.references?.[r.id]).find((v) => v !== null && v !== undefined);
+      const value = last === undefined ? "–" : `${this._fmt(last, scale.decimals)}${this._unit(scale.unit, t)}`;
+      return `<div><svg width="22" height="8"><line x1="0" x2="22" y1="4" y2="4" stroke="${r.color}" stroke-width="2"
+        stroke-dasharray="${r.dash}"/></svg> ${esc(this._refLabel(r, t))}: ${esc(value)}</div>`;
+    }).join("");
+    return `<div>${esc(t.refsIntro)}${items}</div>`;
   }
 
   _nextMidnight(s) {
@@ -995,6 +1162,12 @@ class AirWaterAuditTimelineCard extends HTMLElement {
         + ` (${t.verdicts[p.verdict] ?? p.verdict ?? "–"})`;
       if (audit === "dhw" && p.cop != null) text += `, ${t.cop} ${this._fmt(p.cop, 1)}`;
       if (audit === "cost" && p.cost_eur != null) text += `, ${t.cost} ${this._fmt(p.cost_eur, 2)} €`;
+      if (audit === "cost" && p.references) {
+        for (const r of sc.references ?? []) {
+          const v = p.references[r.id];
+          if (v != null) text += `; ${t.systems[r.system] ?? r.system} ${this._fmt(v, sc.decimals)}${this._unit(sc.unit, t)}`;
+        }
+      }
       if (audit === "efficiency" && p.cop != null) {
         text += `, ${t.cop} ${this._fmt(p.cop, 1)} = ${this._fmt(p.heat_kwh, 1)} kWh ÷ ${this._fmt(p.electricity_kwh, 0)} kWh`;
         if (p.outdoor_mean != null) text += `, ${this._fmt(p.outdoor_mean, 1)} °C`;
@@ -1007,13 +1180,58 @@ class AirWaterAuditTimelineCard extends HTMLElement {
 
   _eventList(events, x0, t) {
     const kinds = TEXT[(this._hass?.language || "en").startsWith("de") ? "de" : "en"].kinds;
+    // Ändern und Löschen nur für Admins (die WebSocket-Befehle verlangen Admin-Rechte)
+    const tools = (e) => this._hass?.user?.is_admin && e.id
+      ? ` <span class="ev-tools"><button type="button" class="link" data-edit="${esc(e.id)}" title="${esc(t.edit)}">✎</button>`
+        + `<button type="button" class="link" data-del="${esc(e.id)}" title="${esc(t.remove)}">✕</button></span>`
+      : "";
     const items = events.map((e) => `<li><span class="badge">${e.n}</span>${esc(this._fmtTime(e.time))} · `
       + `${esc(kinds[e.kind] ?? e.kind)}${e.note ? ` – ${esc(e.note)}` : ""}`
-      + (x0 !== null && e.t < x0 ? ` <span class="muted">(${t.beforeRange})</span>` : "") + `</li>`).join("");
+      + (x0 !== null && e.t < x0 ? ` <span class="muted">(${t.beforeRange})</span>` : "") + tools(e) + `</li>`).join("");
     return `<div class="events"><h3>${t.events}</h3>${items ? `<ol>${items}</ol>` : `<div class="muted">${t.noEvents}</div>`}</div>`;
   }
 
-  // Nur für Admins: Ereignis anlegen (Subentry-Flow) und Link zur Integrationsseite.
+  _entryId() {
+    return this._hass?.states[this._config.entity]?.attributes?.entry_id;
+  }
+
+  _eventById(id) {
+    return (this._hass?.states[this._config.entity]?.attributes?.events ?? []).find((e) => e.id === id);
+  }
+
+  // Formular füllen: ohne Ereignis „jetzt“, sonst die gespeicherten Werte (lokale Zeit wie eingetragen)
+  _openEventForm(e) {
+    const form = this._admin.querySelector("#form");
+    if (!form) return;
+    const n = new Date();
+    const now = `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}T${pad(n.getHours())}:${pad(n.getMinutes())}`;
+    form.reset();
+    form.id_.value = e?.id ?? "";
+    form.time.value = e?.local_time ? String(e.local_time).slice(0, 16).replace(" ", "T") : now;
+    if (e?.kind) form.kind.value = e.kind;
+    form.note.value = e?.note ?? "";
+    this._admin.querySelector("#formTitle").textContent = e ? this._t().editTitle : this._t().add;
+    form.classList.add("open");
+    this._admin.querySelector("#status").textContent = "";
+    form.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+  }
+
+  async _deleteEvent(e) {
+    if (!e) return;
+    const t = this._t();
+    const kinds = TEXT[(this._hass.language || "en").startsWith("de") ? "de" : "en"].kinds;
+    if (!window.confirm(t.confirmDelete(`${this._fmtTime(e.time)} · ${kinds[e.kind] ?? e.kind}`))) return;
+    const status = this._admin.querySelector("#status");
+    status.textContent = "…";
+    try {
+      await this._hass.callWS({ type: "air_water_heatpump_audit/event/delete", entry_id: this._entryId(), event_id: e.id });
+      status.textContent = t.deleted;
+    } catch (err) {
+      status.textContent = `${t.failed}: ${err?.message ?? err}`;
+    }
+  }
+
+  // Nur für Admins: Ereignis anlegen oder ändern (WebSocket-Befehl der Integration, records.py)
   _renderAdmin(st) {
     const isAdmin = !!this._hass?.user?.is_admin;
     const entryId = st?.attributes?.entry_id;
@@ -1025,9 +1243,11 @@ class AirWaterAuditTimelineCard extends HTMLElement {
     this._admin.innerHTML = `
       <div class="row">
         <button type="button" id="open">${t.add}</button>
-        <a href="/config/integrations/integration/air_water_heatpump_audit">${t.manage}</a>
+        <span class="muted">${esc(t.manageHint)}</span>
       </div>
       <form id="form">
+        <b id="formTitle"></b>
+        <input type="hidden" name="id_">
         <label>${t.time}<input type="datetime-local" name="time" required></label>
         <label>${t.kind}<select name="kind">${Object.entries(kinds).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select></label>
         <label>${t.note}<textarea name="note" rows="2" placeholder="${esc(t.notePlaceholder)}"></textarea></label>
@@ -1036,27 +1256,20 @@ class AirWaterAuditTimelineCard extends HTMLElement {
       <div class="status muted" id="status"></div>`;
     const form = this._admin.querySelector("#form");
     const status = this._admin.querySelector("#status");
-    this._admin.querySelector("#open").addEventListener("click", () => {
-      const n = new Date();
-      form.time.value = `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}T${pad(n.getHours())}:${pad(n.getMinutes())}`;
-      form.classList.add("open");
-      status.textContent = "";
-    });
+    this._admin.querySelector("#open").addEventListener("click", () => this._openEventForm(null));
     this._admin.querySelector("#cancel").addEventListener("click", () => form.classList.remove("open"));
     form.addEventListener("submit", async (ev) => {
       ev.preventDefault();
-      const id = this._hass.states[this._config.entity]?.attributes?.entry_id;
-      const data = { time: form.time.value.replace("T", " ") + ":00", kind: form.kind.value, note: form.note.value.trim() };
+      const event = { time: form.time.value.replace("T", " ") + ":00", kind: form.kind.value, note: form.note.value.trim() };
+      if (form.id_.value) event.id = form.id_.value;
       status.textContent = "…";
       try {
-        const flow = await this._hass.callApi("POST", "config/config_entries/subentries/flow", { handler: [id, "event"] });
-        const res = await this._hass.callApi("POST", `config/config_entries/subentries/flow/${flow.flow_id}`, data);
-        if (res.type !== "create_entry") throw new Error(JSON.stringify(res.errors ?? res.reason ?? res.type));
+        await this._hass.callWS({ type: "air_water_heatpump_audit/event/save", entry_id: this._entryId(), event });
         form.reset();
         form.classList.remove("open");
         status.textContent = t.saved;
       } catch (err) {
-        status.textContent = `${t.failed}: ${err?.body?.message ?? err?.message ?? err}`;
+        status.textContent = `${t.failed}: ${err?.message ?? err}`;
       }
     });
   }

@@ -105,6 +105,14 @@
   "options": {
     "step": {
       "init": {
+        "title": "Settings",
+        "description": "What would you like to change? Events are added, edited and deleted directly in the timeline card.",
+        "menu_options": {
+          "plant": "Plant data",
+          "household": "Household"
+        }
+      },
+      "plant": {
         "title": "Master data",
         "description": "Facts about the system that cannot be measured. Empty fields are allowed: the affected check then shows “not assessable – master data missing”.",
         "sections": {
@@ -163,18 +171,40 @@
             "name": "Cost",
             "description": "Gross prices. The energy price is suggested from the energy dashboard if the heat pump meter is set up there.",
             "data": {
-              "tariff_price": "Heat pump energy price",
-              "tariff_base_fee": "Heat pump meter standing charge",
-              "household_price": "Household energy price",
+              "tariff_price": "Heat pump electricity price",
+              "tariff_price_unit": "Unit of heat pump electricity price",
+              "heat_pump_meter": "Heat pump meter",
+              "tariff_base_fee": "Heat pump tariff standing charge (supplier)",
+              "tariff_base_fee_period": "Standing charge applies",
+              "meter_fee": "Heat pump meter rent (metering fee)",
+              "meter_fee_period": "Meter rent applies",
+              "household_price": "Household electricity price",
+              "household_price_unit": "Unit of household electricity price",
+              "previous_heating_system": "Previous heating",
+              "previous_consumption": "Previous annual consumption",
+              "previous_consumption_unit": "Unit of previous consumption",
               "reference_fuel_price": "Previous fuel price",
-              "reference_efficiency": "Previous heating efficiency"
+              "reference_fuel_price_unit": "Unit of previous fuel price",
+              "reference_efficiency": "Previous heating efficiency",
+              "compare_heating_systems": "Compare heat prices of other heating systems"
             },
             "data_description": {
               "tariff_price": "Price per kWh of heat pump electricity (K1, K2).",
-              "tariff_base_fee": "Only the additional standing charge per year for a separate heat pump meter; leave empty without one.",
-              "household_price": "For comparison: is the separate heat pump tariff worth it (K3)?",
+              "tariff_price_unit": "As stated in the contract, e.g. 25 ct/kWh or 0.25 €/kWh.",
+              "heat_pump_meter": "Separate meter with a heat pump tariff, or heat pump on the household meter. On the household meter there are no additional fixed costs.",
+              "tariff_base_fee": "Fixed amount the electricity supplier charges for the heat pump tariff regardless of consumption; see contract or bill next to the unit price. Empty = not entered (note in the audit), 0 = none.",
+              "tariff_base_fee_period": "As stated in the contract. The audit converts it to a year.",
+              "meter_fee": "Rent for the separate heat pump meter, charged by the meter operator (often the grid operator); on the electricity bill or a separate one. Empty = not entered, 0 = none.",
+              "meter_fee_period": "As stated on the bill. The audit converts it to a year.",
+              "household_price": "For comparison: does the heat pump tariff pay off (K3)? Also gives the comparison line for direct electric heating.",
+              "household_price_unit": "As stated in the contract.",
+              "previous_heating_system": "What was used for heating before; 'None' for a new building. The efficiency below applies to this system.",
+              "previous_consumption": "Annual consumption as on the last bill. Used to spread fixed costs as long as the projection (K2) is not possible.",
+              "previous_consumption_unit": "kWh or MWh for gas, district heating and electricity, litres for heating oil, kg or t for pellets.",
               "reference_fuel_price": "For comparison, e.g. gas: cost per kWh including the share of the standing charge (K1, K2).",
-              "reference_efficiency": "Share of the billed fuel that arrives as heat. Gas condensing boilers reach 0.86 on average in field tests, based on the gross calorific value that gas is billed by."
+              "reference_fuel_price_unit": "As stated on the bill.",
+              "reference_efficiency": "Share of the billed fuel that arrives as heat; applies to the previous heating. Guide values: gas condensing boiler 0.86 (gross), oil boiler 0.91 (net), pellet boiler 0.80, district heating 1.",
+              "compare_heating_systems": "Shows dashed lines for heating oil, natural gas, wood pellets, district heating and direct electric heating in the cost timeline. Prices come from price sensors with the attribute heating_system, e.g. from a price integration or a Scrape sensor (README)."
             }
           },
           "evaluation": {
@@ -191,10 +221,57 @@
             "description": "The recorder only keeps its retention period (default 10 days); InfluxDB goes further back."
           }
         }
+      },
+      "household": {
+        "title": "Household",
+        "description": "People in the household for the hot water demand (W5, W6); currently {count}. Pick a person to edit or delete, or add a new one.",
+        "data": {
+          "person": "Person"
+        }
+      },
+      "person": {
+        "title": "Household member",
+        "description": "For the hot water demand (W5, W6). The audit compares the measured use with what is usual for this household.",
+        "data": {
+          "name": "Name",
+          "birth_year": "Year of birth",
+          "presence": "Lives here",
+          "showers_per_week": "Showers per week",
+          "baths_per_week": "Baths per week",
+          "shower_time": "Usually showers",
+          "delete": "Delete person"
+        },
+        "data_description": {
+          "name": "Only to tell people apart, e.g. first name or “child 1”.",
+          "birth_year": "For typical habits by age if showers and baths are left empty. Small children take baths rather than showers.",
+          "presence": "When the person lives here, e.g. alternating weeks for children who also live with the other parent.",
+          "showers_per_week": "Leave empty for a typical value by age.",
+          "baths_per_week": "Leave empty for a typical value by age.",
+          "shower_time": "For the charging time (W5): an afternoon window does not fit if people shower in the morning.",
+          "delete": "Removes the person from the household."
+        }
+      },
+      "person_presence": {
+        "title": "Presence",
+        "description": "Details of the chosen pattern.",
+        "data": {
+          "weeks_present": "Weeks here in a row",
+          "weeks_absent": "Weeks elsewhere after that",
+          "rotation_start": "Start of a week here",
+          "weekdays": "Days",
+          "every_n_weeks": "Every n-th week",
+          "share_pct": "Share of time here"
+        },
+        "data_description": {
+          "rotation_start": "A day on which a period here begins (may be in the past); the pattern repeats from there. For “certain days” the anchor for “every n-th week”.",
+          "every_n_weeks": "1 = every week, 2 = every other week (e.g. every other weekend).",
+          "share_pct": "If no fixed pattern fits: rough share, e.g. 30 %."
+        }
       }
     },
     "error": {
-      "invalid_capacity_table": "The minimum capacity does not have the expected format. Example: \"35:\" followed by indented \"-7: 3.9\", \"2: 3.5\", \"7: 3.5\"."
+      "invalid_capacity_table": "The minimum capacity does not have the expected format. Example: \"35:\" followed by indented \"-7: 3.9\", \"2: 3.5\", \"7: 3.5\".",
+      "invalid_consumption_unit": "Previous consumption: the unit does not match the previous heating (e.g. litres for gas)."
     }
   },
   "entity": {
@@ -651,17 +728,6 @@
         "hydraulic_separator": "Low loss header"
       }
     },
-    "kind": {
-      "options": {
-        "heating_curve": "Heating curve changed",
-        "valves": "Radiator valves adjusted",
-        "hydraulic_balancing": "Hydraulic balancing",
-        "pump_setting": "Pump setting changed",
-        "dhw_setting": "Hot water setting",
-        "hardware": "Hardware change",
-        "other": "Other"
-      }
-    },
     "interface_profile": {
       "options": {
         "none": "None",
@@ -710,6 +776,43 @@
         "sat": "Saturday",
         "sun": "Sunday"
       }
+    },
+    "heat_pump_meter": {
+      "options": {
+        "separate_meter": "Separate meter with heat pump tariff",
+        "household_meter": "Household meter (no own tariff)"
+      }
+    },
+    "previous_heating_system": {
+      "options": {
+        "natural_gas": "Natural gas",
+        "heating_oil": "Heating oil",
+        "wood_pellets": "Wood pellets",
+        "district_heating": "District heating",
+        "direct_electric": "Direct electric heating",
+        "none": "None (new building)"
+      }
+    },
+    "previous_consumption_unit": {
+      "options": {
+        "kWh": "kWh",
+        "MWh": "MWh",
+        "L": "Litres",
+        "kg": "kg",
+        "t": "Tonnes"
+      }
+    },
+    "fee_period": {
+      "options": {
+        "month": "per month",
+        "year": "per year"
+      }
+    },
+    "price_unit": {
+      "options": {
+        "ct_per_kwh": "ct/kWh",
+        "eur_per_kwh": "€/kWh"
+      }
     }
   },
   "config_subentries": {
@@ -734,127 +837,35 @@
       "abort": {
         "all_audits_added": "All audits are already enabled."
       }
-    },
-    "event": {
-      "entry_type": "Event",
-      "initiate_flow": {
-        "user": "Add event"
-      },
-      "step": {
-        "user": {
-          "title": "Add event",
-          "description": "A change to the system, e.g. heating curve adjusted or hydraulic balancing. The efficiency, flow temperature and capacity audits then only evaluate data after the latest event, so nothing is averaged across a change.",
-          "data": {
-            "time": "Time",
-            "kind": "Type",
-            "note": "Note"
-          },
-          "data_description": {
-            "time": "When the change took effect.",
-            "note": "What exactly was changed, e.g. “parallel shift −1 K”."
+    }
+  },
+  "issues": {
+    "fixed_costs_missing": {
+      "title": "Heat pump fixed costs missing",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Heat pump fixed costs",
+            "description": "The heat price lacks information on the fixed costs of the heat pump: {missing}. Until then the audit calculates without them. Empty means 'not entered', 0 means 'there is none'.",
+            "data": {
+              "heat_pump_meter": "Heat pump meter",
+              "tariff_base_fee": "Heat pump tariff standing charge (supplier)",
+              "tariff_base_fee_period": "Standing charge applies",
+              "meter_fee": "Heat pump meter rent (metering fee)",
+              "meter_fee_period": "Meter rent applies"
+            },
+            "data_description": {
+              "heat_pump_meter": "Separate meter with a heat pump tariff, or heat pump on the household meter. On the household meter there are no additional fixed costs.",
+              "tariff_base_fee": "Fixed amount the electricity supplier charges for the heat pump tariff regardless of consumption; see contract or bill next to the unit price. Empty = not entered (note in the audit), 0 = none.",
+              "tariff_base_fee_period": "As stated in the contract. The audit converts it to a year.",
+              "meter_fee": "Rent for the separate heat pump meter, charged by the meter operator (often the grid operator); on the electricity bill or a separate one. Empty = not entered, 0 = none.",
+              "meter_fee_period": "As stated on the bill. The audit converts it to a year."
+            }
           }
         },
-        "reconfigure": {
-          "title": "Edit event",
-          "description": "A change to the system, e.g. heating curve adjusted or hydraulic balancing. The efficiency, flow temperature and capacity audits then only evaluate data after the latest event, so nothing is averaged across a change.",
-          "data": {
-            "time": "Time",
-            "kind": "Type",
-            "note": "Note"
-          },
-          "data_description": {
-            "time": "When the change took effect.",
-            "note": "What exactly was changed, e.g. “parallel shift −1 K”."
-          }
+        "abort": {
+          "entry_missing": "The entry no longer exists."
         }
-      },
-      "abort": {
-        "reconfigure_successful": "Event saved."
-      }
-    },
-    "person": {
-      "entry_type": "Household member",
-      "initiate_flow": {
-        "user": "Add person"
-      },
-      "step": {
-        "user": {
-          "title": "Household member",
-          "description": "For the hot water demand (W5, W6). The audit compares the measured use with what is usual for this household.",
-          "data": {
-            "name": "Name",
-            "birth_year": "Year of birth",
-            "presence": "Lives here",
-            "showers_per_week": "Showers per week",
-            "baths_per_week": "Baths per week",
-            "shower_time": "Usually showers"
-          },
-          "data_description": {
-            "name": "Only to tell people apart, e.g. first name or “child 1”.",
-            "birth_year": "For typical habits by age if showers and baths are left empty. Small children take baths rather than showers.",
-            "presence": "When the person lives here, e.g. alternating weeks for children who also live with the other parent.",
-            "showers_per_week": "Leave empty for a typical value by age.",
-            "baths_per_week": "Leave empty for a typical value by age.",
-            "shower_time": "For the charging time (W5): an afternoon window does not fit if people shower in the morning."
-          }
-        },
-        "reconfigure": {
-          "title": "Change person",
-          "description": "For the hot water demand (W5, W6).",
-          "data": {
-            "name": "Name",
-            "birth_year": "Year of birth",
-            "presence": "Lives here",
-            "showers_per_week": "Showers per week",
-            "baths_per_week": "Baths per week",
-            "shower_time": "Usually showers"
-          },
-          "data_description": {
-            "name": "Only to tell people apart, e.g. first name or “child 1”.",
-            "birth_year": "For typical habits by age if showers and baths are left empty. Small children take baths rather than showers.",
-            "presence": "When the person lives here, e.g. alternating weeks for children who also live with the other parent.",
-            "showers_per_week": "Leave empty for a typical value by age.",
-            "baths_per_week": "Leave empty for a typical value by age.",
-            "shower_time": "For the charging time (W5): an afternoon window does not fit if people shower in the morning."
-          }
-        },
-        "presence": {
-          "title": "Presence",
-          "description": "Details of the chosen pattern.",
-          "data": {
-            "weeks_present": "Weeks here in a row",
-            "weeks_absent": "Weeks elsewhere after that",
-            "rotation_start": "Start of a week here",
-            "weekdays": "Days",
-            "every_n_weeks": "Every n-th week",
-            "share_pct": "Share of time here"
-          },
-          "data_description": {
-            "rotation_start": "A day on which a period here begins (may be in the past); the pattern repeats from there. For “certain days” the anchor for “every n-th week”.",
-            "every_n_weeks": "1 = every week, 2 = every other week (e.g. every other weekend).",
-            "share_pct": "If no fixed pattern fits: rough share, e.g. 30 %."
-          }
-        },
-        "reconfigure_presence": {
-          "title": "Presence",
-          "description": "Details of the chosen pattern.",
-          "data": {
-            "weeks_present": "Weeks here in a row",
-            "weeks_absent": "Weeks elsewhere after that",
-            "rotation_start": "Start of a week here",
-            "weekdays": "Days",
-            "every_n_weeks": "Every n-th week",
-            "share_pct": "Share of time here"
-          },
-          "data_description": {
-            "rotation_start": "A day on which a period here begins (may be in the past); the pattern repeats from there. For “certain days” the anchor for “every n-th week”.",
-            "every_n_weeks": "1 = every week, 2 = every other week (e.g. every other weekend).",
-            "share_pct": "If no fixed pattern fits: rough share, e.g. 30 %."
-          }
-        }
-      },
-      "abort": {
-        "reconfigure_successful": "Person saved."
       }
     }
   }
