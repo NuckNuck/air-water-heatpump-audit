@@ -18,6 +18,7 @@ from .result import (DERIVED, ELAPSED, FULL_DAYS, early, HINT, INFO, NOT_ASSESSA
 from .series import Interval, Series, clip, intervals_where, total, value_at
 
 PROJECTION_MIN_DAYS = 14  # K2: zwei Wochen, damit kalte und milde Tage dabei sind
+PROJECTION_EARLY_DAYS = early(PROJECTION_MIN_DAYS)  # ab hier vorläufig hochgerechnet (F298, Datenreife 1.9)
 PROJECTION_MIN_SPREAD_K = 4.0  # K2: Spannweite der Tages-Gradtage für die Ausgleichsgerade
 REFERENCE_TOLERANCE = 1.10  # K1: Wärme ist auf etwa ±10 % genau; erst darüber ist die WP sicher teurer
 PRICE_TIMING_TOLERANCE = 1.03  # K4: gezahlter Mittelpreis bis 3 % über dem Zeitmittel ist Zufall der Woche
@@ -261,7 +262,7 @@ def project_year(rows: list[dict], outdoor: Series, tz: str, year_degree_days: f
         g = degree_days(mean)
         if g is not None:
             points.append((g, r))
-    if len(points) < PROJECTION_MIN_DAYS:
+    if len(points) < PROJECTION_EARLY_DAYS:
         return None
     gs = [g for g, _ in points]
     out = {"days": len(points), "degree_days": round(sum(gs), 1)}
@@ -285,16 +286,14 @@ def check_annual_cost(rows: list[dict], outdoor: Series, costs: dict[str, float 
     year_dd = master.get("heating_degree_days")
     if not year_dd:
         return CheckResult(*key, NOT_ASSESSABLE, text="Stammdaten fehlen: Gradtage des Standorts.", origin=SOURCED)
-    if len(rows) < early(PROJECTION_MIN_DAYS):
+    if len(rows) < PROJECTION_EARLY_DAYS:
         return CheckResult(*key, NOT_ASSESSABLE, text=f"{count(len(rows), 'gültiger Tag', 'gültige Tage')}, "
-                           f"vorläufiges Urteil ab {early(PROJECTION_MIN_DAYS):.0f}.", origin=SOURCED, progress=prog)
+                           f"vorläufiges Urteil ab {PROJECTION_EARLY_DAYS:.0f}.", origin=SOURCED, progress=prog)
     year = project_year(rows, outdoor, tz, float(year_dd))
     day_costs = [costs.get(r["day"]) for r in rows]
-    if year is None:
-        # project_year braucht PROJECTION_MIN_DAYS Tage mit Außentemperatur; das Gate oben lässt schon früher durch
-        text = ("Außentemperatur fehlt für die Gradtage." if len(rows) >= PROJECTION_MIN_DAYS else
-                f"{count(len(rows), 'gültiger Tag', 'gültige Tage')}, Hochrechnung ab {PROJECTION_MIN_DAYS} Tagen.")
-        return CheckResult(*key, NOT_ASSESSABLE, text=text, origin=SOURCED, progress=prog)
+    if year is None:  # genug Tage, aber zu wenige mit Außentemperatur
+        return CheckResult(*key, NOT_ASSESSABLE, text="Außentemperatur fehlt für die Gradtage.", origin=SOURCED,
+                           progress=prog)
     if any(c is None for c in day_costs):
         return _missing_price(key)
     mean_price = sum(day_costs) / sum(r["electricity_kwh"] for r in rows)

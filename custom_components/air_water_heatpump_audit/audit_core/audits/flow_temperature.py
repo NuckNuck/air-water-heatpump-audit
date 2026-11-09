@@ -71,7 +71,8 @@ AUDIT = AuditSpec(
     roles=("flow_temp", "return_temp", "flow_rate", "circuit_flow_temp", "circuit_return_temp",
            "circuit_pump_running", "flow_setpoint", "room_temp", "compressor_running", "pump_running", "defrost",
            "dhw_active", "heartbeat",
-           "electricity_meter"),  # nur für die Datenqualität (D8), die an jedem Audit steht
+           "electricity_meter",  # Datenqualität (D8) und Jahresstrom für die Wirkung (1.10)
+           "outdoor_temp", "outdoor_temp_reference"),  # Gradtage der Hochrechnung für die Wirkung
     required_roles=("flow_temp", "compressor_running"),
     master_keys=("hydraulic_separation", "flow_rate_min_lpm", "circuit_flow_max_lpm", "room_temp_target"),
     names={"de": "Vorlauf", "en": "Flow temperature"},
