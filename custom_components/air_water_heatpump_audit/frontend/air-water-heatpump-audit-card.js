@@ -286,7 +286,7 @@ class AirWaterAuditCard extends HTMLElement {
     const loc = this._hass.locale?.language || this._hass.language;
     const f = (v, n = 0) => Number(v).toLocaleString(loc, { minimumFractionDigits: n, maximumFractionDigits: n });
     const pT = d.tariff_ct, pH = d.household_ct, E = d.electricity_kwh, F = d.base_fee_eur ?? 0;
-    const W = 620, H = 210, L = 52, R = 12, T = 10, B = 34;
+    const W = 620, H = 310, L = 62, R = 12, T = 10, B = 40;
     const xMin = pT, xMax = Math.max(pH, d.break_even_household_ct, pT + 4) * 1.25 + 2;
     const yMax = Math.max(E, d.break_even_kwh ?? 0) * 1.8;
     const x = (v) => L + (v - xMin) / (xMax - xMin) * (W - L - R);
@@ -304,7 +304,7 @@ class AirWaterAuditCard extends HTMLElement {
     let ticks = "";
     for (let v = Math.ceil(xMin / xs) * xs; v <= xMax; v += xs) {
       ticks += `<line x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - B}" stroke="var(--divider-color)"/>`
-        + `<text x="${x(v)}" y="${H - B + 13}" text-anchor="middle">${f(v)}</text>`;
+        + `<text x="${x(v)}" y="${H - B + 15}" text-anchor="middle">${f(v)}</text>`;
     }
     for (let v = 0; v <= yMax; v += ys) {
       ticks += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--divider-color)"/>`
@@ -330,8 +330,8 @@ class AirWaterAuditCard extends HTMLElement {
         ${ticks}
         <polyline points="${pts.join(" ")}" fill="none" stroke="${COLORS.ok}" stroke-width="2"/>
         ${guides}${dot}
-        <text x="${(L + W - R) / 2}" y="${H - 4}" text-anchor="middle">${esc(m.x)}</text>
-        <text x="12" y="${(T + H - B) / 2}" text-anchor="middle" transform="rotate(-90 12 ${(T + H - B) / 2})">${esc(m.y)}</text>
+        <text x="${(L + W - R) / 2}" y="${H - 5}" text-anchor="middle">${esc(m.x)}</text>
+        <text x="14" y="${(T + H - B) / 2}" text-anchor="middle" transform="rotate(-90 14 ${(T + H - B) / 2})">${esc(m.y)}</text>
       </svg>
       <div class="mkey"><span class="sw" style="background:${COLORS.ok}"></span>${esc(m.pays)}
         <span class="sw" style="background:${COLORS.hint}"></span>${esc(m.not)}</div></div>`;
@@ -646,7 +646,7 @@ class AirWaterAuditCard extends HTMLElement {
         table.days tr.total td { border-top: 2px solid var(--divider-color); }
         .ready { margin: 6px 0 10px; }
         .meter { margin-top: 8px; } .mtitle { font-weight: 500; margin-bottom: 2px; }
-        .meter svg text { font-size: 10px; fill: var(--secondary-text-color); }
+        .meter svg text { font-size: 12.5px; fill: var(--secondary-text-color); }
         .meter svg text.be { fill: var(--primary-text-color); paint-order: stroke; stroke-width: 3px;
           stroke: var(--card-background-color, #fff); }
         .meter svg text.you { fill: var(--primary-text-color); font-weight: 600; }
