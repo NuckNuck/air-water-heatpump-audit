@@ -454,7 +454,10 @@ entfernen.
 - Sensoren: `sensor.air_water_heatpump_audit_<audit>` (Gesamturteil, Attribute `dq`, `checks`, `readiness`,
   `audit_name`, `color`), `sensor.air_water_heatpump_audit_<id>_<key>` je Prüfung (Zustand = Urteil, Attribute
   `value`, `unit`, `text`, `origin`, `details`, `progress`, `help`, `action`),
-  `sensor.air_water_heatpump_audit_timeline` (Tageswerte, Skalen, zugeschaltete Audits, Ereignisse).
+  `sensor.air_water_heatpump_audit_timeline` (Tageswerte, Skalen, zugeschaltete Audits, Ereignisse),
+  `sensor.air_water_heatpump_audit_cop_365_days` (Arbeitszahl der letzten 365 Tage, Attribute `days`, `first_day`,
+  `last_day`, `heat_kwh`, `electricity_kwh`, `complete`; Spezifikation 4.3).
+- Fortschritt eines Laufs: WebSocket-Abo `air_water_heatpump_audit/progress/subscribe` (Spezifikation 8.1).
 - `prototype/` – Kommandozeilen-Bericht direkt aus InfluxDB:
   `python3 -m prototype.run_audit [START] [ENDE] [--site prototype/site.json]`; Vorlage
   `prototype/site.example.json`, Verbindung über `HEATPUMP_AUDIT_INFLUX_URL` und `HEATPUMP_AUDIT_CREDENTIALS`.

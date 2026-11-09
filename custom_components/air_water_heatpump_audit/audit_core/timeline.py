@@ -6,6 +6,7 @@ hängen nicht von Ereignissen ab; Ereignisse zeichnet die Karte als senkrechte L
 
 from __future__ import annotations
 
+from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
 from . import days
@@ -75,3 +76,27 @@ def merge(stored: list[dict], fresh: list[dict], keep_days: int = KEEP_DAYS) -> 
             continue
         by_day[d["day"]] = d
     return trim_leading_empty([by_day[k] for k in sorted(by_day)])[-keep_days:]
+
+
+ROLLING_DAYS = 365
+
+
+def rolling_cop(days_: list[dict], today: str, span: int = ROLLING_DAYS) -> dict | None:
+    """Arbeitszahl der letzten `span` vollen Tage vor `today` (ISO-Datum, Ortszeit) aus den Tagen des Zeitstrahls
+    (Spezifikation 4.3): Σ korrigierte Wärme ÷ Σ Strom über die Effizienz-Punkte mit Strom > 0. None ohne solchen Tag."""
+    end = date.fromisoformat(today)
+    first_allowed = (end - timedelta(days=span)).isoformat()
+    used = []
+    for d in days_:
+        point = d.get("efficiency")
+        if not (first_allowed <= d["day"] < today) or not isinstance(point, dict):
+            continue
+        if (point.get("electricity_kwh") or 0) > 0 and point.get("heat_kwh") is not None:
+            used.append((d["day"], point["heat_kwh"], point["electricity_kwh"]))
+    if not used:
+        return None
+    used.sort()
+    heat, electricity = sum(u[1] for u in used), sum(u[2] for u in used)
+    return {"cop": round(heat / electricity, 2), "days": len(used), "first_day": used[0][0], "last_day": used[-1][0],
+            "heat_kwh": round(heat, 1), "electricity_kwh": round(electricity, 1),
+            "complete": used[0][0] == first_allowed}

@@ -582,6 +582,9 @@
       "timeline": {
         "name": "Timeline"
       },
+      "cop_365_days": {
+        "name": "COP last 365 days"
+      },
       "dhw": {
         "name": "Audit 4 hot water",
         "state": {

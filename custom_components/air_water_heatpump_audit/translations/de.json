@@ -582,6 +582,9 @@
       "timeline": {
         "name": "Zeitstrahl"
       },
+      "cop_365_days": {
+        "name": "Arbeitszahl der letzten 365 Tage"
+      },
       "dhw": {
         "name": "Audit 4 Warmwasser",
         "state": {
