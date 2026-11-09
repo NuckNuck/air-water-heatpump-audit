@@ -665,6 +665,22 @@ leer werden (Issue #31).
   Ergebnisse (z. B. nach dem Start), steht der Hinweis an ihrer Stelle. Der Balken schätzt aus den Schritten und der
   Dauer des letzten Laufs und erreicht 100 % erst am Ende des Laufs.
 
+### 8.2 Rohdaten zwischen Läufen behalten
+
+Ein Lauf lädt die Rohdaten des ganzen Fensters (Standard 30 Tage); das ist der größte Teil seiner Dauer (Issue #35).
+
+- **Nachladen:** Die Integration behält die Zeitreihen des letzten Laufs im Speicher (nicht auf der Platte). Der
+  nächste Lauf lädt nur den Zeitraum ab 5 Minuten vor dem Ende des letzten Laufs nach; dort ersetzen die neuen Werte
+  die alten. Werte vor dem Fensterbeginn fallen heraus, je Rolle bleibt der letzte Wert davor erhalten (er gilt zu
+  Fensterbeginn, wie beim vollen Laden).
+- **Ergebnis:** Ein Lauf mit nachgeladenen Daten rechnet dieselben Ergebnisse wie ein Lauf, der das Fenster ganz lädt,
+  sofern die Quelle zurückliegende Werte nicht nachträglich ändert.
+- **Ganz geladen** wird beim ersten Lauf nach Start oder Neuladen des Eintrags, wenn sich die gelesenen Rollen, die
+  Preis-Sensoren (7.3) oder die genutzte Datenquelle ändern, nach einem Fehler beim Laden, wenn der letzte Lauf
+  länger als das Fenster zurückliegt, und spätestens 24 Stunden nach dem letzten vollen Laden (falls die Quelle
+  ältere Werte nachträglich ergänzt hat).
+- Die Langzeitstatistik (1.11) wird weiter bei jedem Lauf gelesen; sie ist schnell.
+
 ---
 
 ## 9. Quellen
