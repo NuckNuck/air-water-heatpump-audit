@@ -237,3 +237,14 @@ mit Hinweis „Empfohlen: zeigt, wie belastbar die anderen Urteile sind“ (F150
   Gesamtlauf“ wahr.
 - Die Karte sortiert die Ersparnisse über alle gezeigten Audits selbst (`_priorities`); im Bericht gibt es dafür kein
   eigenes Feld.
+
+## Ereignisse als Markierung, Prüfungen mit Rollen-Voraussetzung (11.11.2026, Version 0.21.0)
+
+- **Ereignisse (#39):** `Context` setzt `section_start` und `dhw_section_start` immer auf den Fensterbeginn und merkt
+  nur noch das letzte Ereignis (`event`, `dhw_event`). `AuditSpec.section` bestimmt damit nur, welche Ereignisse ein
+  Audit betreffen. `attach_before()` und die zweite Rechnung je Ereignis entfallen; Veränderungen zeigt der Zeitstrahl.
+  Die Namen `section_start` und `*_window` bleiben, damit die Prüfungen unverändert bleiben.
+- **Rollen-Voraussetzung (#40):** `CheckSpec.needs_role` – ohne diese Rolle gibt es die Prüfung nicht. `run_audits()`
+  bekommt `configured_roles` (None = alle), `runner.applies()` filtert; `sensor.py` legt den Sensor nicht an und
+  entfernt einen früher angelegten. Erste Nutzerin: K4 mit `price_signal`.
+

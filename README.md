@@ -133,7 +133,7 @@ Stromzähler der Wärmepumpe im Energie-Dashboard, wird dessen Preis vorgeschlag
 | K1 Wärmepreis | Was eine Kilowattstunde Wärme in der letzten Woche gekostet hat, im Vergleich zum früheren Brennstoff (z. B. Gas). Grün bis 10 % teurer (Messgenauigkeit). |
 | K2 Kosten pro Jahr | Strom und Kosten aufs Jahr hochgerechnet, mit der Ersparnis gegenüber dem früheren Brennstoff (nur Info). Mit der Wohnfläche dazu der Verbrauch je m² und die ungefähre Klasse im Energieausweis, mit den Personen die Kosten je Person. Braucht die Gradtage des Wohnorts und 14 Tage. |
 | K3 Wärmepumpentarif | Ob sich ein eigener Wärmepumpentarif mit zweitem Zähler gegenüber Haushaltsstrom lohnt, und ab welchem Haushaltsstrompreis, Preisabstand zum Haushaltsstrom bzw. Jahresverbrauch er sich lohnen würde (mit Diagramm). Hinweis auf das reduzierte Netzentgelt nach § 14a EnWG, das an den eigenen Zähler gebunden ist. |
-| K4 Strompreis dynamisch | Nur bei dynamischem Tarif: ob die Wärmepumpe bevorzugt in teuren Stunden läuft. |
+| K4 Strompreis dynamisch | Ob die Wärmepumpe bevorzugt in teuren Stunden läuft. Gibt es nur, wenn ein dynamischer Strompreis zugeordnet ist. |
 | K5 Sperrzeiten | Nur mit Sperrsignal des Netzbetreibers: wie oft und wie lange gesperrt oder gedimmt wird; gelb, wenn währenddessen oder danach der Heizstab nachheizt. |
 
 #### Vergleich mit anderen Heizsystemen
@@ -193,11 +193,10 @@ man mit der Maus über den Balken fährt oder auf das **?** daneben tippt.
 ### Ereignisse: „Ich habe etwas verstellt“
 
 Wenn an der Anlage etwas geändert wird – Heizkurve, Pumpenstufe, Heizkörperventile, hydraulischer Abgleich –, trägt
-man das als **Ereignis** ein. Alle Audits außer der Datenbasis rechnen dann ab diesem Zeitpunkt neu, damit
-nie „vorher“ und „nachher“ vermischt werden. So sieht man schwarz auf weiß, ob die Änderung etwas gebracht hat.
-Damit nach einer Änderung nicht tagelang alles grau ist, urteilen die Prüfungen schon mit wenigen Daten vorläufig.
-Solange ein Urteil vorläufig oder noch offen ist, steht darunter das Urteil von **davor**, z. B. „davor: grün 0,31“;
-beim Überfahren steht der Zeitraum.
+man das als **Ereignis** ein. Das Ereignis ist eine Markierung: Die Audits rechnen danach genauso weiter wie vorher,
+nichts wird zurückgesetzt (seit 0.21.0). Im **Zeitstrahl** steht es als senkrechte Linie; dort sieht man, ob sich die
+Tageswerte seitdem verbessern oder verschlechtern. Springt eine Prüfung in den Tagen danach um, lohnt der Blick, ob
+es mit dem Ereignis zusammenhängt. Über der Tabelle steht das letzte Ereignis.
 
 ### Zeitstrahl
 

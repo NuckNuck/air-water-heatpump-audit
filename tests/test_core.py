@@ -700,7 +700,7 @@ class SectionTest(unittest.TestCase):
         self.assertEqual(section_start(events, 100, 400), (150.0, events[1]))
         self.assertEqual(section_start(events[:1], 100, 400), (100, None))
 
-    def test_audits_after_event_ignore_cycles_before(self):
+    def test_audits_keep_cycles_before_event(self):
         from audit_core.runner import run_audits
         s = {"compressor_running": onoff(*[i * 20 * M for i in range(1, 24)]),
              "heartbeat": [(t, t + 100) for t in range(0, 8 * H + 1, 60)]}  # lückenlos, keine Neustarts
@@ -709,9 +709,11 @@ class SectionTest(unittest.TestCase):
                            events=[{"time": 6 * H, "kind": "heating_curve", "note": ""}])
         starts = lambda rep: next(r for r in rep["audits"]["capacity"]["checks"] if r["check_id"] == "C2")["value"]
         self.assertGreater(starts(before), 0)
-        self.assertEqual(after["section"]["start"], 6 * H)
+        # #39: Das Ereignis wird gemerkt, aber die Zyklen davor zählen weiter
+        self.assertEqual(after["section"]["event"]["time"], 6 * H)
         self.assertEqual(after["period"]["start"], 0)
-        self.assertLess(len(after["cycles"]), len(before["cycles"]))
+        self.assertEqual(len(after["cycles"]), len(before["cycles"]))
+        self.assertEqual(starts(after), starts(before))
 
 
 from audit_core import timeline as tl
@@ -1104,9 +1106,10 @@ class ReadinessTest(unittest.TestCase):
         ready = rep["readiness"]
         self.assertEqual(set(ready), {"data_basis", "efficiency", "flow_temperature", "capacity", "dhw", "cost"})
         self.assertEqual(ready["data_basis"]["start"], 0)
-        self.assertEqual(ready["capacity"]["start"], 2 * H)
+        # Ereignisse setzen nichts zurück (#39): Datenreife zählt ab Fensterbeginn
+        self.assertEqual(ready["capacity"]["start"], 0)
         c1 = next(c for c in ready["capacity"]["checks"] if c["check_id"] == "C1")
-        self.assertEqual((c1["reached"], c1["eta"]), (False, 2 * H + 14 * 24 * H))
+        self.assertEqual((c1["reached"], c1["eta"]), (False, 14 * 24 * H))
         # Ohne Vor-/Rücklauf haben T1/T3–T5 keine Mindestmenge (Eingang fehlt), ohne Raumfühler auch T6 nicht
         self.assertFalse({"T1", "T3", "T4", "T5", "T6"} & {c["check_id"] for c in ready["flow_temperature"]["checks"]})
 
@@ -1138,19 +1141,29 @@ class RegistryTest(unittest.TestCase):
         rep = __import__("json").loads(__import__("json").dumps(rep, sort_keys=True, default=str))
         self.assertEqual(rep["audits"]["cost"]["checks"], self.run_with(["cost"])["audits"]["cost"]["checks"])
 
-    def test_provisional_verdict_with_state_before_event(self):
-        """F239: Nach dem Ereignis urteilt E3 schon vorläufig; darunter steht das Urteil aus dem Abschnitt davor."""
-        e3 = next(c for c in self.run_with(["efficiency"])["audits"]["efficiency"]["checks"] if c["check_id"] == "E3")
-        self.assertTrue(e3["provisional"])
-        self.assertEqual(e3["verdict"], OK)
-        self.assertEqual((e3["before"]["verdict"], e3["before"]["end"]), (OK, self.syn.EVENTS[0]["time"]))
-        self.assertEqual(e3["before"]["start"], self.syn.START)
-        # ohne Ereignis kein Vergleich
+    def test_event_does_not_change_verdicts(self):
+        """#39: Ein Ereignis ändert an den Urteilen nichts; nur das Ereignis selbst steht im Bericht."""
         from audit_core.runner import run_audits
         rep = run_audits(self.series, self.syn.START, self.syn.END, recorder_keep_days=10, long_term_days=None,
                          heater_kw=self.syn.HEATER_KW, master=self.syn.MASTER, events=[], controls={},
-                         tz="Europe/Berlin", audits=["efficiency"])
-        self.assertTrue(all(c["before"] is None for c in rep["audits"]["efficiency"]["checks"]))
+                         tz="Europe/Berlin")
+        rep = __import__("json").loads(__import__("json").dumps(rep, sort_keys=True, default=str))
+        with_event = self.run_with()
+        for audit_id, audit in rep["audits"].items():
+            self.assertEqual(with_event["audits"][audit_id]["checks"], audit["checks"], audit_id)
+        self.assertIsNotNone(with_event["audits"]["efficiency"]["event"])
+        self.assertTrue(all(c["before"] is None for a in with_event["audits"].values() for c in a["checks"]))
+
+    def test_check_needing_a_role_exists_only_with_it(self):
+        """#40: K4 gibt es nur mit zugeordnetem dynamischem Strompreis."""
+        from audit_core.runner import run_audits
+        ids = lambda roles: [c["check_id"] for c in run_audits(
+            self.series, self.syn.START, self.syn.END, recorder_keep_days=10, long_term_days=None,
+            heater_kw=self.syn.HEATER_KW, master=self.syn.MASTER, events=[], controls={}, tz="Europe/Berlin",
+            audits=["cost"], configured_roles=roles)["audits"]["cost"]["checks"]]
+        self.assertNotIn("K4", ids({"electricity_meter"}))
+        self.assertIn("K4", ids({"electricity_meter", "price_signal"}))
+        self.assertIn("K4", ids(None))
 
     def test_early_and_mark_provisional(self):
         from audit_core.result import CheckResult, early, mark_provisional, progress
@@ -1176,13 +1189,14 @@ class RegistryTest(unittest.TestCase):
                              report["section"]["event"])
         self.assertEqual(report, __import__("json").loads(golden.read_text(encoding="utf-8")))
 
-    def test_dhw_section_ignores_heating_events(self):
-        """Eine verstellte Heizkreispumpe beginnt den Abschnitt der Audits 1–3 neu, nicht den des Warmwassers."""
+    def test_events_are_markers_only(self):
+        """#39: Ereignisse setzen keinen Abschnitt; gemerkt wird je Audit das letzte betreffende Ereignis."""
         from audit_core.context import Context
         events = [{"time": 5 * H, "kind": "pump_setting"}, {"time": 2 * H, "kind": "dhw_setting"}]
         ctx = Context({}, 0, 10 * H, recorder_keep_days=None, long_term_days=None, heater_kw={}, master={},
                       events=events, controls={}, tz="UTC")
-        self.assertEqual((ctx.section_start, ctx.dhw_section_start), (5 * H, 2 * H))
+        self.assertEqual((ctx.section_start, ctx.dhw_section_start), (0, 0))
+        self.assertEqual(ctx.event_of("section")["kind"], "pump_setting")
         self.assertEqual(ctx.event_of("dhw")["kind"], "dhw_setting")
         self.assertIsNone(ctx.event_of("window"))
 

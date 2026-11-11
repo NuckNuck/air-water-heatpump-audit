@@ -128,13 +128,19 @@ Ein Modell-Profil in `profiles.py` kann Datenblattwerte vorschlagen; der Besitze
 
 Der Besitzer trägt Änderungen an der Anlage in der Zeitstrahl-Karte ein, ändert und löscht sie dort (gespeichert als
 Liste `events` in den Optionen, je Eintrag mit `id`): Zeitpunkt, Art (`heating_curve`, `valves`,
-`hydraulic_balancing`, `pump_setting`, `dhw_setting`, `hardware`, `other`) und Notiz. Ereignisse teilen die Zeit in
-Abschnitte; Audits mit Mehrtageswerten mitteln nie über einen Trenner hinweg.
+`hydraulic_balancing`, `pump_setting`, `dhw_setting`, `hardware`, `other`) und Notiz.
 
-- **Audit 0** prüft die Daten und nutzt das ganze Fenster.
-- **Audits 1–5** rechnen ab dem letzten Ereignis im Fenster (`section_start`). Jede Ereignisart setzt sie zurück.
-- **Ausnahmen:** D4 und T2 (Fühlerabgleich) nutzen das ganze Fenster, denn Ereignisse ändern die Anlage, nicht die
-  Fühler. Der Zeitstrahl speichert Tageswerte über das ganze Fenster; Tage vor dem ersten Messwert entfallen.
+**Ereignisse sind Markierungen, keine Trenner (seit 0.21.0, #39).** Alle Audits rechnen über ihren normalen Zeitraum
+weiter, als gäbe es das Ereignis nicht; `section_start` und `dhw_section_start` sind gleich dem Fensterbeginn. Grund:
+Ein Neubeginn ab dem Ereignis ließ die Prüfungen sofort auf „nicht bewertbar“ oder „vorläufig“ fallen, obwohl sich an
+den Daten nichts geändert hatte. Ob eine Änderung wirkt, zeigt der Zeitstrahl: Er trägt Tageswerte und die Ereignisse
+als Linien; Tage mit Ereignis sind als gemischt gekennzeichnet. Springt eine Prüfung später um, prüft der Besitzer, ob
+es mit dem Ereignis zusammenhängt.
+
+- Je Audit steht im Bericht das letzte betreffende Ereignis (`audits.<id>.event`): Audit 0 keines, Audit Warmwasser
+  nur Warmwasser-Ereignisse (`dhw_setting`), die übrigen jedes. Die Karte zeigt es als „Letztes Ereignis …“.
+- Der Vorher-Vergleich (`before`, bis 0.20.0) entfällt; das Feld bleibt im Bericht und ist immer leer.
+- Der Zeitstrahl speichert Tageswerte über das ganze Fenster; Tage vor dem ersten Messwert entfallen.
 - Kein aktives Nachfragen: Die Integration fordert keine Ereignisse an.
 
 ### 1.6 Geltungsbereich: Luft-Wasser-Wärmepumpen
@@ -188,7 +194,7 @@ trägt ein Ereignis ein. Ist der Vorschlag erreicht, zeigt sie „✓ eingestell
 
 Jede Prüfung meldet, wie viel ihr noch fehlt (`progress`: vorhanden, nötig, Einheit, Zählweise `full_days`,
 `elapsed` oder `rate`). Daraus schätzt `audit_core/readiness.py` je Audit den Tag, an dem alle Prüfungen bewertbar
-sind (Hochrechnung, Audit 0 ab Fensterbeginn, Audits 1–5 ab dem letzten Ereignis). Fällt ein Tag durch, rückt der
+sind (Hochrechnung ab Fensterbeginn; Ereignisse setzen sie nicht zurück, 1.5). Fällt ein Tag durch, rückt der
 Termin nach hinten.
 
 In der Tabelle füllt sich der Marker einer `not_assessable`-Prüfung mit `progress` von links in der Farbe von
@@ -201,12 +207,10 @@ aus 3 Zyklen → 1 h aus 1 Zyklus. Zeitspannen in Stunden brauchen mindestens 24
 T2 (Fühler-Offsets) behalten ihre eigene Untergrenze, denn mit ihnen rechnen andere Prüfungen; W3 urteilt erst nach
 einer vollen Woche, sonst fehlt die wöchentliche Aufheizung womöglich nur zufällig. Bis `progress` die volle Menge
 erreicht, trägt das Urteil `provisional`; die Karte zeigt den Marker blasser mit „vorläufig · x von y …“. Die
-Datenreife bezieht sich weiter auf die volle Mindestmenge. Gemittelt wird nur ab dem Ereignis (1.5).
+Datenreife bezieht sich weiter auf die volle Mindestmenge.
 
-**Stand vor dem Ereignis:** Ist eine Prüfung vorläufig oder `not_assessable` und hat ihr Audit ein Ereignis, rechnet
-der Runner dasselbe Audit für den Abschnitt davor (Fenster bis zum Ereignis) und hängt das Urteil als `before` an
-(Urteil, Wert, Text, Zeitraum, `provisional`). War dieser Abschnitt kürzer als 1 h oder dort nur vorläufig bewertet,
-sucht er bis zu drei Abschnitte zurück und nimmt das erste belastbare Urteil, sonst das vorläufige.
+**Stand vor dem Ereignis:** bis 0.20.0 hing der Runner an vorläufige Urteile das Urteil vor dem Ereignis (`before`).
+Seit 0.21.0 rechnen Ereignisse nicht mehr neu (1.5), der Vergleich entfällt.
 
 ---
 
@@ -541,7 +545,7 @@ Ziel: Den gemessenen Strom in Euro umrechnen: Was kostet eine Kilowattstunde Wä
 | K1 | `heat_price` | Wärmepreis der letzten 7 gültigen Tage in ct/kWh, mit festen Kosten je kWh (7.1) | 7 gültige Tage; Preis | `ok` ≤ Vergleichspreis × 1,10 · `hint` darüber · `info` ohne Vergleichspreis | `derived`: 10 % ≈ Messunsicherheit der Wärme; Nutzungsgrad Gas-Brennwert 0,86 auf Hs (DBU-BW). Wochenwert, im Winter höher als im Jahresmittel |
 | K2 | `annual_cost` | Strom, Kosten und Wärme im Jahr, Ersparnis gegen den Vergleich | 14 gültige Tage, vorläufig ab 5 (1.9); `heating_degree_days` | `info` (Hochrechnung) | `sourced`: Gradtagzahl G20/15 (DWD-GT); Referenz Potsdam 3.666,8 Kd. Mindestens 14 Tage `derived`. Mit `living_area_m2` dazu Wärme und Strom je m² und die Klasse des Energieausweises nach Endenergie (GEG Anlage 10: A+ < 30, A < 50, B < 75, C < 100, D < 130, E < 160, F < 200, G < 250, H darüber; Strom ÷ (1,2 × Wohnfläche) nach GEG § 82 Abs. 2); mit Personen (6.6) die Kosten je Person |
 | K3 | `tariff_benefit` | Ersparnis des eigenen Wärmepumpentarifs: (`household_price` − `tariff_price`) × Jahresstrom aus K2 − feste Kosten des eigenen Zählers; dazu die Grenzen, ab denen der eigene Zähler sich lohnt (7.2.1) | wie K2; beide Preise; kein `price_signal`; `info` am Haushaltszähler | `ok` ≥ 0 · `hint` < 0 | `physical` (Rechnung) |
-| K4 | `price_timing` | gezahlter Mittelpreis gegen das Zeitmittel von `price_signal` | 7 Tage; Rolle `price_signal` | `ok` ≤ +3 % · `hint` darüber | `derived`: 3 % eigene Festlegung (Zufall einer Woche) |
+| K4 | `price_timing` | gezahlter Mittelpreis gegen das Zeitmittel von `price_signal`; gibt es nur mit dieser Rolle (`CheckSpec.needs_role`, #40) | 7 Tage; Rolle `price_signal` | `ok` ≤ +3 % · `hint` darüber | `derived`: 3 % eigene Festlegung (Zufall einer Woche) |
 | K5 | `grid_lock` | Sperren pro Tag, Dauer, längste Sperre; Heizstab-Stunden während und bis 2 h nach einer Sperre | 7 Tage; Rolle `grid_lock` | `ok` · `hint`, wenn der Heizstab dabei läuft. Anzahl und Dauer nur im Text | `derived`; seit 2024 keine feste Höchstdauer, nur Mindestleistung 4,2 kW (BK6-22-300 Anl. 1 Ziff. 4.5.1; präventiv höchstens 2 h täglich bis Ende 2028, Ziff. 10.5). Die frühere Tarifregel „3 × 2 h“ ist ohne Primärquelle und wird nicht verwendet |
 
 #### 7.2.1 K3: Ab wann lohnt sich der eigene Zähler?

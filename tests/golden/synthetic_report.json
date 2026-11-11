@@ -3,34 +3,34 @@
   "capacity": {
    "checks": [
     {
-     "action": null,
-     "before": {
-      "end": 1768118400.0,
-      "event": null,
-      "provisional": true,
-      "start": 1767567600.0,
-      "text": "150 Starts in 153,0 h → Obergrenze 5.882 Starts/Jahr (WPQS: ⅓ ≤ 2.000, 90 % < 5.500).",
-      "unit": "1/a",
-      "value": 5882,
-      "verdict": "hint"
+     "action": {
+      "steps": [
+       "Zuerst den hydraulischen Abgleich machen lassen; er ändert, wie viel Wärme die Heizkörper abnehmen, und damit das Takten.",
+       "Danach mit dem Fachbetrieb die Regelung durchgehen: Schaltdifferenz (Hysterese) größer, Mindestlaufzeit und Sperrzeit nach dem Abschalten, Vorlauf nicht unnötig niedrig.",
+       "Volumenstrom und Puffer prüfen lassen: Ein zu kleiner Wasserinhalt lässt die Wärmepumpe schnell abschalten."
+      ],
+      "target": "unter 5.500 Starts im Jahr (heute 5.925 1/a)",
+      "text": "Die Wärmepumpe startet sehr oft.",
+      "who": "installer"
      },
+     "before": null,
      "check_id": "C1",
      "details": {},
      "key": "starts_per_year",
      "origin": "sourced",
      "progress": {
       "basis": "elapsed",
-      "have": 87.0,
+      "have": 240.0,
       "lag_h": 0.0,
       "need": 336,
-      "since": 1768118400.0,
+      "since": 1767567600.0,
       "unit": "hours"
      },
-     "provisional": false,
-     "text": "86 Starts in 87,0 h → Obergrenze 5.931 Starts/Jahr (WPQS: ⅓ ≤ 2.000, 90 % < 5.500). Vorläufiges Urteil ab 112 h, belastbar ab 14 Tagen.",
+     "provisional": true,
+     "text": "237 Starts in 240,0 h → Obergrenze 5.925 Starts/Jahr (WPQS: ⅓ ≤ 2.000, 90 % < 5.500).",
      "unit": "1/a",
-     "value": 5931,
-     "verdict": "not_assessable"
+     "value": 5925,
+     "verdict": "hint"
     },
     {
      "action": null,
@@ -41,10 +41,10 @@
      "origin": "sourced",
      "progress": {
       "basis": "elapsed",
-      "have": 87.0,
+      "have": 240.0,
       "lag_h": 0.0,
       "need": 1,
-      "since": 1768118400.0,
+      "since": 1767567600.0,
       "unit": "hours"
      },
      "provisional": false,
@@ -59,6 +59,150 @@
      "check_id": "C3",
      "details": {
       "durations_min": [
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       100.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       100.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       40.0,
+       50.0,
        50.0,
        50.0,
        50.0,
@@ -143,7 +287,7 @@
        50.0,
        50.0
       ],
-      "heating_cycles": 83,
+      "heating_cycles": 227,
       "very_short": 0,
       "very_short_days": []
      },
@@ -151,14 +295,14 @@
      "origin": "descriptive",
      "progress": {
       "basis": "rate",
-      "have": 83,
+      "have": 227,
       "lag_h": 0.0,
       "need": 20,
-      "since": 1768118400.0,
+      "since": 1767567600.0,
       "unit": "cycles"
      },
      "provisional": false,
-     "text": "0 von 83 Heizzyklen kürzer als 10 min, 0 kürzer als 3 min.",
+     "text": "0 von 227 Heizzyklen kürzer als 10 min, 0 kürzer als 3 min.",
      "unit": "%",
      "value": 0.0,
      "verdict": "ok"
@@ -169,6 +313,69 @@
      "check_id": "C4",
      "details": {
       "days": [
+       {
+        "day": "2026-01-05",
+        "flow_c": 36.4,
+        "heat_kwh": 74.3,
+        "load_kw": 3.1,
+        "min_capacity_kw": 3.46,
+        "outdoor_c": 2.8,
+        "ratio": 0.9
+       },
+       {
+        "day": "2026-01-06",
+        "flow_c": 36.4,
+        "heat_kwh": 74.3,
+        "load_kw": 3.1,
+        "min_capacity_kw": 3.46,
+        "outdoor_c": 2.8,
+        "ratio": 0.9
+       },
+       {
+        "day": "2026-01-07",
+        "flow_c": 36.4,
+        "heat_kwh": 74.3,
+        "load_kw": 3.1,
+        "min_capacity_kw": 3.46,
+        "outdoor_c": 2.8,
+        "ratio": 0.9
+       },
+       {
+        "day": "2026-01-08",
+        "flow_c": 36.4,
+        "heat_kwh": 74.3,
+        "load_kw": 3.1,
+        "min_capacity_kw": 3.46,
+        "outdoor_c": 2.8,
+        "ratio": 0.9
+       },
+       {
+        "day": "2026-01-09",
+        "flow_c": 36.4,
+        "heat_kwh": 72.7,
+        "load_kw": 3.03,
+        "min_capacity_kw": 3.46,
+        "outdoor_c": 2.8,
+        "ratio": 0.88
+       },
+       {
+        "day": "2026-01-10",
+        "flow_c": 36.4,
+        "heat_kwh": 74.3,
+        "load_kw": 3.1,
+        "min_capacity_kw": 3.46,
+        "outdoor_c": 2.8,
+        "ratio": 0.9
+       },
+       {
+        "day": "2026-01-11",
+        "flow_c": 36.4,
+        "heat_kwh": 86.8,
+        "load_kw": 3.62,
+        "min_capacity_kw": 3.46,
+        "outdoor_c": 2.8,
+        "ratio": 1.05
+       },
        {
         "day": "2026-01-12",
         "flow_c": 36.4,
@@ -202,10 +409,10 @@
      "origin": "physical",
      "progress": {
       "basis": "full_days",
-      "have": 3,
+      "have": 10,
       "lag_h": 0.0,
       "need": 1,
-      "since": 1768118400.0,
+      "since": 1767567600.0,
       "unit": "days"
      },
      "provisional": false,
@@ -216,39 +423,30 @@
     },
     {
      "action": null,
-     "before": {
-      "end": 1768118400.0,
-      "event": null,
-      "provisional": true,
-      "start": 1767567600.0,
-      "text": "Heizstab ≈ 0,2 kWh von 137 kWh Zählerstrom.",
-      "unit": "%",
-      "value": 0.18,
-      "verdict": "ok"
-     },
+     "before": null,
      "check_id": "C5",
      "details": {
-      "heater_kwh": 0.0,
+      "heater_kwh": 0.25,
       "on_hours": {
        "booster_heater": 0.0,
        "booster_heater_2": 0.0,
-       "immersion_heater": 0.0
+       "immersion_heater": 0.08333333333333333
       }
      },
      "key": "backup_heater_share",
      "origin": "derived",
      "progress": {
       "basis": "elapsed",
-      "have": 87.0,
+      "have": 240.0,
       "lag_h": 0.0,
       "need": 168,
-      "since": 1768118400.0,
+      "since": 1767567600.0,
       "unit": "hours"
      },
-     "provisional": true,
-     "text": "Heizstab ≈ 0,0 kWh von 96 kWh Zählerstrom.",
+     "provisional": false,
+     "text": "Heizstab ≈ 0,2 kWh von 233 kWh Zählerstrom.",
      "unit": "%",
-     "value": 0.0,
+     "value": 0.11,
      "verdict": "ok"
     },
     {
@@ -257,6 +455,210 @@
      "check_id": "C6",
      "details": {
       "events": [
+       [
+        1767568800.0,
+        1767568920.0
+       ],
+       [
+        1767579600.0,
+        1767579720.0
+       ],
+       [
+        1767590400.0,
+        1767590520.0
+       ],
+       [
+        1767601200.0,
+        1767601320.0
+       ],
+       [
+        1767612000.0,
+        1767612120.0
+       ],
+       [
+        1767622800.0,
+        1767622920.0
+       ],
+       [
+        1767633600.0,
+        1767633720.0
+       ],
+       [
+        1767644400.0,
+        1767644520.0
+       ],
+       [
+        1767655200.0,
+        1767655320.0
+       ],
+       [
+        1767666000.0,
+        1767666120.0
+       ],
+       [
+        1767676800.0,
+        1767676920.0
+       ],
+       [
+        1767687600.0,
+        1767687720.0
+       ],
+       [
+        1767698400.0,
+        1767698520.0
+       ],
+       [
+        1767709200.0,
+        1767709320.0
+       ],
+       [
+        1767720000.0,
+        1767720120.0
+       ],
+       [
+        1767730800.0,
+        1767730920.0
+       ],
+       [
+        1767741600.0,
+        1767741720.0
+       ],
+       [
+        1767752400.0,
+        1767752520.0
+       ],
+       [
+        1767763200.0,
+        1767763320.0
+       ],
+       [
+        1767774000.0,
+        1767774120.0
+       ],
+       [
+        1767784800.0,
+        1767784920.0
+       ],
+       [
+        1767795600.0,
+        1767795720.0
+       ],
+       [
+        1767806400.0,
+        1767806520.0
+       ],
+       [
+        1767817200.0,
+        1767817320.0
+       ],
+       [
+        1767828000.0,
+        1767828120.0
+       ],
+       [
+        1767838800.0,
+        1767838920.0
+       ],
+       [
+        1767849600.0,
+        1767849720.0
+       ],
+       [
+        1767860400.0,
+        1767860520.0
+       ],
+       [
+        1767871200.0,
+        1767871320.0
+       ],
+       [
+        1767882000.0,
+        1767882120.0
+       ],
+       [
+        1767892800.0,
+        1767892920.0
+       ],
+       [
+        1767903600.0,
+        1767903720.0
+       ],
+       [
+        1767914400.0,
+        1767914520.0
+       ],
+       [
+        1767925200.0,
+        1767925320.0
+       ],
+       [
+        1767936000.0,
+        1767936120.0
+       ],
+       [
+        1767946800.0,
+        1767946920.0
+       ],
+       [
+        1767957600.0,
+        1767957720.0
+       ],
+       [
+        1767968400.0,
+        1767968520.0
+       ],
+       [
+        1767979200.0,
+        1767979320.0
+       ],
+       [
+        1767990000.0,
+        1767990120.0
+       ],
+       [
+        1768000800.0,
+        1768000920.0
+       ],
+       [
+        1768011600.0,
+        1768011720.0
+       ],
+       [
+        1768022400.0,
+        1768022520.0
+       ],
+       [
+        1768033200.0,
+        1768033320.0
+       ],
+       [
+        1768044000.0,
+        1768044120.0
+       ],
+       [
+        1768054800.0,
+        1768054920.0
+       ],
+       [
+        1768065600.0,
+        1768065720.0
+       ],
+       [
+        1768076400.0,
+        1768076520.0
+       ],
+       [
+        1768087200.0,
+        1768087320.0
+       ],
+       [
+        1768098000.0,
+        1768098120.0
+       ],
+       [
+        1768108800.0,
+        1768108920.0
+       ],
        [
         1768119600.0,
         1768119720.0
@@ -374,18 +776,18 @@
         1768422120.0
        ]
       ],
-      "minutes": 58.0,
-      "warm_events": 4,
-      "warm_rate_per_h": 0.24,
-      "warm_run_h": 16.7
+      "minutes": 160.0,
+      "warm_events": 10,
+      "warm_rate_per_h": 0.27,
+      "warm_run_h": 37.0
      },
      "key": "defrost",
      "origin": "derived",
      "progress": null,
      "provisional": false,
-     "text": "29 Abtauungen in 72,5 h Verdichterlauf. Über 5 °C außen: 4 Abtauungen in 16,7 h Lauf (0,2/h).",
+     "text": "80 Abtauungen in 175,8 h Verdichterlauf. Über 5 °C außen: 10 Abtauungen in 37,0 h Lauf (0,3/h).",
      "unit": "1/h Lauf",
-     "value": 0.4,
+     "value": 0.46,
      "verdict": "ok"
     },
     {
@@ -394,8 +796,8 @@
      "check_id": "C7",
      "details": {
       "histogram_pct": {
-       "30-39": 71.8,
-       "40-49": 28.2
+       "30-39": 74.3,
+       "40-49": 25.7
       }
      },
      "key": "modulation",
@@ -409,7 +811,7 @@
     }
    ],
    "dq": "high",
-   "verdict": "ok"
+   "verdict": "hint"
   },
   "data_basis": {
    "checks": [
@@ -1907,6 +2309,87 @@
      "details": {
       "days": [
        {
+        "cop": 3.63,
+        "cop_raw": 4.15,
+        "day": "2026-01-05",
+        "dhw_heat_kwh": 3.74,
+        "electricity_kwh": 21.5,
+        "heat_kwh": 78.09,
+        "heat_raw_kwh": 89.16,
+        "ideal_kwh": 8.05,
+        "outdoor_mean": 2.8
+       },
+       {
+        "cop": 3.65,
+        "cop_raw": 4.17,
+        "day": "2026-01-06",
+        "dhw_heat_kwh": 3.74,
+        "electricity_kwh": 21.4,
+        "heat_kwh": 78.09,
+        "heat_raw_kwh": 89.16,
+        "ideal_kwh": 8.05,
+        "outdoor_mean": 2.8
+       },
+       {
+        "cop": 3.65,
+        "cop_raw": 4.17,
+        "day": "2026-01-07",
+        "dhw_heat_kwh": 3.74,
+        "electricity_kwh": 21.4,
+        "heat_kwh": 78.09,
+        "heat_raw_kwh": 89.16,
+        "ideal_kwh": 8.05,
+        "outdoor_mean": 2.8
+       },
+       {
+        "cop": 3.63,
+        "cop_raw": 4.15,
+        "day": "2026-01-08",
+        "dhw_heat_kwh": 3.74,
+        "electricity_kwh": 21.5,
+        "heat_kwh": 78.09,
+        "heat_raw_kwh": 89.16,
+        "ideal_kwh": 8.05,
+        "outdoor_mean": 2.8
+       },
+       {
+        "cop": 3.61,
+        "cop_raw": 4.13,
+        "day": "2026-01-09",
+        "dhw_heat_kwh": 3.74,
+        "electricity_kwh": 21.4,
+        "gap_heat_kwh": 1.04,
+        "gap_method": "load",
+        "gap_min": 21,
+        "gap_share_pct": 1.2,
+        "heat_kwh": 77.34,
+        "heat_raw_kwh": 88.35,
+        "ideal_kwh": 8.004,
+        "outdoor_mean": 2.7
+       },
+       {
+        "cop": 3.63,
+        "cop_raw": 4.15,
+        "day": "2026-01-10",
+        "dhw_heat_kwh": 3.74,
+        "electricity_kwh": 21.5,
+        "heat_kwh": 78.09,
+        "heat_raw_kwh": 89.16,
+        "ideal_kwh": 8.05,
+        "outdoor_mean": 2.8
+       },
+       {
+        "cop": 3.68,
+        "cop_raw": 4.19,
+        "day": "2026-01-11",
+        "dhw_heat_kwh": 3.74,
+        "electricity_kwh": 24.6,
+        "heat_kwh": 90.54,
+        "heat_raw_kwh": 103.0,
+        "ideal_kwh": 9.28,
+        "outdoor_mean": 2.8
+       },
+       {
         "cop": 3.68,
         "cop_raw": 4.18,
         "day": "2026-01-12",
@@ -1945,10 +2428,10 @@
      "origin": "descriptive",
      "progress": {
       "basis": "full_days",
-      "have": 3,
+      "have": 10,
       "lag_h": 0.0,
       "need": 1,
-      "since": 1768118400.0,
+      "since": 1767567600.0,
       "unit": "days"
      },
      "provisional": false,
@@ -1959,101 +2442,74 @@
     },
     {
      "action": null,
-     "before": {
-      "end": 1768118400.0,
-      "event": null,
-      "provisional": true,
-      "start": 1767567600.0,
-      "text": "05.01.2026 bis 10.01.2026: Arbeitszahl 3,6 (roh 4,2). Feldtest-Mittel bei 3 °C außen: 2,8 (Fraunhofer, Monatswerte von 22 Wärmepumpen; ein Mittelwert, keine Grenze).",
-      "unit": "",
-      "value": 3.63,
-      "verdict": "info"
-     },
+     "before": null,
      "check_id": "E2",
      "details": {
-      "electricity_kwh": 79.4,
-      "field_cop": 2.7800000000000002,
-      "heat_kwh": 292.8,
-      "heat_raw_kwh": 332.7,
-      "outdoor_mean": 2.7999999999999994
+      "electricity_kwh": 168.4,
+      "field_cop": 2.778571428571429,
+      "heat_kwh": 616.9,
+      "heat_raw_kwh": 702.3,
+      "outdoor_mean": 2.7857142857142856
      },
      "key": "weekly_cop",
      "origin": "sourced",
      "progress": {
       "basis": "full_days",
-      "have": 3,
+      "have": 10,
       "lag_h": 0.0,
       "need": 7,
-      "since": 1768118400.0,
+      "since": 1767567600.0,
       "unit": "days"
      },
-     "provisional": true,
-     "text": "12.01.2026 bis 14.01.2026: Arbeitszahl 3,7 (roh 4,2). Feldtest-Mittel bei 3 °C außen: 2,8 (Fraunhofer, Monatswerte von 22 Wärmepumpen; ein Mittelwert, keine Grenze).",
+     "provisional": false,
+     "text": "08.01.2026 bis 14.01.2026: Arbeitszahl 3,7 (roh 4,2). Feldtest-Mittel bei 3 °C außen: 2,8 (Fraunhofer, Monatswerte von 22 Wärmepumpen; ein Mittelwert, keine Grenze).",
      "unit": "",
-     "value": 3.69,
+     "value": 3.66,
      "verdict": "info"
     },
     {
      "action": null,
-     "before": {
-      "end": 1768118400.0,
-      "event": null,
-      "provisional": true,
-      "start": 1767567600.0,
-      "text": "Gütegrad 0,37 (Feldtest Luft/Wasser 0,32–0,44, Mittel 0,39). Für ihre Temperaturen arbeitet die Wärmepumpe normal.",
-      "unit": "",
-      "value": 0.375,
-      "verdict": "ok"
-     },
+     "before": null,
      "check_id": "E3",
      "details": {
-      "electricity_kwh": 79.4,
-      "ideal_kwh": 30.09
+      "electricity_kwh": 168.4,
+      "ideal_kwh": 63.48
      },
      "key": "carnot_efficiency",
      "origin": "derived",
      "progress": {
       "basis": "full_days",
-      "have": 3,
+      "have": 10,
       "lag_h": 0.0,
       "need": 7,
-      "since": 1768118400.0,
+      "since": 1767567600.0,
       "unit": "days"
      },
-     "provisional": true,
+     "provisional": false,
      "text": "Gütegrad 0,38 (Feldtest Luft/Wasser 0,32–0,44, Mittel 0,39). Für ihre Temperaturen arbeitet die Wärmepumpe normal.",
      "unit": "",
-     "value": 0.379,
+     "value": 0.377,
      "verdict": "ok"
     },
     {
      "action": null,
-     "before": {
-      "end": 1768118400.0,
-      "event": null,
-      "provisional": true,
-      "start": 1767567600.0,
-      "text": "5 % der Wärme gingen ins Warmwasser (Feldtest-Mittel übers Jahr 19 %; im Sommer mehr, im Winter weniger).",
-      "unit": "%",
-      "value": 4.8,
-      "verdict": "info"
-     },
+     "before": null,
      "check_id": "E4",
      "details": {},
      "key": "dhw_share",
      "origin": "sourced",
      "progress": {
       "basis": "full_days",
-      "have": 3,
+      "have": 10,
       "lag_h": 0.0,
       "need": 7,
-      "since": 1768118400.0,
+      "since": 1767567600.0,
       "unit": "days"
      },
-     "provisional": true,
+     "provisional": false,
      "text": "4 % der Wärme gingen ins Warmwasser (Feldtest-Mittel übers Jahr 19 %; im Sommer mehr, im Winter weniger).",
      "unit": "%",
-     "value": 3.8,
+     "value": 4.2,
      "verdict": "info"
     }
    ],
@@ -2072,24 +2528,24 @@
        4.5
       ],
       "correction_k": 0.5,
-      "cycles": 86,
-      "heating_h": 54.6,
-      "raw_k": 2.0
+      "cycles": 230,
+      "heating_h": 126.7,
+      "raw_k": 1.99
      },
      "key": "buffer_flow_loss",
      "origin": "derived",
      "progress": {
       "basis": "rate",
-      "have": 54.65,
+      "have": 126.72,
       "lag_h": 0.0,
       "need": 3.0,
-      "since": 1768118400.0,
+      "since": 1767567600.0,
       "unit": "heating_hours"
      },
      "provisional": false,
      "text": "Im Heizbetrieb liegt der Vorlauf der Wärmepumpe im Mittel 1,5 K über dem Vorlauf im Heizkreis. Die Wärmepumpe arbeitet damit wärmer als nötig, das kostet grob 3–4 % Effizienz. Fühlerunterschied aus T2 (+0,5 K) abgezogen, die Fühler sind abgeglichen.",
      "unit": "K",
-     "value": 1.5,
+     "value": 1.49,
      "verdict": "ok"
     },
     {
@@ -2121,18 +2577,18 @@
      "before": null,
      "check_id": "T3",
      "details": {
-      "circuit_spread_k": 4.5,
-      "flow_minus_circuit_return_k": 6.5,
+      "circuit_spread_k": 4.49,
+      "flow_minus_circuit_return_k": 6.48,
       "return_minus_circuit_return_k": 1.5
      },
      "key": "flow_ratio",
      "origin": "physical",
      "progress": {
       "basis": "rate",
-      "have": 54.65,
+      "have": 126.72,
       "lag_h": 0.0,
       "need": 3.0,
-      "since": 1768118400.0,
+      "since": 1767567600.0,
       "unit": "heating_hours"
      },
      "provisional": false,
@@ -2150,22 +2606,22 @@
       "flow_margin_lpm": 1.5,
       "flow_min_lpm": 14.3,
       "flow_resolution_lpm": 1.0,
-      "spread_k": 5.0
+      "spread_k": 4.98
      },
      "key": "heat_pump_spread",
      "origin": "sourced",
      "progress": {
       "basis": "rate",
-      "have": 54.65,
+      "have": 126.72,
       "lag_h": 0.0,
       "need": 3.0,
-      "since": 1768118400.0,
+      "since": 1767567600.0,
       "unit": "heating_hours"
      },
      "provisional": false,
      "text": "Spreizung der Wärmepumpe im Heizbetrieb 5,0 K (Feldmittel bei Bestandsanlagen 5,5 K). Durchfluss 16,0 l/min (Herstellerminimum 14,3 l/min).",
      "unit": "K",
-     "value": 5.0,
+     "value": 4.98,
      "verdict": "ok"
     },
     {
@@ -2173,24 +2629,24 @@
      "before": null,
      "check_id": "T5",
      "details": {
-      "circuit_minus_setpoint_k": 0.5,
-      "heat_pump_minus_setpoint_k": 2.5,
-      "setpoint_c": 33.9
+      "circuit_minus_setpoint_k": 0.49,
+      "heat_pump_minus_setpoint_k": 2.48,
+      "setpoint_c": 34.0
      },
      "key": "flow_vs_setpoint",
      "origin": "descriptive",
      "progress": {
       "basis": "rate",
-      "have": 54.65,
+      "have": 126.72,
       "lag_h": 0.0,
       "need": 3.0,
-      "since": 1768118400.0,
+      "since": 1767567600.0,
       "unit": "heating_hours"
      },
      "provisional": false,
-     "text": "Soll-Vorlauf im Mittel 33,9 °C. Die Wärmepumpe liefert +2,5 K dazu, im Heizkreis kommen +0,5 K an. Die Steuerung regelt offenbar auf den Heizkreis-Fühler; den Aufschlag trägt die Wärmepumpe.",
+     "text": "Soll-Vorlauf im Mittel 34,0 °C. Die Wärmepumpe liefert +2,5 K dazu, im Heizkreis kommen +0,5 K an. Die Steuerung regelt offenbar auf den Heizkreis-Fühler; den Aufschlag trägt die Wärmepumpe.",
      "unit": "K",
-     "value": 2.5,
+     "value": 2.48,
      "verdict": "info"
     },
     {
@@ -2208,23 +2664,42 @@
        "Hier im Zeitstrahl „Ereignis hinzufügen“ wählen, damit die Audits ab der Änderung neu rechnen. Art: „Heizkurve geändert“.",
        "Eine Woche beobachten. Ist es dann noch zu warm, noch einmal 1 K; wird es zu kühl, 1 K zurück."
       ],
-      "target": "Parallelverschiebung 1 K niedriger als heute (Soll-Vorlauf im Mittel ≈ 32,9 statt 33,9 °C)",
+      "target": "Parallelverschiebung 1 K niedriger als heute (Soll-Vorlauf im Mittel ≈ 33,0 statt 34,0 °C)",
       "text": "Die Räume sind wärmer als nötig: Heizkurve um 1 K absenken.",
       "who": "owner"
      },
-     "before": {
-      "end": 1768118400.0,
-      "event": null,
-      "provisional": false,
-      "start": 1767567600.0,
-      "text": "Der Raum war an 6 von 6 Heiztagen mindestens 1 K wärmer als das Ziel 21 °C (kältester Tag 22,3 °C). Die Heizkurve hat Reserve: um 1 K absenken und ein bis zwei Tage beobachten.",
-      "unit": "°C",
-      "value": 22.3,
-      "verdict": "hint"
-     },
+     "before": null,
      "check_id": "T6",
      "details": {
       "days": [
+       [
+        "2026-01-05",
+        22.3
+       ],
+       [
+        "2026-01-06",
+        22.3
+       ],
+       [
+        "2026-01-07",
+        22.3
+       ],
+       [
+        "2026-01-08",
+        22.3
+       ],
+       [
+        "2026-01-09",
+        22.3
+       ],
+       [
+        "2026-01-10",
+        22.3
+       ],
+       [
+        "2026-01-11",
+        22.3
+       ],
        [
         "2026-01-12",
         22.3
@@ -2239,20 +2714,20 @@
        ]
       ],
       "target_c": 21.0,
-      "warm_days": 3
+      "warm_days": 10
      },
      "key": "heating_curve_headroom",
      "origin": "derived",
      "progress": {
       "basis": "full_days",
-      "have": 3,
+      "have": 10,
       "lag_h": 0.0,
       "need": 5,
-      "since": 1768118400.0,
+      "since": 1767567600.0,
       "unit": "heating_days"
      },
-     "provisional": true,
-     "text": "Der Raum war an 3 von 3 Heiztagen mindestens 1 K wärmer als das Ziel 21 °C (kältester Tag 22,3 °C). Die Heizkurve hat Reserve: um 1 K absenken und ein bis zwei Tage beobachten.",
+     "provisional": false,
+     "text": "Der Raum war an 10 von 10 Heiztagen mindestens 1 K wärmer als das Ziel 21 °C (kältester Tag 22,3 °C). Die Heizkurve hat Reserve: um 1 K absenken und ein bis zwei Tage beobachten.",
      "unit": "°C",
      "value": 22.3,
      "verdict": "hint"
@@ -2265,12 +2740,1522 @@
  "cycles": [
   {
    "defrost_stops": 0,
-   "duration_min": 50.0,
-   "end": 1768121400.0,
+   "duration_min": 40.0,
+   "end": 1767570000.0,
    "kind": "heating",
    "open_end": false,
    "open_start": true,
    "pause_before": null,
+   "start": 1767567600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767573600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767571200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767577200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767574800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767580800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767578400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767584400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767582000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 45.0,
+   "end": 1767588300.0,
+   "kind": "dhw",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767585600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767591600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 900.0,
+   "start": 1767589200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767595200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767592800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767598800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767596400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767602400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767600000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767606000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767603600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767609600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767607200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767613200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767610800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767616800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767614400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767620400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767618000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767624000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767621600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767627600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767625200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767631200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767628800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767634800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767632400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767638400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767636000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767642000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767639600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767645600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767643200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767649200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767646800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767652800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767650400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767656400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767654000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767660000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767657600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767663600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767661200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767667200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767664800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767670800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767668400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 45.0,
+   "end": 1767674700.0,
+   "kind": "dhw",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767672000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767678000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 900.0,
+   "start": 1767675600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767681600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767679200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767685200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767682800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767688800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767686400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767692400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767690000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767696000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767693600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767699600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767697200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767703200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767700800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767706800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767704400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767710400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767708000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767714000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767711600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767717600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767715200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767721200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767718800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767724800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767722400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767728400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767726000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767732000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767729600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767735600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767733200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767739200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767736800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767742800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767740400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767746400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767744000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767750000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767747600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767753600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767751200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767757200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767754800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 45.0,
+   "end": 1767761100.0,
+   "kind": "dhw",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767758400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767764400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 900.0,
+   "start": 1767762000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767768000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767765600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767771600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767769200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767775200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767772800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767778800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767776400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767782400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767780000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767786000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767783600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767789600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767787200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767793200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767790800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767796800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767794400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767800400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767798000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767804000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767801600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767807600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767805200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767811200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767808800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767814800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767812400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767818400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767816000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767822000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767819600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767825600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767823200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767829200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767826800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767832800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767830400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767836400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767834000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767840000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767837600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767843600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767841200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 45.0,
+   "end": 1767847500.0,
+   "kind": "dhw",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767844800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767850800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 900.0,
+   "start": 1767848400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767854400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767852000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767858000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767855600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767861600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767859200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767865200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767862800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 100.0,
+   "end": 1767872400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767866400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767876000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767873600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767879600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767877200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767883200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767880800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767886800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767884400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767890400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767888000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767894000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767891600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767897600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767895200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767901200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767898800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767904800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767902400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767908400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767906000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767912000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767909600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767915600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767913200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767919200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767916800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767922800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767920400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767926400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767924000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767930000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767927600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 45.0,
+   "end": 1767933900.0,
+   "kind": "dhw",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767931200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767937200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 900.0,
+   "start": 1767934800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767940800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767938400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767944400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767942000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 100.0,
+   "end": 1767951600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767945600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767955200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767952800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767958800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767956400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767962400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767960000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767966000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767963600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767969600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767967200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767973200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767970800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767976800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767974400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767980400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767978000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767984000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767981600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767987600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767985200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767991200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767988800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767994800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767992400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1767998400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767996000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768002000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1767999600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768005600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768003200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768009200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768006800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768012800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768010400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768016400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768014000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 45.0,
+   "end": 1768020300.0,
+   "kind": "dhw",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768017600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768023600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 900.0,
+   "start": 1768021200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768027200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768024800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768030800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768028400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768034400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768032000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768038000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768035600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768041600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768039200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768045200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768042800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768048800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768046400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768052400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768050000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768056000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768053600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768059600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768057200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768063200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768060800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768066800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768064400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768070400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768068000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768074000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768071600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768077600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768075200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768081200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768078800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768084800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768082400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768088400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768086000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768092000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768089600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768095600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768093200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768099200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768096800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768102800.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768100400.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 45.0,
+   "end": 1768106700.0,
+   "kind": "dhw",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768104000.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768110000.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 900.0,
+   "start": 1768107600.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768113600.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768111200.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 40.0,
+   "end": 1768117200.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
+   "start": 1768114800.0
+  },
+  {
+   "defrost_stops": 0,
+   "duration_min": 50.0,
+   "end": 1768121400.0,
+   "kind": "heating",
+   "open_end": false,
+   "open_start": false,
+   "pause_before": 1200.0,
    "start": 1768118400.0
   },
   {
@@ -3150,48 +5135,48 @@
    "checks": [
     {
      "check_id": "C1",
-     "eta": 1769328000.0,
-     "have": 87.0,
+     "eta": 1768777200.0,
+     "have": 240.0,
      "need": 336,
      "reached": false,
      "unit": "hours"
     },
     {
      "check_id": "C2",
-     "eta": 1768122000.0,
-     "have": 87.0,
+     "eta": 1767571200.0,
+     "have": 240.0,
      "need": 1,
      "reached": true,
      "unit": "hours"
     },
     {
      "check_id": "C3",
-     "eta": 1768193869.879518,
-     "have": 83,
+     "eta": 1767643723.3480177,
+     "have": 227,
      "need": 20,
      "reached": true,
      "unit": "cycles"
     },
     {
      "check_id": "C4",
-     "eta": 1768258800.0,
-     "have": 3,
+     "eta": 1767654000.0,
+     "have": 10,
      "need": 1,
      "reached": true,
      "unit": "days"
     },
     {
      "check_id": "C5",
-     "eta": 1768723200.0,
-     "have": 87.0,
+     "eta": 1768172400.0,
+     "have": 240.0,
      "need": 168,
-     "reached": false,
+     "reached": true,
      "unit": "hours"
     }
    ],
-   "eta": 1769328000.0,
+   "eta": 1768777200.0,
    "reached": false,
-   "start": 1768118400.0
+   "start": 1767567600.0
   },
   "data_basis": {
    "checks": [
@@ -3228,47 +5213,47 @@
    "checks": [
     {
      "check_id": "E1",
-     "eta": 1768258800.0,
-     "have": 3,
+     "eta": 1767654000.0,
+     "have": 10,
      "need": 1,
      "reached": true,
      "unit": "days"
     },
     {
      "check_id": "E2",
-     "eta": 1768777200.0,
-     "have": 3,
+     "eta": 1768172400.0,
+     "have": 10,
      "need": 7,
-     "reached": false,
+     "reached": true,
      "unit": "days"
     },
     {
      "check_id": "E3",
-     "eta": 1768777200.0,
-     "have": 3,
+     "eta": 1768172400.0,
+     "have": 10,
      "need": 7,
-     "reached": false,
+     "reached": true,
      "unit": "days"
     },
     {
      "check_id": "E4",
-     "eta": 1768777200.0,
-     "have": 3,
+     "eta": 1768172400.0,
+     "have": 10,
      "need": 7,
-     "reached": false,
+     "reached": true,
      "unit": "days"
     }
    ],
-   "eta": 1768777200.0,
-   "reached": false,
-   "start": 1768118400.0
+   "eta": 1768172400.0,
+   "reached": true,
+   "start": 1767567600.0
   },
   "flow_temperature": {
    "checks": [
     {
      "check_id": "T1",
-     "eta": 1768135593.0466607,
-     "have": 54.65,
+     "eta": 1767588054.5454545,
+     "have": 126.72,
      "need": 3.0,
      "reached": true,
      "unit": "heating_hours"
@@ -3283,40 +5268,40 @@
     },
     {
      "check_id": "T3",
-     "eta": 1768135593.0466607,
-     "have": 54.65,
+     "eta": 1767588054.5454545,
+     "have": 126.72,
      "need": 3.0,
      "reached": true,
      "unit": "heating_hours"
     },
     {
      "check_id": "T4",
-     "eta": 1768135593.0466607,
-     "have": 54.65,
+     "eta": 1767588054.5454545,
+     "have": 126.72,
      "need": 3.0,
      "reached": true,
      "unit": "heating_hours"
     },
     {
      "check_id": "T5",
-     "eta": 1768135593.0466607,
-     "have": 54.65,
+     "eta": 1767588054.5454545,
+     "have": 126.72,
      "need": 3.0,
      "reached": true,
      "unit": "heating_hours"
     },
     {
      "check_id": "T6",
-     "eta": 1768604400.0,
-     "have": 3,
+     "eta": 1767999600.0,
+     "have": 10,
      "need": 5,
-     "reached": false,
+     "reached": true,
      "unit": "heating_days"
     }
    ],
-   "eta": 1768604400.0,
-   "reached": false,
-   "start": 1768118400.0
+   "eta": 1767999600.0,
+   "reached": true,
+   "start": 1767567600.0
   }
  },
  "section": {
@@ -3325,7 +5310,7 @@
    "note": "Pumpe eine Stufe tiefer",
    "time": 1768118400.0
   },
-  "start": 1768118400.0
+  "start": 1767567600.0
  },
  "timeline": {
   "days": [
