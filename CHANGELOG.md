@@ -6,6 +6,16 @@ Assistant 2026.11) bieten sie als Update an.
 Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/): Solange die Hauptversion 0 ist, kann jede
 Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
+## [0.21.0] – unveröffentlicht
+
+### Geändert
+- **Ereignisse setzen die Bewertung nicht mehr zurück** (#39): Nach einem neuen Ereignis rechnen alle Audits über
+  denselben Zeitraum weiter wie vorher. Bisher fielen viele Prüfungen sofort auf „nicht bewertbar“ oder „vorläufig“,
+  obwohl sich an den Daten nichts geändert hatte. Ob eine Änderung wirkt, zeigt der Zeitstrahl. Über der Tabelle
+  steht „Letztes Ereignis …“ statt „Bewertet ab …“. Die Zeile „davor: …“ unter vorläufigen Urteilen entfällt.
+- **K4 nur mit dynamischem Strompreis** (#40): Ohne zugeordneten dynamischen Strompreis gibt es K4 weder in der Karte
+  noch als Sensor; ein vorhandener K4-Sensor wird entfernt.
+
 ## [0.20.0] – 2026-11-09
 
 ### Behoben
