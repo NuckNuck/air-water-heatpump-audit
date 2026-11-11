@@ -69,7 +69,7 @@ AUDIT = AuditSpec(
                                                                        bool(ctx.s["price_signal"]))),
         CheckSpec("K4", "price_timing", lambda ctx: k1.check_price_timing(ctx.s["electricity_meter"],
                                                                            ctx.s["price_signal"], ctx.section_start,
-                                                                           ctx.end)),
+                                                                           ctx.end), needs_role="price_signal"),
         CheckSpec("K5", "grid_lock", lambda ctx: k1.check_grid_lock(ctx.s["grid_lock"], _heaters(ctx),
                                                                      ctx.section_start, ctx.end)),
     ),

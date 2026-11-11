@@ -58,7 +58,8 @@ const TEXT = {
     kinds: { heating_curve: "Heizkurve geändert", valves: "Heizkörperventile verstellt",
       hydraulic_balancing: "Hydraulischer Abgleich", pump_setting: "Pumpe verstellt",
       dhw_setting: "Warmwasser-Einstellung", hardware: "Umbau an der Anlage", other: "Sonstiges" },
-    section: (sec, fmt, kind) => `Bewertet ab ${fmt(sec.start)}: ${kind}${sec.note ? ` – ${sec.note}` : ""}`,
+    section: (sec, fmt, kind) => `Letztes Ereignis ${fmt(sec.start)}: ${kind}${sec.note ? ` – ${sec.note}` : ""}`
+      + " · Bewertet wird weiter über den ganzen Zeitraum; Veränderungen seitdem zeigt der Zeitstrahl.",
     prov: { label: "vorläufig", tip: "Urteil mit weniger als der vollen Datenmenge; es wird mit jedem Tag belastbarer.",
       before: "davor", period: (a, b) => `${a} bis ${b}`, beforeProv: "(damals vorläufig)",
       verdicts: { ok: "grün", hint: "gelb", warn: "rot", info: "Info" } },
@@ -122,7 +123,8 @@ const TEXT = {
     kinds: { heating_curve: "Heating curve changed", valves: "Radiator valves adjusted",
       hydraulic_balancing: "Hydraulic balancing", pump_setting: "Pump setting changed",
       dhw_setting: "Hot water setting", hardware: "Hardware change", other: "Other" },
-    section: (sec, fmt, kind) => `Assessed from ${fmt(sec.start)}: ${kind}${sec.note ? ` – ${sec.note}` : ""}`,
+    section: (sec, fmt, kind) => `Last event ${fmt(sec.start)}: ${kind}${sec.note ? ` – ${sec.note}` : ""}`
+      + " · Assessment still covers the whole period; the timeline shows changes since then.",
     prov: { label: "preliminary", tip: "Verdict with less than the full amount of data; it firms up day by day.",
       before: "before", period: (a, b) => `${a} to ${b}`, beforeProv: "(preliminary at the time)",
       verdicts: { ok: "green", hint: "yellow", warn: "red", info: "info" } },
@@ -471,7 +473,8 @@ class AirWaterAuditCard extends ProgressMixin(HTMLElement) {
       + `${COLORS.not_assessable} ${pct}%)">${label}</span>`;
   }
 
-  // Vorläufiges Urteil (Datenmenge) und das letzte Urteil vor dem Ereignis, unter dem Urteils-Marker (F239).
+  // Vorläufiges Urteil (Datenmenge) unter dem Urteils-Marker. `before` liefert der Runner seit #39 nicht mehr;
+  // der Block bleibt für ältere Berichte.
   _provisional(at, t) {
     const hass = this._hass;
     const loc = hass.locale?.language || hass.language;

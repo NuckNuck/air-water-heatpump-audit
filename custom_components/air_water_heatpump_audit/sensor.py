@@ -12,6 +12,7 @@ from typing import Any
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -19,9 +20,10 @@ from homeassistant.util import dt as dt_util
 
 from .audit_core.help import CHECK_HELP
 from .audit_core.audits import BY_ID
+from .audit_core.runner import applies
 from .audit_core.timeline import rolling_cop
 from .const import CONF_AUDIT, DOMAIN, SUBENTRY_AUDIT, VERDICTS, audit_title, language
-from .coordinator import AirWaterAuditConfigEntry, AirWaterAuditCoordinator
+from .coordinator import AirWaterAuditConfigEntry, AirWaterAuditCoordinator, configured_roles
 
 MAX_CYCLES_IN_ATTRIBUTES = 200
 
@@ -53,7 +55,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry
                             name=audit_title(spec.audit_id, language(hass)), manufacturer="air-water-heatpump-audit",
                             model=spec.audit_id, via_device_id=main.id, entry_type=DeviceEntryType.SERVICE)
         entities: list[SensorEntity] = [AuditSensor(coordinator, spec.audit_id, device)]
-        entities += [CheckSensor(coordinator, spec.audit_id, c.check_id, c.key, device) for c in spec.checks]
+        roles = configured_roles(entry.data)
+        entities += [CheckSensor(coordinator, spec.audit_id, c.check_id, c.key, device) for c in spec.checks
+                     if applies(c, roles)]
+        # Prüfungen, deren Rolle fehlt (z. B. K4 ohne dynamischen Tarif, #40): früher angelegte Sensoren entfernen
+        registry = er.async_get(hass)
+        for c in spec.checks:
+            if not applies(c, roles) and (eid := registry.async_get_entity_id(
+                    "sensor", DOMAIN, f"{entry.entry_id}_{c.check_id.lower()}_{c.key}")):
+                registry.async_remove(eid)
         async_add_entities(entities, config_subentry_id=sub.subentry_id)
     async_add_entities([TimelineSensor(coordinator), RollingCopSensor(coordinator)])
 

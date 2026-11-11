@@ -7,8 +7,6 @@ Zeitreihe angenommen; die betroffenen Prüfungen enden dann in „nicht bewertba
 
 from __future__ import annotations
 
-from collections.abc import Callable
-
 from . import cost, days
 from . import readiness as rd
 from . import timeline as tl
@@ -21,8 +19,6 @@ from .result import HINT, INFO, NOT_ASSESSABLE, OK, WARN, CheckResult, mark_prov
 from .series import Series
 
 DATA_BASIS, EFFICIENCY, FLOW_TEMPERATURE, CAPACITY = "data_basis", "efficiency", "flow_temperature", "capacity"
-BEFORE_MAX_SECTIONS = 3  # so weit sucht attach_before() zurück
-BEFORE_MIN_S = 3600  # kürzere Abschnitte (zwei Ereignisse kurz hintereinander) überspringt die Suche
 
 
 def selected(audit_ids: list[str] | None) -> list[AuditSpec]:
@@ -39,9 +35,12 @@ def run_audits(s: dict[str, Series], start: float, end: float, *, recorder_keep_
                long_term_days: float | None, heater_kw: dict[str, float | None], master: dict | None = None,
                events: list[dict] | None = None, controls: dict[str, dict] | None = None,
                tz: str = days.DEFAULT_TZ, audits: list[str] | None = None,
-               price_refs: list[dict] | None = None, statistics: dict | None = None) -> dict:
-    """master: Stammdaten (Spezifikation 1.4). events: Änderungen an der Anlage ({time, kind, note}); Audits mit
-    `section == "section"` rechnen nur ab dem letzten Ereignis, damit nie über eine Änderung hinweg gemittelt wird.
+               price_refs: list[dict] | None = None, statistics: dict | None = None,
+               configured_roles: set[str] | None = None) -> dict:
+    """master: Stammdaten (Spezifikation 1.4). events: Änderungen an der Anlage ({time, kind, note}). Sie sind nur
+    Markierungen (Spezifikation 1.5, #39): Jedes Audit rechnet über sein volles Fenster, ein Ereignis setzt nichts
+    zurück. Ob sich seitdem etwas verschlechtert, zeigt der Zeitstrahl.
+    configured_roles: zugeordnete Rollen; Prüfungen mit `needs_role` außerhalb davon entfallen. None = alle zeigen.
     controls: heutiger Zustand der Stellgrößen-Rollen (actions.CONTROL_ROLES); daraus entstehen Vorschläge.
     audits: IDs der zugeschalteten Audits, None = alle.
     price_refs: Preis-Sensoren anderer Heizsysteme für den Kosten-Zeitstrahl (heating_prices), None = abgeschaltet.
@@ -55,18 +54,10 @@ def run_audits(s: dict[str, Series], start: float, end: float, *, recorder_keep_
                        price_refs=price_refs, statistics=statistics)
 
     ctx = context(end, events, controls)
-    prior: dict[float, Context] = {}  # Ereigniszeit → Lauf bis zu diesem Ereignis, für attach_before()
-
-    def until(t: float) -> Context:
-        if t not in prior:
-            prior[t] = context(t, [e for e in events or [] if e["time"] < t], None)
-        return prior[t]
-
     specs = selected(audits)
     report_audits, readiness = {}, {}
     for spec in specs:
-        results = run_spec(spec, ctx)
-        attach_before(spec, ctx, results, until)
+        results = run_spec(spec, ctx, configured_roles)
         since = ctx.since(spec.section)
         readiness[spec.audit_id] = rd.audit_readiness(since, results, end, tz)
         with_actions = attach_actions(results, ctx.controls)
@@ -89,8 +80,13 @@ def run_audits(s: dict[str, Series], start: float, end: float, *, recorder_keep_
     return report
 
 
-def run_spec(spec: AuditSpec, ctx: Context) -> list[CheckResult]:
-    results = [c.run(ctx) for c in spec.checks]
+def applies(check, configured_roles: set[str] | None) -> bool:
+    """Prüfung mit vorausgesetzter Rolle nur, wenn die Rolle zugeordnet ist (z. B. K4 nur mit dynamischem Tarif, #40)."""
+    return check.needs_role is None or configured_roles is None or check.needs_role in configured_roles
+
+
+def run_spec(spec: AuditSpec, ctx: Context, configured_roles: set[str] | None = None) -> list[CheckResult]:
+    results = [c.run(ctx) for c in spec.checks if applies(c, configured_roles)]
     if spec.finish:
         spec.finish(ctx, results)
     for r in results:
@@ -98,35 +94,6 @@ def run_spec(spec: AuditSpec, ctx: Context) -> list[CheckResult]:
     return results
 
 
-def attach_before(spec: AuditSpec, ctx: Context, results: list[CheckResult],
-                  until: Callable[[float], Context]) -> None:
-    """Vorläufige und nicht bewertbare Prüfungen bekommen das letzte belastbare Urteil vor dem Ereignis (F239).
-
-    Gesucht wird abschnittsweise rückwärts, höchstens BEFORE_MAX_SECTIONS weit; ein vorläufiges Urteil davor gilt
-    nur, wenn kein belastbares kommt. until(t) liefert den Laufkontext bis zum Zeitpunkt t.
-    """
-    open_ids = {r.check_id for r in results if r.provisional or r.verdict == NOT_ASSESSABLE}
-    event = ctx.event_of(spec.section)
-    if not open_ids or event is None:
-        return
-    found: dict[str, dict] = {}
-    t = event["time"]
-    for _ in range(BEFORE_MAX_SECTIONS):
-        pc = until(t)
-        sec_start = pc.since(spec.section)
-        if t - sec_start >= BEFORE_MIN_S:
-            for r in run_spec(spec, pc):
-                if r.check_id not in open_ids or r.verdict not in (OK, HINT, WARN, INFO):
-                    continue
-                if r.check_id not in found or (found[r.check_id]["provisional"] and not r.provisional):
-                    found[r.check_id] = {"verdict": r.verdict, "value": r.value, "unit": r.unit, "text": r.text,
-                                         "provisional": r.provisional, "start": sec_start, "end": t,
-                                         "event": pc.event_of(spec.section)}
-        if all(i in found and not found[i]["provisional"] for i in open_ids) or sec_start <= ctx.start:
-            break
-        t = sec_start
-    for r in results:
-        r.before = found.get(r.check_id) if r.check_id in open_ids else None
 
 
 

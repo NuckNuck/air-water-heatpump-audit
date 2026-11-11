@@ -122,7 +122,7 @@ class StatisticDaysTest(unittest.TestCase):
 
 
 class StatisticDaysUsageTest(unittest.TestCase):
-    """F295: Statistik-Tage zählen für K2 (nach dem letzten Ereignis), nicht für die übrigen Prüfungen."""
+    """F295: Statistik-Tage zählen für K2, nicht für die übrigen Prüfungen; Ereignisse trennen sie nicht (#39)."""
 
     @staticmethod
     def check(report: dict, audit: str, check_id: str) -> dict:
@@ -133,10 +133,11 @@ class StatisticDaysUsageTest(unittest.TestCase):
         self.assertGreater(self.check(with_stats, "cost", "K2")["progress"]["have"],
                            self.check(without, "cost", "K2")["progress"]["have"])
 
-    def test_annual_projection_ignores_statistic_days_before_last_event(self):
-        without = run(events=syn.EVENTS, audits=["cost"])
-        with_stats = run(stats(), events=syn.EVENTS, audits=["cost"])
-        self.assertEqual(self.check(with_stats, "cost", "K2"), self.check(without, "cost", "K2"))
+    def test_annual_projection_keeps_statistic_days_across_events(self):
+        """#39: Ein Ereignis trennt nicht mehr; K2 rechnet mit denselben Statistik-Tagen wie ohne Ereignis."""
+        plain = run(stats(), audits=["cost"])
+        with_event = run(stats(), events=syn.EVENTS, audits=["cost"])
+        self.assertEqual(self.check(with_event, "cost", "K2"), self.check(plain, "cost", "K2"))
 
     def test_efficiency_checks_use_raw_days_only(self):
         without, with_stats = run(audits=["efficiency"]), run(stats(), audits=["efficiency"])

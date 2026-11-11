@@ -5,10 +5,10 @@ Jede wird höchstens einmal je Lauf gerechnet und nur, wenn ein zugeschaltetes A
 deren Ergebnis andere brauchen (D2, D4, D8, T2), ist selbst eine Grundgröße; das Audit, zu dem sie gehört, zeigt sie
 nur an. So rechnet z. B. die Effizienz mit dem Offset, auch wenn das Datenbasis-Audit abgeschaltet ist.
 
-Zwei Zeiträume: `start` (ganzes Fenster: Fühler, Datenbasis, Zeitstrahl) und `section_start` (ab dem letzten
-Ereignis: Verhalten der Anlage, Spezifikation 1.5). Grundgrößen mit `_window` gelten fürs ganze Fenster. Das Audit
-Warmwasser beginnt nur bei Ereignissen neu, die das Warmwasser betreffen (`dhw_section_start`): Eine verstellte
-Heizkreispumpe ändert nichts daran, wie viel geduscht wird.
+Ereignisse sind Markierungen, keine Trenner (Spezifikation 1.5, #39): Alle Audits rechnen über das ganze Fenster,
+`section_start` und `dhw_section_start` sind gleich `start`. Gemerkt wird nur das letzte Ereignis (`event`) bzw. das
+letzte Warmwasser-Ereignis (`dhw_event`); der Runner vergleicht damit das Urteil von heute mit dem zum Ereigniszeitpunkt.
+Die Namen `section_start` und `_window` bleiben, damit die Prüfungen unverändert bleiben.
 """
 
 from __future__ import annotations
@@ -80,10 +80,10 @@ class Context:
         self.start, self.end = start, end
         # Tageswerte der Langzeitstatistik (long_term.py, Spezifikation 1.11); None = keine
         self.statistics = statistics
-        past = [e["time"] for e in events or [] if e["time"] <= end]
-        self.last_event_time = max(past) if past else None
-        self.section_start, self.event = section_start(events or [], start, end)
-        self.dhw_section_start, self.dhw_event = section_start(events or [], start, end, w1.EVENT_KINDS)
+        # Ereignisse nur merken, nicht ab ihnen rechnen (Spezifikation 1.5, #39)
+        _, self.event = section_start(events or [], start, end)
+        _, self.dhw_event = section_start(events or [], start, end, w1.EVENT_KINDS)
+        self.section_start = self.dhw_section_start = start
         self.recorder_keep_days, self.long_term_days = recorder_keep_days, long_term_days
         self.heater_kw = heater_kw
         self.master = master or {}
@@ -104,7 +104,7 @@ class Context:
         return {"window": self.start, "dhw": self.dhw_section_start}.get(section, self.section_start)
 
     def event_of(self, section: str) -> dict | None:
-        """Das Ereignis, ab dem ein Audit mit diesem Zeitraum rechnet; None = ganzes Fenster."""
+        """Das letzte Ereignis, das ein Audit mit diesem Zeitraum betrifft; None = keines (Datenbasis: nie)."""
         return {"window": None, "dhw": self.dhw_event}.get(section, self.event)
 
     # --- Datenbasis -------------------------------------------------------------------------------------------
@@ -196,19 +196,17 @@ class Context:
 
     @cached_property
     def statistic_rows_section(self) -> list[dict]:
-        """Statistik-Tage nach dem letzten Ereignis, auch wenn es vor dem Fenster liegt (für K2, Jahreswärme, Wirkung)."""
-        if self.last_event_time is None:
-            return self.statistic_rows
-        return [r for r in self.statistic_rows if days.parse(r["day"], self.tz) >= self.last_event_time]
+        """Statistik-Tage für K2, Jahreswärme und Wirkung; seit #39 alle, Ereignisse trennen nicht mehr."""
+        return self.statistic_rows
 
     @cached_property
     def year_rows(self) -> list[dict]:
-        """Tage für die Hochrechnung K2 und die Jahreswärme: Statistik-Tage seit dem Ereignis + gültige Tage."""
+        """Tage für die Hochrechnung K2 und die Jahreswärme: Statistik-Tage + gültige Tage."""
         return self.statistic_rows_section + self.daily_rows
 
     @cached_property
     def year_rows_window(self) -> list[dict]:
-        """Tage für die Jahreswerte der Wirkung (1.10): Statistik-Tage seit dem Ereignis + ganzes Fenster."""
+        """Tage für die Jahreswerte der Wirkung (1.10): Statistik-Tage + ganzes Fenster."""
         return self.statistic_rows_section + self.daily_rows_window
 
     def timeline_row(self, day: str) -> dict | None:
