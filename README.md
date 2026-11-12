@@ -9,6 +9,36 @@
 > mit und ändert nichts an der Wärmepumpe. Die Urteile sind Hinweise, kein Gutachten: Bitte nichts an der Anlage
 > verstellen, ohne die Erklärung zur jeweiligen Prüfung gelesen zu haben, und im Zweifel den Fachbetrieb fragen.
 
+## Inhalt
+
+- [Worum geht es?](#worum-geht-es)
+- [Was wird genau geprüft?](#was-wird-genau-geprüft)
+  - [Audit 0 – Datenbasis: Kann man den Messwerten trauen?](#audit-0--datenbasis-kann-man-den-messwerten-trauen)
+  - [Audit 1 – Effizienz: Wie gut arbeitet die Wärmepumpe?](#audit-1--effizienz-wie-gut-arbeitet-die-wärmepumpe)
+  - [Audit 2 – Vorlauf: Heizt sie wärmer als nötig?](#audit-2--vorlauf-heizt-sie-wärmer-als-nötig)
+  - [Audit 3 – Leistung: Passt die Wärmepumpe zum Haus?](#audit-3--leistung-passt-die-wärmepumpe-zum-haus)
+  - [Audit 4 – Warmwasser: Effizient, hygienisch und zur richtigen Zeit?](#audit-4--warmwasser-effizient-hygienisch-und-zur-richtigen-zeit)
+  - [Audit 5 – Kosten: Was kostet die Wärme, lohnt der Tarif?](#audit-5--kosten-was-kostet-die-wärme-lohnt-der-tarif)
+    - [Vergleich mit anderen Heizsystemen](#vergleich-mit-anderen-heizsystemen)
+    - [Feste Kosten im Wärmepreis](#feste-kosten-im-wärmepreis)
+  - [Was bringt eine Aktion?](#was-bringt-eine-aktion)
+  - [Wann gibt es ein Ergebnis?](#wann-gibt-es-ein-ergebnis)
+  - [Ereignisse: „Ich habe etwas verstellt“](#ereignisse-ich-habe-etwas-verstellt)
+  - [Zeitstrahl](#zeitstrahl)
+- [Was brauche ich?](#was-brauche-ich)
+  - [Welche Messwerte werden genutzt?](#welche-messwerte-werden-genutzt)
+- [Installation – Schritt für Schritt](#installation--schritt-für-schritt)
+  - [Weg A: über HACS](#weg-a-über-hacs)
+  - [Weg B: Dateien von Hand kopieren](#weg-b-dateien-von-hand-kopieren)
+  - [Einrichten](#einrichten)
+  - [Anlagendaten ergänzen (empfohlen)](#anlagendaten-ergänzen-empfohlen)
+  - [Personen im Haushalt](#personen-im-haushalt)
+  - [Karte auf dem Dashboard anzeigen](#karte-auf-dem-dashboard-anzeigen)
+  - [Ereignis eintragen](#ereignis-eintragen)
+- [Häufige Fragen](#häufige-fragen)
+- [Für Entwickler](#für-entwickler)
+- [Lizenz](#lizenz)
+
 ## Worum geht es?
 
 Eine Wärmepumpe heizt fast immer – aber oft nicht so sparsam, wie sie könnte. Typische Gründe: Die Heizkurve ist zu
