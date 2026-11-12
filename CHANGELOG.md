@@ -16,6 +16,12 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 - **K4 nur mit dynamischem Strompreis** (#40): Ohne zugeordneten dynamischen Strompreis gibt es K4 weder in der Karte
   noch als Sensor; ein vorhandener K4-Sensor wird entfernt.
 
+- **W2 bewertet das eingestellte Warmwasser-Soll** (#44): Bisher galt der Median der Speichertemperatur über alle
+  Ladungen im Zeitraum. Wer nach einem gelben W2 das Soll anhob, sah wochenlang weiter Gelb, weil die alten Ladungen
+  im Median blieben. Jetzt zählt das aktuelle Soll, eine Umstellung wirkt sofort. Ohne zugeordneten Soll-Sensor nimmt
+  W2 ersatzweise die Speichertemperatur nach dem Laden der letzten 7 Tage. Unter 50 °C bleibt W2 grün, wenn der
+  Speicher regelmäßig auf 60 °C aufgeheizt wird.
+
 ### Behoben
 - **Zahlen mit höchstens zwei Nachkommastellen** (#42): Unter „Datenbasis“ stand der Zählerstrom ungerundet
   (z. B. „443.21299999999997 kWh“). Die Attribute aller Audit-Sensoren und die Zahlen in Prüftexten haben jetzt

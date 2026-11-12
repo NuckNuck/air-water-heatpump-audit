@@ -39,6 +39,8 @@ DISINFECTION_MAX_PER_WEEK = 2  # W3: öfter kostet Strom ohne Hygienegewinn
 # einen Abstand (DVGW 2023 S. 15, UBA 2023 S. 5); Vorgabe einmal pro Woche als eigene Festlegung, im Stammdatum
 # einstellbar (Mitsubishi Ecodan ab Werk: alle 15 Tage). Ein Tag Spielraum für die Uhrzeit der Aufheizung.
 DISINFECTION_INTERVAL_DAYS = 7
+# W2 ohne Soll-Sensor: Median der Speichertemperatur nur über die letzten Tage, damit eine Umstellung bald wirkt (#44)
+SETPOINT_FALLBACK_DAYS = 7
 INTERVAL_SLACK_DAYS = 1
 # W6: Wasseraustausch. Bestimmungsgemäßer Betrieb heißt Austausch mindestens alle 7 Tage, besser alle 3 Tage
 # (DVGW-Information 2020; DVGW-Kompaktinfo 2024 S. 2).
@@ -197,26 +199,39 @@ def regular_disinfection(charges: list[Charge], window_start: float, end: float,
 def check_dhw_temperature(charges: list[Charge], since: float, end: float, setpoint: Series,
                           window_charges: list[Charge] | None = None, window_start: float | None = None,
                           interval_days: float | None = None, turnover_days: float | None = None) -> CheckResult:
-    """W2: Speichertemperatur nach dem Laden (Median aller Ladungen) gegen die untere Betriebstemperatur (Hygiene)
-    und die Grenze, ab der nur noch Strom verloren geht. Seltene Aufheizungen auf 60 °C verschieben den Median kaum;
-    ist der Speicher immer auf 60 °C eingestellt, zeigt der Median genau das.
+    """W2: eingestellte Warmwasser-Solltemperatur gegen die untere Betriebstemperatur (Hygiene) und die Grenze, ab der
+    nur noch Strom verloren geht (#44). Bewertet wird nur das aktuelle Soll, nicht der Verlauf: Stellt der Besitzer
+    nach einem Hinweis das Soll um, gilt das sofort.
 
-    Unter 50 °C entscheidet, ob der Speicher regelmäßig auf 60 °C aufgeheizt wird (Entscheid F226). Die Aufheizungen
-    zählen übers ganze Fenster (window_charges ab window_start): Ein Ereignis ändert nichts an der Hygiene davor."""
+    Ohne Soll-Sensor ersatzweise der Median der Speichertemperatur nach dem Laden über die letzten
+    SETPOINT_FALLBACK_DAYS Tage, damit alte Ladungen nach einer Umstellung nicht nachhängen.
+
+    Unter 50 °C entscheidet, ob der Speicher regelmäßig auf 60 °C aufgeheizt wird (Entscheid F226, bleibt mit #44).
+    Die Aufheizungen zählen übers ganze Fenster (window_charges ab window_start)."""
     key = ("W2", "dhw_temperature")
-    normal = [c.tank_after for c in charges if c.tank_after is not None]
-    prog = progress(len(normal), MIN_CHARGES, "charges", RATE, since)
-    if len(normal) < early(MIN_CHARGES):
-        return CheckResult(*key, NOT_ASSESSABLE, text=f"{count(len(normal), 'Ladung', 'Ladungen')} mit "
-                           f"Speichertemperatur, vorläufiges Urteil ab {early(MIN_CHARGES):.0f}.", origin=SOURCED,
-                           progress=prog)
-    temp = _median(normal)
-    target = time_mean(setpoint, [(since, end)]) if setpoint else None
+    try:
+        current = float(value_at(setpoint, end)) if setpoint else None
+    except (TypeError, ValueError):
+        current = None
     interval = interval_days or DISINFECTION_INTERVAL_DAYS
-    text = f"Speicher nach dem Laden {num(temp, '.1f')} °C (Median)"
-    text += f", eingestellt {num(target, '.0f')} °C. " if target is not None else ". "
-    details = {"tank_after_median": round(temp, 1), "setpoint_mean": None if target is None else round(target, 1),
-               "interval_days": interval}
+    if current is not None:
+        temp = current
+        prog = None
+        text = f"Warmwasser-Soll {num(temp, '.0f')} °C. "
+        details = {"setpoint": round(temp, 1), "source": "setpoint", "interval_days": interval}
+    else:
+        recent_from = max(since, end - SETPOINT_FALLBACK_DAYS * 86400)
+        normal = [c.tank_after for c in charges if c.tank_after is not None and c.start >= recent_from]
+        prog = progress(len(normal), MIN_CHARGES, "charges", RATE, recent_from)
+        if len(normal) < early(MIN_CHARGES):
+            return CheckResult(*key, NOT_ASSESSABLE, text=f"Kein Warmwasser-Soll zugeordnet; "
+                               f"{count(len(normal), 'Ladung', 'Ladungen')} mit Speichertemperatur in den letzten "
+                               f"{num(SETPOINT_FALLBACK_DAYS, 'g')} Tagen, vorläufiges Urteil ab "
+                               f"{early(MIN_CHARGES):.0f}.", origin=SOURCED, progress=prog)
+        temp = _median(normal)
+        text = (f"Kein Warmwasser-Soll zugeordnet; Speicher nach dem Laden {num(temp, '.1f')} °C (Median der letzten "
+                f"{num(SETPOINT_FALLBACK_DAYS, 'g')} Tage). ")
+        details = {"tank_after_median": round(temp, 1), "source": "tank", "interval_days": interval}
     exchange = (f" Der Speicherinhalt wird etwa alle {num(turnover_days, '.1f')} Tage ausgetauscht (W6)."
                 if turnover_days is not None else "")
     if temp < HYGIENE_MIN_C - SENSOR_TOLERANCE_K:
