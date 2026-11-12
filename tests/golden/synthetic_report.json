@@ -5121,7 +5121,7 @@
  ],
  "heat": {
   "corrected_kwh": 850.21,
-  "electricity_kwh": 232.70000000000005,
+  "electricity_kwh": 232.7,
   "offset_k": 0.5,
   "offset_robust": true,
   "raw_kwh": 968.8

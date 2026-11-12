@@ -4,7 +4,7 @@ import unittest
 
 from audit_core import cycles as c3
 from audit_core import data_basis as d0
-from audit_core.result import HINT, INFO, NOT_ASSESSABLE, OK, WARN, CheckResult, count, num, overall
+from audit_core.result import HINT, INFO, NOT_ASSESSABLE, OK, WARN, CheckResult, count, num, overall, round_floats
 from audit_core.series import combine, intersect, intervals_where, subtract, weighted_median, weighted_values
 
 M = 60
@@ -18,6 +18,19 @@ def onoff(*switches, start_value=0):
         v = 1 - v
         out.append((t, v))
     return out
+
+
+class RoundingTest(unittest.TestCase):
+    """#42: Zahlen höchstens mit zwei Nachkommastellen ausgeben."""
+
+    def test_round_floats_nested(self):
+        self.assertEqual(round_floats({"a": 443.21299999999997, "b": [1.005e-3, 2, "x"], "c": None, "d": True}),
+                         {"a": 443.21, "b": [0.0, 2, "x"], "c": None, "d": True})
+
+    def test_num_without_precision(self):
+        self.assertEqual(num(443.21299999999997), "443,21")
+        self.assertEqual(num(1.5, ".1f"), "1,5")
+        self.assertEqual(num(7), "7")
 
 
 class SeriesTest(unittest.TestCase):

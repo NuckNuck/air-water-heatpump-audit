@@ -20,6 +20,7 @@ from homeassistant.util import dt as dt_util
 
 from .audit_core.help import CHECK_HELP
 from .audit_core.audits import BY_ID
+from .audit_core.result import round_floats
 from .audit_core.runner import applies
 from .audit_core.timeline import rolling_cop
 from .const import CONF_AUDIT, DOMAIN, SUBENTRY_AUDIT, VERDICTS, audit_title, language
@@ -142,7 +143,7 @@ class AuditSensor(_Base):
             attrs["cycles"] = [{k: c[k] for k in ("start", "end", "duration_min", "pause_before", "kind",
                                                   "open_start", "open_end", "defrost_stops")}
                                for c in data["cycles"][-MAX_CYCLES_IN_ATTRIBUTES:]]
-        return attrs
+        return round_floats(attrs)
 
 
 def _before(b: dict | None) -> dict | None:
@@ -182,11 +183,11 @@ class CheckSensor(_Base):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         r = self._result()
-        return {"check_id": r["check_id"], "audit": self._audit, "value": r["value"], "unit": r["unit"],
+        return round_floats({"check_id": r["check_id"], "audit": self._audit, "value": r["value"], "unit": r["unit"],
                 "text": r["text"], "origin": r["origin"], "details": r["details"],
                 "action": r.get("action"), "help": CHECK_HELP.get(r["check_id"]),
                 "progress": r.get("progress"), "provisional": r.get("provisional", False),
-                "before": _before(r.get("before"))}
+                "before": _before(r.get("before"))})
 
 
 class TimelineSensor(_Entity):
@@ -210,11 +211,11 @@ class TimelineSensor(_Entity):
         audits = [{"id": a, "name": BY_ID[a].names[lang], "color": BY_ID[a].color, "order": BY_ID[a].order,
                    "metric": BY_ID[a].timeline.metric_names.get(lang, ""), "entity_id": f"sensor.{DOMAIN}_{a}"}
                   for a in data["audits"] if BY_ID[a].timeline]
-        return {"days": data["timeline"]["days"], "scales": data["timeline"]["scales"], "audits": audits,
+        return round_floats({"days": data["timeline"]["days"], "scales": data["timeline"]["scales"], "audits": audits,
                 "events": [{"time": _iso(e["time"]), "kind": e["kind"], "note": e.get("note"),
                             "title": e.get("title"), "id": e.get("id"), "local_time": e.get("local_time")}
                            for e in data.get("events", [])],
-                "entry_id": self.coordinator.config_entry.entry_id}
+                "entry_id": self.coordinator.config_entry.entry_id})
 
 
 class RollingCopSensor(_Entity):
@@ -245,4 +246,4 @@ class RollingCopSensor(_Entity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {k: v for k, v in self._result().items() if k != "cop"}
+        return round_floats({k: v for k, v in self._result().items() if k != "cop"})

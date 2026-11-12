@@ -26,7 +26,7 @@ from . import long_term as lt
 from . import efficiency as e1
 from . import flow_temp as t2
 from . import heating_prices as hp
-from .result import HINT, NOT_ASSESSABLE, OK, CheckResult
+from .result import HINT, NOT_ASSESSABLE, OK, CheckResult, round_floats
 from .series import Interval, Series, clip, intervals_where
 
 # Rollen-Keys (Spezifikation 1.3): herstellerneutral; was eine Rolle bedeutet, steht in den Übersetzungen.
@@ -162,9 +162,9 @@ class Context:
     @cached_property
     def heat_summary(self) -> dict:
         return {"raw_kwh": round(heat.energy_kwh(self.heat_raw, [(self.start, self.end)]), 2),
-                "offset_k": self.offset_k, "offset_robust": self.offset_robust,
+                "offset_k": round(self.offset_k, 2), "offset_robust": self.offset_robust,
                 "corrected_kwh": round(heat.energy_kwh(self.heat_corrected, [(self.start, self.end)]), 2),
-                "electricity_kwh": meter_delta(self.s["electricity_meter"], self.start, self.end)}
+                "electricity_kwh": round_floats(meter_delta(self.s["electricity_meter"], self.start, self.end))}
 
     @cached_property
     def carnot_ideal(self) -> Series:
