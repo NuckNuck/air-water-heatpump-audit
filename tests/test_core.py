@@ -1280,6 +1280,24 @@ class DhwTest(unittest.TestCase):
         always = w1.check_disinfection([self.charge(d, 61.0) for d in range(14)], [], 3.0, 0, 14 * 24 * H)
         self.assertEqual((always.verdict, always.value), (OK, None))
 
+    def test_temperature_rates_current_setpoint(self):
+        """#44: W2 bewertet nur das aktuelle Soll; ohne Soll-Sensor die Ladungen der letzten 7 Tage."""
+        from audit_core import dhw as w1
+        end = 20 * 24 * H
+        cool = [self.charge(d, 45.0) for d in range(19)]
+        # Soll von 44 auf 49 °C umgestellt: sofort grün, obwohl alle gemessenen Ladungen bei 45 °C liegen
+        r = w1.check_dhw_temperature(cool, 0, end, [(0, 44.0), (19 * 24 * H, 49.0)])
+        self.assertEqual((r.verdict, r.value, r.details["source"], r.progress), (OK, 49.0, "setpoint", None))
+        self.assertIn("Warmwasser-Soll 49 °C", r.text)
+        r = w1.check_dhw_temperature(cool, 0, end, [(0, 44.0)])
+        self.assertEqual((r.verdict, r.value), (HINT, 44.0))
+        self.assertEqual(w1.check_dhw_temperature(cool, 0, end, [(0, 62.0)]).verdict, HINT)
+        # Ohne Soll-Sensor: nur die letzten 7 Tage zählen
+        warm = [self.charge(d, 45.0) for d in range(12)] + [self.charge(d, 51.0) for d in range(12, 19)]
+        r = w1.check_dhw_temperature(warm, 0, end, [])
+        self.assertEqual((r.verdict, r.value, r.details["source"]), (OK, 51.0, "tank"))
+        self.assertIn("Kein Warmwasser-Soll", r.text)
+
     def test_temperature_below_50_depends_on_regular_disinfection(self):
         from audit_core import dhw as w1
         cool = [self.charge(d, 45.0) for d in range(30)]

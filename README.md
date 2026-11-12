@@ -117,7 +117,7 @@ Ladung ist die Zeit, in der das Umschaltventil auf Warmwasser steht.
 | Prüfung | Was wird geprüft? |
 |---|---|
 | W1 Gütegrad Warmwasser | Wie effizient die Wärmepumpe beim Warmwasser arbeitet, mit denselben Grenzen wie beim Heizen; dazu die Arbeitszahl. Braucht einen Stromzähler mit Nachkommastellen. |
-| W2 Speichertemperatur | Wie warm der Speicher nach dem Laden ist. Grün von 50 bis 60 °C. Darunter grün, solange der Speicher regelmäßig auf 60 °C aufgeheizt wird (Abstand einstellbar, Vorgabe 7 Tage), sonst gelb. Gelb auch über 60 °C, weil das nur Strom kostet. |
+| W2 Speichertemperatur | Auf welche Temperatur das Warmwasser eingestellt ist (aktuelles Soll; ohne Soll-Sensor die Speichertemperatur nach dem Laden der letzten 7 Tage). Eine Umstellung wirkt sofort. Grün von 50 bis 60 °C. Darunter grün, solange der Speicher regelmäßig auf 60 °C aufgeheizt wird (Abstand einstellbar, Vorgabe 7 Tage), sonst gelb. Gelb auch über 60 °C, weil das nur Strom kostet. |
 | W3 Aufheizen auf 60 °C | Wie oft die Legionellenschaltung läuft und wie viel der Heizstab dabei braucht. Gelb bei mehr als zweimal pro Woche. Ob eine fehlende Aufheizung ein Problem ist, bewertet W2. |
 | W4 Speicherverlust | Wie viel Wärme der Speicher nachts verliert, umgerechnet auf die Klassen des Energielabels. Grün bis Klasse D (die Schätzung ist etwa eine Klasse unsicher). Braucht den Speicherinhalt. |
 | W5 Ladezeitpunkt | Ob zu einer kalten Tageszeit geladen wird; gelb, wenn Laden zur wärmsten Tageszeit mindestens 10 % des Warmwasserstroms sparen würde. Mit den Duschzeiten des Haushalts sagt der Text, ob ein Ladefenster passt. |

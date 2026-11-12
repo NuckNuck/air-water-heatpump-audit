@@ -137,8 +137,8 @@ CHECK_HELP: dict[str, dict[str, str]] = {
            "source": "Abgeleitet aus dem Feldtest Fraunhofer ISE (Gütegrad); der Gütegrad rechnet die höhere "
                      f"Temperatur beim Warmwasser heraus. Arbeitszahl nur Warmwasser im Feldtest: Mittel "
                      f"{_k(w1.FIELD_DHW_COP)}."},
-    "W2": {"what": "Wie warm der Speicher nach dem Laden ist (Median der normalen Ladungen, ohne Aufheizen auf "
-                   "60 °C).",
+    "W2": {"what": "Auf welche Temperatur das Warmwasser eingestellt ist (aktuelles Soll). Ohne Soll-Sensor ersatzweise "
+                   f"die Speichertemperatur nach dem Laden (Median der letzten {w1.SETPOINT_FALLBACK_DAYS} Tage).",
            "rating": f"Grün von {_k(w1.HYGIENE_MIN_C)} bis {_k(w1.EFFICIENCY_MAX_C)} °C. Darunter grün, wenn der "
                      "Speicher regelmäßig auf 60 °C aufgeheizt wird (Abstand aus den Stammdaten, Vorgabe "
                      f"{w1.DISINFECTION_INTERVAL_DAYS} Tage; kein Regelwerk nennt einen Abstand), sonst Gelb. Über {_k(w1.EFFICIENCY_MAX_C)} °C Gelb "

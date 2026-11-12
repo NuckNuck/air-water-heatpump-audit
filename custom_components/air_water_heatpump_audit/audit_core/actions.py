@@ -144,8 +144,8 @@ def _dhw_temperature(r: CheckResult, _: dict) -> Action:
                   f"mindestens alle {num(interval, 'g')} Tage 60 °C", [
                       "Am Bedienteil die Legionellenschaltung suchen (oft „Legionellen“ oder „Antilegionella“), "
                       f"einschalten, Intervall {num(interval, 'g')} Tage, Uhrzeit am Nachmittag.",
-                      "Alternativ die Warmwasser-Solltemperatur so einstellen, dass der Speicher nach dem Laden "
-                      "mindestens 50 °C zeigt; das kostet etwa 1,4 % Strom je Kelvin beim Warmwasser.",
+                      "Alternativ die Warmwasser-Solltemperatur auf mindestens 50 °C stellen; das kostet etwa "
+                      "1,4 % Strom je Kelvin beim Warmwasser.",
                       "Gibt es eine Zirkulationsleitung, verlangen die Regeln 60 °C; dann mit dem Fachbetrieb klären.",
                       _EVENT_STEP])
 
