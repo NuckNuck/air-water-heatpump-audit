@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import asdict, dataclass, field
+from typing import Any
 
 OK, HINT, WARN, INFO, NOT_ASSESSABLE = "ok", "hint", "warn", "info", "not_assessable"
 _RANK = {OK: 0, HINT: 1, WARN: 2}
@@ -68,8 +69,24 @@ def overall(results: list[CheckResult]) -> str:
     return NOT_ASSESSABLE
 
 
+def round_floats(value: Any, digits: int = 2) -> Any:
+    """Gleitkommazahlen in Zahl, Liste oder dict rekursiv auf höchstens `digits` Nachkommastellen runden (#42)."""
+    if isinstance(value, float):
+        return round(value, digits)
+    if isinstance(value, dict):
+        return {k: round_floats(v, digits) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [round_floats(v, digits) for v in value]
+    return value
+
+
 def num(value: float, spec: str = "g") -> str:
-    """Zahl für Fließtexte im deutschen Format: Dezimalkomma, Tausenderpunkt nur bei spec mit ",". """
+    """Zahl für Fließtexte im deutschen Format: Dezimalkomma, Tausenderpunkt nur bei spec mit ",".
+
+    Ohne feste Stellenzahl in spec höchstens zwei Nachkommastellen (#42).
+    """
+    if isinstance(value, float) and "." not in spec:
+        value = round(value, 2)
     text = format(value, spec)
     return text.replace(",", "\0").replace(".", ",").replace("\0", ".")
 

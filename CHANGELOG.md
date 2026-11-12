@@ -16,6 +16,11 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 - **K4 nur mit dynamischem Strompreis** (#40): Ohne zugeordneten dynamischen Strompreis gibt es K4 weder in der Karte
   noch als Sensor; ein vorhandener K4-Sensor wird entfernt.
 
+### Behoben
+- **Zahlen mit höchstens zwei Nachkommastellen** (#42): Unter „Datenbasis“ stand der Zählerstrom ungerundet
+  (z. B. „443.21299999999997 kWh“). Die Attribute aller Audit-Sensoren und die Zahlen in Prüftexten haben jetzt
+  höchstens zwei Nachkommastellen; die Karte zeigt Wärme, Offset und Zählerstrom im Zahlformat der HA-Sprache.
+
 ## [0.20.0] – 2026-11-09
 
 ### Behoben

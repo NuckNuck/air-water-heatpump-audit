@@ -53,8 +53,8 @@ const TEXT = {
       note: (p, f) => `${p.label}: ${f(p.current)} → ${f(p.value)}${p.unit ? " " + p.unit : ""} (über die Audit-Karte)`,
       ok: "Übernommen und als Ereignis eingetragen; die Audits rechnen neu.", failed: "Fehlgeschlagen" },
     origin: { sourced: "belegt", derived: "abgeleitet", physical: "physikalisch", descriptive: "beschreibend" },
-    heat: (h) => `Wärme ${h.raw_kwh} kWh roh, ${h.corrected_kwh} kWh mit Offset ${h.offset_k >= 0 ? "+" : ""}${h.offset_k} K`
-      + (h.offset_robust ? "" : " (vorläufig)") + (h.electricity_kwh != null ? ` · Zählerstrom ${h.electricity_kwh} kWh` : ""),
+    heat: (h, f) => `Wärme ${f(h.raw_kwh)} kWh roh, ${f(h.corrected_kwh)} kWh mit Offset ${h.offset_k >= 0 ? "+" : ""}${f(h.offset_k)} K`
+      + (h.offset_robust ? "" : " (vorläufig)") + (h.electricity_kwh != null ? ` · Zählerstrom ${f(h.electricity_kwh)} kWh` : ""),
     kinds: { heating_curve: "Heizkurve geändert", valves: "Heizkörperventile verstellt",
       hydraulic_balancing: "Hydraulischer Abgleich", pump_setting: "Pumpe verstellt",
       dhw_setting: "Warmwasser-Einstellung", hardware: "Umbau an der Anlage", other: "Sonstiges" },
@@ -118,8 +118,8 @@ const TEXT = {
       note: (p, f) => `${p.label}: ${f(p.current)} → ${f(p.value)}${p.unit ? " " + p.unit : ""} (from the audit card)`,
       ok: "Applied and recorded as an event; the audits are recalculated.", failed: "Failed" },
     origin: { sourced: "sourced", derived: "derived", physical: "physical", descriptive: "descriptive" },
-    heat: (h) => `Heat ${h.raw_kwh} kWh raw, ${h.corrected_kwh} kWh with offset ${h.offset_k >= 0 ? "+" : ""}${h.offset_k} K`
-      + (h.offset_robust ? "" : " (preliminary)") + (h.electricity_kwh != null ? ` · metered electricity ${h.electricity_kwh} kWh` : ""),
+    heat: (h, f) => `Heat ${f(h.raw_kwh)} kWh raw, ${f(h.corrected_kwh)} kWh with offset ${h.offset_k >= 0 ? "+" : ""}${f(h.offset_k)} K`
+      + (h.offset_robust ? "" : " (preliminary)") + (h.electricity_kwh != null ? ` · metered electricity ${f(h.electricity_kwh)} kWh` : ""),
     kinds: { heating_curve: "Heating curve changed", valves: "Radiator valves adjusted",
       hydraulic_balancing: "Hydraulic balancing", pump_setting: "Pump setting changed",
       dhw_setting: "Hot water setting", hardware: "Hardware change", other: "Other" },
@@ -607,7 +607,7 @@ class AirWaterAuditCard extends ProgressMixin(HTMLElement) {
       outdoor_mean: temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : null };
     return `<table class="days"><thead><tr>${["day", "outdoor", "electricity", "heat", "heat_raw", "cop", "cop_raw", "carnot", "dhw"]
       .map((k) => `<th>${c[k]}</th>`).join("")}</tr></thead><tbody>
-      ${[...rows].reverse().map((r) => line(day(r.day) + (r.gap_min ? ` <span class="gap" title="${esc(t.days.gap(r.gap_min,
+      ${[...rows].reverse().map((r) => line(day(r.day) + (r.gap_min ? ` <span class="gap" title="${esc(t.days.gap(f(r.gap_min, 0),
         f(r.gap_share_pct, 0), t.days.gapHow[r.gap_method] ?? r.gap_method))}">*</span>` : ""), r)).join("")}
       ${rows.length > 1 ? line(`<b>${t.days.total}</b>`, total).replace("<tr>", '<tr class="total">') : ""}
       </tbody></table><div class="msg">${t.days.note}${rows.some((r) => r.gap_min) ? ` ${t.days.gapNote}` : ""}</div>`;
@@ -679,7 +679,7 @@ class AirWaterAuditCard extends ProgressMixin(HTMLElement) {
         <div class="title">${esc(title)}</div>
         <div class="state">${esc(hass.formatEntityState(audit))}</div>
         ${a.entry_id ? settingsLink(a.entry_id, t.settings) : ""}
-      </div>${a.heat ? `<div class="heat">${esc(t.heat(a.heat))}</div>` : ""}</td></tr>`;
+      </div>${a.heat ? `<div class="heat">${esc(t.heat(a.heat, (v) => formatValue(v, "", hass.language)))}</div>` : ""}</td></tr>`;
     if (audit.state === "unavailable" || audit.state === "unknown") {
       const msg = runningProgress() ? PROGRESS_TEXT[this._lang()].first : t.waiting;
       return head + `<tr><td colspan="${span}" class="msg">${esc(msg)}</td></tr>`;
