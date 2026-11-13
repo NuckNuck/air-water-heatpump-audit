@@ -394,8 +394,8 @@ entities:
 Nach jeder Änderung an der Anlage:
 
 in der **Zeitstrahl-Karte** auf **Ereignis hinzufügen** (nur für Administratoren sichtbar). Zeitpunkt, Art (z. B.
-„Heizkurve geändert“) und eine kurze Notiz eintragen. In der Ereignisliste unter dem Zeitstrahl ändert ✎ ein Ereignis,
-✕ löscht es. Übernimmt man einen Vorschlag der Karte, trägt sie das Ereignis selbst ein.
+„Heizkurve geändert“) und eine kurze Notiz eintragen. Die Ereignisliste unter dem Zeitstrahl zeigt die neuesten
+Ereignisse zuerst und ab 10 Einträgen eine Bildlaufleiste; ✎ ändert ein Ereignis, ✕ löscht es. Übernimmt man einen Vorschlag der Karte, trägt sie das Ereignis selbst ein.
 
 Danach rechnet die Integration alle Audits neu; das dauert je nach Datenmenge eine halbe Minute oder länger. Die
 bisherigen Ergebnisse bleiben so lange stehen, oben in den Karten zeigt „Wird aktualisiert …“ mit einem Balken den

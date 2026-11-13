@@ -21,6 +21,9 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
   im Median blieben. Jetzt zählt das aktuelle Soll, eine Umstellung wirkt sofort. Ohne zugeordneten Soll-Sensor nimmt
   W2 ersatzweise die Speichertemperatur nach dem Laden der letzten 7 Tage. Unter 50 °C bleibt W2 grün, wenn der
   Speicher regelmäßig auf 60 °C aufgeheizt wird.
+- **Ereignisliste: neueste zuerst, höchstens 10 Einträge sichtbar** (#48): Die Liste unter dem Zeitstrahl beginnt mit
+  dem zuletzt eingetragenen Ereignis; ab dem elften Eintrag scrollt sie, statt die Karte zu verlängern. Die Nummern
+  bleiben chronologisch, damit sie zu den Linien im Zeitstrahl passen.
 
 ### Behoben
 - **Zahlen mit höchstens zwei Nachkommastellen** (#42): Unter „Datenbasis“ stand der Zählerstrom ungerundet
