@@ -846,6 +846,7 @@ const REF_COLORS = { heating_oil: "#6d4c41", natural_gas: "#1e88e5", wood_pellet
 const REF_DASHES = ["6 3", "2 3", "10 3 2 3"];
 // Zeitraum-Umschalter (F285 a): Tage oder "all"; Auswahl je Browser in localStorage
 const TL_RANGES = ["3", "7", "30", "90", "365", "all"];
+const EVENT_ROWS = 10;  // sichtbare Einträge der Ereignisliste, der Rest scrollt (#48)
 const TL_RANGE_KEY = "air-water-heatpump-audit-timeline-range";
 
 const TL_TEXT = {
@@ -1056,7 +1057,8 @@ class AirWaterAuditTimelineCard extends ProgressMixin(HTMLElement) {
         .day { margin-top: 12px; padding: 8px 10px; border-radius: 8px; background: var(--secondary-background-color); }
         .events { margin-top: 16px; }
         .events h3 { margin: 0 0 6px; font-size: 1em; font-weight: 500; }
-        .events ol { margin: 0; padding-left: 0; list-style: none; }
+        .events ol { margin: 0; padding-left: 0; list-style: none; position: relative; overflow-y: auto; }
+        .events ol.long { max-height: 17em; }
         .events li { margin: 3px 0; }
         .ev-tools { white-space: nowrap; }
         button.link { background: none; border: none; padding: 0 4px; color: var(--primary-color); cursor: pointer; font: inherit; }
@@ -1114,7 +1116,10 @@ class AirWaterAuditTimelineCard extends ProgressMixin(HTMLElement) {
     const signature = [st?.last_updated, width, this._selected, hass.language].join("|");
     if (!force && signature === this._signature) return;
     this._signature = signature;
+    const scroll = this._charts.querySelector(".events ol")?.scrollTop ?? 0;  // Scrollstand der Ereignisliste halten
     this._renderCharts(st, width);
+    const ol = this._charts.querySelector(".events ol");
+    if (ol && scroll) ol.scrollTop = scroll;
     this._renderAdmin(st);
   }
 
@@ -1150,6 +1155,7 @@ class AirWaterAuditTimelineCard extends ProgressMixin(HTMLElement) {
       `<button type="button" data-range="${r}" class="${r === this._range ? "on" : ""}">${esc(t.range[r])}</button>`).join("")}</div>` : "";
     if (!days.length) {
       this._charts.innerHTML = title + ranges + `<p class="muted">${t.none}</p>` + this._eventList(events, null, t);
+      this._limitEventList();
       return;
     }
     const x0 = days[0].start;
@@ -1164,6 +1170,7 @@ class AirWaterAuditTimelineCard extends ProgressMixin(HTMLElement) {
     const sel = this._selected !== null && days[this._selected] ? this._dayDetails(days[this._selected], a.scales, t, events)
       : `<div class="muted" style="margin-top:8px">${t.pick}</div>`;
     this._charts.innerHTML = title + ranges + charts + sel + this._eventList(events, x0, t);
+    this._limitEventList();
   }
 
   // Zugeschaltete Audits mit Zeitstrahl: Linien zuerst, Streifen (Datenbasis) zuletzt
@@ -1450,10 +1457,26 @@ class AirWaterAuditTimelineCard extends ProgressMixin(HTMLElement) {
       ? ` <span class="ev-tools"><button type="button" class="link" data-edit="${esc(e.id)}" title="${esc(t.edit)}">✎</button>`
         + `<button type="button" class="link" data-del="${esc(e.id)}" title="${esc(t.remove)}">✕</button></span>`
       : "";
-    const items = events.map((e) => `<li><span class="badge">${e.n}</span>${esc(this._fmtTime(e.time))} · `
+    // Neueste zuerst (#48); die Nummern bleiben chronologisch, sie gehören zu den Linien im Zeitstrahl
+    const items = [...events].reverse().map((e) => `<li><span class="badge">${e.n}</span>${esc(this._fmtTime(e.time))} · `
       + `${esc(kinds[e.kind] ?? e.kind)}${e.note ? ` – ${esc(e.note)}` : ""}`
       + (x0 !== null && e.t < x0 ? ` <span class="muted">(${t.beforeRange})</span>` : "") + tools(e) + `</li>`).join("");
-    return `<div class="events"><h3>${t.events}</h3>${items ? `<ol>${items}</ol>` : `<div class="muted">${t.noEvents}</div>`}</div>`;
+    return `<div class="events"><h3>${t.events}</h3>${items ? `<ol${events.length > EVENT_ROWS ? ' class="long"' : ""}>${items}</ol>`
+      : `<div class="muted">${t.noEvents}</div>`}</div>`;
+  }
+
+  // Höchstens EVENT_ROWS Einträge sichtbar, der Rest scrollt (#48). Die Höhe kommt aus der Lage des ersten
+  // nicht mehr sichtbaren Eintrags, so passt sie auch bei umbrochenen Notizen. Gemessen wird nach dem Layout; ohne
+  // brauchbares Layout (Karte verborgen) gilt die feste Höhe aus dem Stylesheet.
+  _limitEventList() {
+    const ol = this._charts?.querySelector(".events ol.long");
+    if (!ol) return;
+    requestAnimationFrame(() => {
+      const cut = ol.children[EVENT_ROWS];
+      if (cut && cut.offsetParent === ol && cut.offsetTop > ol.children[EVENT_ROWS - 1].offsetTop) {
+        ol.style.maxHeight = `${cut.offsetTop}px`;
+      }
+    });
   }
 
   _entryId() {
