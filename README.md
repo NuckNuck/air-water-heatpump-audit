@@ -54,7 +54,7 @@ kann:
 | **Datenbasis** | Kann man den Messwerten trauen? | „Der Vorlauffühler zeigt 0,5 K mehr als der Rücklauffühler, obwohl beide gleich sein müssten.“ |
 | **Effizienz** | Wie gut arbeitet die Wärmepumpe? | „Gütegrad 0,38 – im Bereich guter Anlagen aus dem Fraunhofer-Feldtest.“ |
 | **Vorlauf** | Heizt sie wärmer als nötig? | „Hinter dem Pufferspeicher kommen 2,8 K weniger an, als die Wärmepumpe erzeugt.“ |
-| **Leistung** | Passt die Wärmepumpe zum Haus? | „Hochgerechnet 5.200 Verdichterstarts im Jahr – viele Anlagen kommen mit unter 2.000 aus.“ |
+| **Leistung** | Passt die Wärmepumpe zum Haus? | „Hochgerechnet 6.200 Verdichterstarts im Jahr – 90 % der Anlagen bleiben unter 5.500.“ |
 | **Warmwasser** | Effizient, hygienisch und zur richtigen Zeit? | „Speicher 45 °C, aber seit 3 Wochen nicht auf 60 °C aufgeheizt.“ |
 | **Kosten** | Was kostet die Wärme, lohnt der Tarif? | „Wärme kostet 8,1 ct/kWh – mit Gas wären es 14,3 ct.“ |
 
@@ -131,7 +131,7 @@ Lebensdauer.
 
 | Prüfung | Was wird geprüft? |
 |---|---|
-| C1 Starts pro Jahr | Verdichterstarts, hochgerechnet aufs Jahr. Grün bis 2.000. |
+| C1 Starts pro Jahr | Verdichterstarts, hochgerechnet aufs Jahr. Grün bis 5.500, über 2.000 mit Anmerkung. |
 | C2 Starts pro Stunde | Die meisten Starts innerhalb einer Stunde. Grün bis 6. |
 | C3 Kurze Zyklen | Wie viele Heizläufe kürzer als 10 Minuten sind; gelb, wenn an mindestens zwei Tagen Läufe unter 3 Minuten vorkommen. |
 | C4 Last gegen Mindestleistung | Ob der Wärmebedarf unter der kleinsten Leistung der Wärmepumpe liegt – dann ist Takten unvermeidbar (nur Info). |
@@ -147,7 +147,7 @@ Ladung ist die Zeit, in der das Umschaltventil auf Warmwasser steht.
 | Prüfung | Was wird geprüft? |
 |---|---|
 | W1 Gütegrad Warmwasser | Wie effizient die Wärmepumpe beim Warmwasser arbeitet, mit denselben Grenzen wie beim Heizen; dazu die Arbeitszahl. Braucht einen Stromzähler mit Nachkommastellen. |
-| W2 Speichertemperatur | Wie warm der Speicher nach dem Laden ist. Grün von 50 bis 60 °C. Darunter grün, solange der Speicher regelmäßig auf 60 °C aufgeheizt wird (Abstand einstellbar, Vorgabe 7 Tage), sonst gelb. Gelb auch über 60 °C, weil das nur Strom kostet. |
+| W2 Speichertemperatur | Auf welche Temperatur das Warmwasser eingestellt ist (aktuelles Soll; ohne Soll-Sensor die Speichertemperatur nach dem Laden der letzten 7 Tage). Eine Umstellung wirkt sofort. Grün von 50 bis 60 °C. Darunter grün, solange der Speicher regelmäßig auf 60 °C aufgeheizt wird (Abstand einstellbar, Vorgabe 7 Tage), sonst gelb. Gelb auch über 60 °C, weil das nur Strom kostet. |
 | W3 Aufheizen auf 60 °C | Wie oft die Legionellenschaltung läuft und wie viel der Heizstab dabei braucht. Gelb bei mehr als zweimal pro Woche. Ob eine fehlende Aufheizung ein Problem ist, bewertet W2. |
 | W4 Speicherverlust | Wie viel Wärme der Speicher nachts verliert, umgerechnet auf die Klassen des Energielabels. Grün bis Klasse D (die Schätzung ist etwa eine Klasse unsicher). Braucht den Speicherinhalt. |
 | W5 Ladezeitpunkt | Ob zu einer kalten Tageszeit geladen wird; gelb, wenn Laden zur wärmsten Tageszeit mindestens 10 % des Warmwasserstroms sparen würde. Mit den Duschzeiten des Haushalts sagt der Text, ob ein Ladefenster passt. |
@@ -163,7 +163,7 @@ Stromzähler der Wärmepumpe im Energie-Dashboard, wird dessen Preis vorgeschlag
 | K1 Wärmepreis | Was eine Kilowattstunde Wärme in der letzten Woche gekostet hat, im Vergleich zum früheren Brennstoff (z. B. Gas). Grün bis 10 % teurer (Messgenauigkeit). |
 | K2 Kosten pro Jahr | Strom und Kosten aufs Jahr hochgerechnet, mit der Ersparnis gegenüber dem früheren Brennstoff (nur Info). Mit der Wohnfläche dazu der Verbrauch je m² und die ungefähre Klasse im Energieausweis, mit den Personen die Kosten je Person. Braucht die Gradtage des Wohnorts und 14 Tage. |
 | K3 Wärmepumpentarif | Ob sich ein eigener Wärmepumpentarif mit zweitem Zähler gegenüber Haushaltsstrom lohnt, und ab welchem Haushaltsstrompreis, Preisabstand zum Haushaltsstrom bzw. Jahresverbrauch er sich lohnen würde (mit Diagramm). Hinweis auf das reduzierte Netzentgelt nach § 14a EnWG, das an den eigenen Zähler gebunden ist. |
-| K4 Strompreis dynamisch | Nur bei dynamischem Tarif: ob die Wärmepumpe bevorzugt in teuren Stunden läuft. |
+| K4 Strompreis dynamisch | Ob die Wärmepumpe bevorzugt in teuren Stunden läuft. Gibt es nur, wenn ein dynamischer Strompreis zugeordnet ist. |
 | K5 Sperrzeiten | Nur mit Sperrsignal des Netzbetreibers: wie oft und wie lange gesperrt oder gedimmt wird; gelb, wenn währenddessen oder danach der Heizstab nachheizt. |
 
 #### Vergleich mit anderen Heizsystemen
@@ -223,11 +223,10 @@ man mit der Maus über den Balken fährt oder auf das **?** daneben tippt.
 ### Ereignisse: „Ich habe etwas verstellt“
 
 Wenn an der Anlage etwas geändert wird – Heizkurve, Pumpenstufe, Heizkörperventile, hydraulischer Abgleich –, trägt
-man das als **Ereignis** ein. Alle Audits außer der Datenbasis rechnen dann ab diesem Zeitpunkt neu, damit
-nie „vorher“ und „nachher“ vermischt werden. So sieht man schwarz auf weiß, ob die Änderung etwas gebracht hat.
-Damit nach einer Änderung nicht tagelang alles grau ist, urteilen die Prüfungen schon mit wenigen Daten vorläufig.
-Solange ein Urteil vorläufig oder noch offen ist, steht darunter das Urteil von **davor**, z. B. „davor: grün 0,31“;
-beim Überfahren steht der Zeitraum.
+man das als **Ereignis** ein. Das Ereignis ist eine Markierung: Die Audits rechnen danach genauso weiter wie vorher,
+nichts wird zurückgesetzt (seit 0.21.0). Im **Zeitstrahl** steht es als senkrechte Linie; dort sieht man, ob sich die
+Tageswerte seitdem verbessern oder verschlechtern. Springt eine Prüfung in den Tagen danach um, lohnt der Blick, ob
+es mit dem Ereignis zusammenhängt. Über der Tabelle steht das letzte Ereignis.
 
 ### Zeitstrahl
 
@@ -425,8 +424,8 @@ entities:
 Nach jeder Änderung an der Anlage:
 
 in der **Zeitstrahl-Karte** auf **Ereignis hinzufügen** (nur für Administratoren sichtbar). Zeitpunkt, Art (z. B.
-„Heizkurve geändert“) und eine kurze Notiz eintragen. In der Ereignisliste unter dem Zeitstrahl ändert ✎ ein Ereignis,
-✕ löscht es. Übernimmt man einen Vorschlag der Karte, trägt sie das Ereignis selbst ein.
+„Heizkurve geändert“) und eine kurze Notiz eintragen. Die Ereignisliste unter dem Zeitstrahl zeigt die neuesten
+Ereignisse zuerst und ab 10 Einträgen eine Bildlaufleiste; ✎ ändert ein Ereignis, ✕ löscht es. Übernimmt man einen Vorschlag der Karte, trägt sie das Ereignis selbst ein.
 
 Danach rechnet die Integration alle Audits neu; das dauert je nach Datenmenge eine halbe Minute oder länger. Die
 bisherigen Ergebnisse bleiben so lange stehen, oben in den Karten zeigt „Wird aktualisiert …“ mit einem Balken den

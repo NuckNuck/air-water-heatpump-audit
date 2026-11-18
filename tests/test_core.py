@@ -4,7 +4,7 @@ import unittest
 
 from audit_core import cycles as c3
 from audit_core import data_basis as d0
-from audit_core.result import HINT, INFO, NOT_ASSESSABLE, OK, WARN, CheckResult, count, num, overall
+from audit_core.result import HINT, INFO, NOT_ASSESSABLE, OK, WARN, CheckResult, count, num, overall, round_floats
 from audit_core.series import combine, intersect, intervals_where, subtract, weighted_median, weighted_values
 
 M = 60
@@ -18,6 +18,19 @@ def onoff(*switches, start_value=0):
         v = 1 - v
         out.append((t, v))
     return out
+
+
+class RoundingTest(unittest.TestCase):
+    """#42: Zahlen höchstens mit zwei Nachkommastellen ausgeben."""
+
+    def test_round_floats_nested(self):
+        self.assertEqual(round_floats({"a": 443.21299999999997, "b": [1.005e-3, 2, "x"], "c": None, "d": True}),
+                         {"a": 443.21, "b": [0.0, 2, "x"], "c": None, "d": True})
+
+    def test_num_without_precision(self):
+        self.assertEqual(num(443.21299999999997), "443,21")
+        self.assertEqual(num(1.5, ".1f"), "1,5")
+        self.assertEqual(num(7), "7")
 
 
 class SeriesTest(unittest.TestCase):
@@ -93,6 +106,15 @@ class CycleTest(unittest.TestCase):
         r = c3.check_starts_per_year(cyc, 0, 14 * 24 * H, 6279)
         self.assertGreater(r.value, 5500)
         self.assertEqual(r.verdict, HINT)
+
+    def test_projection_green_up_to_5500_with_note(self):
+        s = onoff(*[i * 3 * H + d for i in range(14 * 8) for d in (0, 2 * H)])
+        cyc = c3.detect_cycles(s, 0, 14 * 24 * H)
+        r = c3.check_starts_per_year(cyc, 0, 14 * 24 * H, 6279)
+        self.assertTrue(2000 < r.value <= 5500)
+        self.assertEqual(r.verdict, OK)
+        self.assertTrue(r.text.startswith(f"Hochgerechnet {r.value:,}".replace(",", ".")))
+        self.assertIn("höchstens 2.000", r.text)
 
     def test_projection_needs_heating_hours(self):
         r = c3.check_starts_per_year([], 0, 14 * 24 * H, None)
@@ -700,7 +722,7 @@ class SectionTest(unittest.TestCase):
         self.assertEqual(section_start(events, 100, 400), (150.0, events[1]))
         self.assertEqual(section_start(events[:1], 100, 400), (100, None))
 
-    def test_audits_after_event_ignore_cycles_before(self):
+    def test_audits_keep_cycles_before_event(self):
         from audit_core.runner import run_audits
         s = {"compressor_running": onoff(*[i * 20 * M for i in range(1, 24)]),
              "heartbeat": [(t, t + 100) for t in range(0, 8 * H + 1, 60)]}  # lückenlos, keine Neustarts
@@ -709,9 +731,11 @@ class SectionTest(unittest.TestCase):
                            events=[{"time": 6 * H, "kind": "heating_curve", "note": ""}])
         starts = lambda rep: next(r for r in rep["audits"]["capacity"]["checks"] if r["check_id"] == "C2")["value"]
         self.assertGreater(starts(before), 0)
-        self.assertEqual(after["section"]["start"], 6 * H)
+        # #39: Das Ereignis wird gemerkt, aber die Zyklen davor zählen weiter
+        self.assertEqual(after["section"]["event"]["time"], 6 * H)
         self.assertEqual(after["period"]["start"], 0)
-        self.assertLess(len(after["cycles"]), len(before["cycles"]))
+        self.assertEqual(len(after["cycles"]), len(before["cycles"]))
+        self.assertEqual(starts(after), starts(before))
 
 
 from audit_core import timeline as tl
@@ -1027,7 +1051,7 @@ class TimelineTest(unittest.TestCase):
         from audit_core.audits import BY_ID
         scale = lambda audit, hours: BY_ID[audit].timeline.scale({"heating_hours": hours})
         self.assertEqual(scale("flow_temperature", 6279)["bands"][0], [0, 1.5, OK])
-        self.assertAlmostEqual(scale("capacity", 6279)["bands"][0][1], 7.6)
+        self.assertAlmostEqual(scale("capacity", 6279)["bands"][0][1], 21.0)  # 5.500 × 24 ÷ 6.279
         self.assertEqual(scale("capacity", None)["bands"], [])
 
     def test_merge_keeps_old_days_and_replaces_recomputed(self):
@@ -1104,9 +1128,10 @@ class ReadinessTest(unittest.TestCase):
         ready = rep["readiness"]
         self.assertEqual(set(ready), {"data_basis", "efficiency", "flow_temperature", "capacity", "dhw", "cost"})
         self.assertEqual(ready["data_basis"]["start"], 0)
-        self.assertEqual(ready["capacity"]["start"], 2 * H)
+        # Ereignisse setzen nichts zurück (#39): Datenreife zählt ab Fensterbeginn
+        self.assertEqual(ready["capacity"]["start"], 0)
         c1 = next(c for c in ready["capacity"]["checks"] if c["check_id"] == "C1")
-        self.assertEqual((c1["reached"], c1["eta"]), (False, 2 * H + 14 * 24 * H))
+        self.assertEqual((c1["reached"], c1["eta"]), (False, 14 * 24 * H))
         # Ohne Vor-/Rücklauf haben T1/T3–T5 keine Mindestmenge (Eingang fehlt), ohne Raumfühler auch T6 nicht
         self.assertFalse({"T1", "T3", "T4", "T5", "T6"} & {c["check_id"] for c in ready["flow_temperature"]["checks"]})
 
@@ -1138,19 +1163,29 @@ class RegistryTest(unittest.TestCase):
         rep = __import__("json").loads(__import__("json").dumps(rep, sort_keys=True, default=str))
         self.assertEqual(rep["audits"]["cost"]["checks"], self.run_with(["cost"])["audits"]["cost"]["checks"])
 
-    def test_provisional_verdict_with_state_before_event(self):
-        """F239: Nach dem Ereignis urteilt E3 schon vorläufig; darunter steht das Urteil aus dem Abschnitt davor."""
-        e3 = next(c for c in self.run_with(["efficiency"])["audits"]["efficiency"]["checks"] if c["check_id"] == "E3")
-        self.assertTrue(e3["provisional"])
-        self.assertEqual(e3["verdict"], OK)
-        self.assertEqual((e3["before"]["verdict"], e3["before"]["end"]), (OK, self.syn.EVENTS[0]["time"]))
-        self.assertEqual(e3["before"]["start"], self.syn.START)
-        # ohne Ereignis kein Vergleich
+    def test_event_does_not_change_verdicts(self):
+        """#39: Ein Ereignis ändert an den Urteilen nichts; nur das Ereignis selbst steht im Bericht."""
         from audit_core.runner import run_audits
         rep = run_audits(self.series, self.syn.START, self.syn.END, recorder_keep_days=10, long_term_days=None,
                          heater_kw=self.syn.HEATER_KW, master=self.syn.MASTER, events=[], controls={},
-                         tz="Europe/Berlin", audits=["efficiency"])
-        self.assertTrue(all(c["before"] is None for c in rep["audits"]["efficiency"]["checks"]))
+                         tz="Europe/Berlin")
+        rep = __import__("json").loads(__import__("json").dumps(rep, sort_keys=True, default=str))
+        with_event = self.run_with()
+        for audit_id, audit in rep["audits"].items():
+            self.assertEqual(with_event["audits"][audit_id]["checks"], audit["checks"], audit_id)
+        self.assertIsNotNone(with_event["audits"]["efficiency"]["event"])
+        self.assertTrue(all(c["before"] is None for a in with_event["audits"].values() for c in a["checks"]))
+
+    def test_check_needing_a_role_exists_only_with_it(self):
+        """#40: K4 gibt es nur mit zugeordnetem dynamischem Strompreis."""
+        from audit_core.runner import run_audits
+        ids = lambda roles: [c["check_id"] for c in run_audits(
+            self.series, self.syn.START, self.syn.END, recorder_keep_days=10, long_term_days=None,
+            heater_kw=self.syn.HEATER_KW, master=self.syn.MASTER, events=[], controls={}, tz="Europe/Berlin",
+            audits=["cost"], configured_roles=roles)["audits"]["cost"]["checks"]]
+        self.assertNotIn("K4", ids({"electricity_meter"}))
+        self.assertIn("K4", ids({"electricity_meter", "price_signal"}))
+        self.assertIn("K4", ids(None))
 
     def test_early_and_mark_provisional(self):
         from audit_core.result import CheckResult, early, mark_provisional, progress
@@ -1176,13 +1211,14 @@ class RegistryTest(unittest.TestCase):
                              report["section"]["event"])
         self.assertEqual(report, __import__("json").loads(golden.read_text(encoding="utf-8")))
 
-    def test_dhw_section_ignores_heating_events(self):
-        """Eine verstellte Heizkreispumpe beginnt den Abschnitt der Audits 1–3 neu, nicht den des Warmwassers."""
+    def test_events_are_markers_only(self):
+        """#39: Ereignisse setzen keinen Abschnitt; gemerkt wird je Audit das letzte betreffende Ereignis."""
         from audit_core.context import Context
         events = [{"time": 5 * H, "kind": "pump_setting"}, {"time": 2 * H, "kind": "dhw_setting"}]
         ctx = Context({}, 0, 10 * H, recorder_keep_days=None, long_term_days=None, heater_kw={}, master={},
                       events=events, controls={}, tz="UTC")
-        self.assertEqual((ctx.section_start, ctx.dhw_section_start), (5 * H, 2 * H))
+        self.assertEqual((ctx.section_start, ctx.dhw_section_start), (0, 0))
+        self.assertEqual(ctx.event_of("section")["kind"], "pump_setting")
         self.assertEqual(ctx.event_of("dhw")["kind"], "dhw_setting")
         self.assertIsNone(ctx.event_of("window"))
 
@@ -1252,6 +1288,24 @@ class DhwTest(unittest.TestCase):
         self.assertIn("Heizstab", r.text)
         always = w1.check_disinfection([self.charge(d, 61.0) for d in range(14)], [], 3.0, 0, 14 * 24 * H)
         self.assertEqual((always.verdict, always.value), (OK, None))
+
+    def test_temperature_rates_current_setpoint(self):
+        """#44: W2 bewertet nur das aktuelle Soll; ohne Soll-Sensor die Ladungen der letzten 7 Tage."""
+        from audit_core import dhw as w1
+        end = 20 * 24 * H
+        cool = [self.charge(d, 45.0) for d in range(19)]
+        # Soll von 44 auf 49 °C umgestellt: sofort grün, obwohl alle gemessenen Ladungen bei 45 °C liegen
+        r = w1.check_dhw_temperature(cool, 0, end, [(0, 44.0), (19 * 24 * H, 49.0)])
+        self.assertEqual((r.verdict, r.value, r.details["source"], r.progress), (OK, 49.0, "setpoint", None))
+        self.assertIn("Warmwasser-Soll 49 °C", r.text)
+        r = w1.check_dhw_temperature(cool, 0, end, [(0, 44.0)])
+        self.assertEqual((r.verdict, r.value), (HINT, 44.0))
+        self.assertEqual(w1.check_dhw_temperature(cool, 0, end, [(0, 62.0)]).verdict, HINT)
+        # Ohne Soll-Sensor: nur die letzten 7 Tage zählen
+        warm = [self.charge(d, 45.0) for d in range(12)] + [self.charge(d, 51.0) for d in range(12, 19)]
+        r = w1.check_dhw_temperature(warm, 0, end, [])
+        self.assertEqual((r.verdict, r.value, r.details["source"]), (OK, 51.0, "tank"))
+        self.assertIn("Kein Warmwasser-Soll", r.text)
 
     def test_temperature_below_50_depends_on_regular_disinfection(self):
         from audit_core import dhw as w1

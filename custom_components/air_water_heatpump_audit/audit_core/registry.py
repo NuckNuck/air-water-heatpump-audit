@@ -15,7 +15,8 @@ from .result import CheckResult
 if TYPE_CHECKING:
     from .context import Context
 
-# Zeitraum eines Audits: ganzes Fenster, ab dem letzten Ereignis, ab dem letzten Warmwasser-Ereignis (context.py)
+# Zeitraum eines Audits; seit #39 rechnen alle über das ganze Fenster. Der Wert bestimmt nur noch, welches Ereignis
+# ein Audit betrifft: keines (Datenbasis), jedes, nur Warmwasser-Ereignisse (context.py)
 WINDOW, SECTION, DHW_SECTION = "window", "section", "dhw"
 
 
@@ -24,6 +25,8 @@ class CheckSpec:
     check_id: str  # „E3“
     key: str  # „carnot_efficiency“ → unique_id, translation_key, entity_id
     run: Callable[[Context], CheckResult]
+    # Rolle, ohne die es die Prüfung gar nicht gibt (keine Zeile, kein Sensor), z. B. K4 nur mit dynamischem Tarif (#40)
+    needs_role: str | None = None
 
 
 @dataclass(frozen=True)
@@ -41,7 +44,7 @@ class AuditSpec:
     audit_id: str
     order: int
     color: str  # feste Audit-Farbe (Datenreife, Zeitstrahl), keine Ampelfarbe
-    section: str  # WINDOW: ganzes Fenster; SECTION: ab dem letzten Ereignis; DHW_SECTION: ab dem letzten Warmwasser-Ereignis
+    section: str  # welche Ereignisse das Audit betreffen: WINDOW keine, SECTION alle, DHW_SECTION nur Warmwasser
     roles: tuple[str, ...]  # alle Rollen, die das Audit (auch über Grundgrößen) liest
     required_roles: tuple[str, ...]  # ohne sie ist das Audit nicht sinnvoll; für die Einrichtung
     master_keys: tuple[str, ...]  # Stammdaten, die das Audit nutzt

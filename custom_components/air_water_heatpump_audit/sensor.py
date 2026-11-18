@@ -12,6 +12,7 @@ from typing import Any
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -19,9 +20,11 @@ from homeassistant.util import dt as dt_util
 
 from .audit_core.help import CHECK_HELP
 from .audit_core.audits import BY_ID
+from .audit_core.result import round_floats
+from .audit_core.runner import applies
 from .audit_core.timeline import rolling_cop
 from .const import CONF_AUDIT, DOMAIN, SUBENTRY_AUDIT, VERDICTS, audit_title, language
-from .coordinator import AirWaterAuditConfigEntry, AirWaterAuditCoordinator
+from .coordinator import AirWaterAuditConfigEntry, AirWaterAuditCoordinator, configured_roles
 
 MAX_CYCLES_IN_ATTRIBUTES = 200
 
@@ -53,7 +56,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirWaterAuditConfigEntry
                             name=audit_title(spec.audit_id, language(hass)), manufacturer="air-water-heatpump-audit",
                             model=spec.audit_id, via_device_id=main.id, entry_type=DeviceEntryType.SERVICE)
         entities: list[SensorEntity] = [AuditSensor(coordinator, spec.audit_id, device)]
-        entities += [CheckSensor(coordinator, spec.audit_id, c.check_id, c.key, device) for c in spec.checks]
+        roles = configured_roles(entry.data)
+        entities += [CheckSensor(coordinator, spec.audit_id, c.check_id, c.key, device) for c in spec.checks
+                     if applies(c, roles)]
+        # Prüfungen, deren Rolle fehlt (z. B. K4 ohne dynamischen Tarif, #40): früher angelegte Sensoren entfernen
+        registry = er.async_get(hass)
+        for c in spec.checks:
+            if not applies(c, roles) and (eid := registry.async_get_entity_id(
+                    "sensor", DOMAIN, f"{entry.entry_id}_{c.check_id.lower()}_{c.key}")):
+                registry.async_remove(eid)
         async_add_entities(entities, config_subentry_id=sub.subentry_id)
     async_add_entities([TimelineSensor(coordinator), RollingCopSensor(coordinator)])
 
@@ -132,7 +143,7 @@ class AuditSensor(_Base):
             attrs["cycles"] = [{k: c[k] for k in ("start", "end", "duration_min", "pause_before", "kind",
                                                   "open_start", "open_end", "defrost_stops")}
                                for c in data["cycles"][-MAX_CYCLES_IN_ATTRIBUTES:]]
-        return attrs
+        return round_floats(attrs)
 
 
 def _before(b: dict | None) -> dict | None:
@@ -172,11 +183,11 @@ class CheckSensor(_Base):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         r = self._result()
-        return {"check_id": r["check_id"], "audit": self._audit, "value": r["value"], "unit": r["unit"],
+        return round_floats({"check_id": r["check_id"], "audit": self._audit, "value": r["value"], "unit": r["unit"],
                 "text": r["text"], "origin": r["origin"], "details": r["details"],
                 "action": r.get("action"), "help": CHECK_HELP.get(r["check_id"]),
                 "progress": r.get("progress"), "provisional": r.get("provisional", False),
-                "before": _before(r.get("before"))}
+                "before": _before(r.get("before"))})
 
 
 class TimelineSensor(_Entity):
@@ -200,11 +211,11 @@ class TimelineSensor(_Entity):
         audits = [{"id": a, "name": BY_ID[a].names[lang], "color": BY_ID[a].color, "order": BY_ID[a].order,
                    "metric": BY_ID[a].timeline.metric_names.get(lang, ""), "entity_id": f"sensor.{DOMAIN}_{a}"}
                   for a in data["audits"] if BY_ID[a].timeline]
-        return {"days": data["timeline"]["days"], "scales": data["timeline"]["scales"], "audits": audits,
+        return round_floats({"days": data["timeline"]["days"], "scales": data["timeline"]["scales"], "audits": audits,
                 "events": [{"time": _iso(e["time"]), "kind": e["kind"], "note": e.get("note"),
                             "title": e.get("title"), "id": e.get("id"), "local_time": e.get("local_time")}
                            for e in data.get("events", [])],
-                "entry_id": self.coordinator.config_entry.entry_id}
+                "entry_id": self.coordinator.config_entry.entry_id})
 
 
 class RollingCopSensor(_Entity):
@@ -235,4 +246,4 @@ class RollingCopSensor(_Entity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {k: v for k, v in self._result().items() if k != "cop"}
+        return round_floats({k: v for k, v in self._result().items() if k != "cop"})

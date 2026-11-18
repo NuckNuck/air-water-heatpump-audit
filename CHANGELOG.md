@@ -6,6 +6,33 @@ Assistant 2026.11) bieten sie als Update an.
 Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/): Solange die Hauptversion 0 ist, kann jede
 Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
+## [0.21.0] – 2026-11-18
+
+### Geändert
+- **Ereignisse setzen die Bewertung nicht mehr zurück** (#39): Nach einem neuen Ereignis rechnen alle Audits über
+  denselben Zeitraum weiter wie vorher. Bisher fielen viele Prüfungen sofort auf „nicht bewertbar“ oder „vorläufig“,
+  obwohl sich an den Daten nichts geändert hatte. Ob eine Änderung wirkt, zeigt der Zeitstrahl. Über der Tabelle
+  steht „Letztes Ereignis …“ statt „Bewertet ab …“. Die Zeile „davor: …“ unter vorläufigen Urteilen entfällt.
+- **K4 nur mit dynamischem Strompreis** (#40): Ohne zugeordneten dynamischen Strompreis gibt es K4 weder in der Karte
+  noch als Sensor; ein vorhandener K4-Sensor wird entfernt.
+- **W2 bewertet das eingestellte Warmwasser-Soll** (#44): Bisher galt der Median der Speichertemperatur über alle
+  Ladungen im Zeitraum. Wer nach einem gelben W2 das Soll anhob, sah wochenlang weiter Gelb, weil die alten Ladungen
+  im Median blieben. Jetzt zählt das aktuelle Soll, eine Umstellung wirkt sofort. Ohne zugeordneten Soll-Sensor nimmt
+  W2 ersatzweise die Speichertemperatur nach dem Laden der letzten 7 Tage. Unter 50 °C bleibt W2 grün, wenn der
+  Speicher regelmäßig auf 60 °C aufgeheizt wird.
+- **C1 grün bis 5.500 Starts pro Jahr** (#50): Bisher war C1 nur bis 2.000 hochgerechnete Starts grün, obwohl
+  das genannte Ziel „unter 5.500“ lautete. Jetzt ist C1 bis 5.500 grün (90 % der Anlagen im Feldtest liegen
+  darunter); über 2.000 steht eine Anmerkung im Text. Der Text nennt die hochgerechnete Zahl der Starts vorne. Die
+  Bänder „Starts pro Tag“ im Zeitstrahl folgen der neuen Grenze.
+- **Ereignisliste: neueste zuerst, höchstens 10 Einträge sichtbar** (#48): Die Liste unter dem Zeitstrahl beginnt mit
+  dem zuletzt eingetragenen Ereignis; ab dem elften Eintrag scrollt sie, statt die Karte zu verlängern. Die Nummern
+  bleiben chronologisch, damit sie zu den Linien im Zeitstrahl passen.
+
+### Behoben
+- **Zahlen mit höchstens zwei Nachkommastellen** (#42): Unter „Datenbasis“ stand der Zählerstrom ungerundet
+  (z. B. „443.21299999999997 kWh“). Die Attribute aller Audit-Sensoren und die Zahlen in Prüftexten haben jetzt
+  höchstens zwei Nachkommastellen; die Karte zeigt Wärme, Offset und Zählerstrom im Zahlformat der HA-Sprache.
+
 ## [0.20.0] – 2026-11-09
 
 ### Behoben

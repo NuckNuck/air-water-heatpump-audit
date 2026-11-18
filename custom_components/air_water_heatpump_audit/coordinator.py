@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 import logging
 import time
 from datetime import timedelta
@@ -60,6 +62,11 @@ def structure(entry: ConfigEntry) -> tuple:
 # Für D1: Ab wann reichen die Rohdaten in InfluxDB zurück? Erste vorhandene Rolle dieser Liste.
 DEPTH_ROLES = ("compressor_running", "flow_temp", "heartbeat")
 
+
+
+def configured_roles(data: Mapping[str, Any]) -> set[str]:
+    """Zugeordnete Rollen der Einrichtung; bestimmt, welche Prüfungen es gibt (CheckSpec.needs_role, #40)."""
+    return {r for r, e in data.items() if r in ROLE_KEYS and e}
 
 class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Ein Lauf = alle Audits über das Fenster [max(jetzt − Fenster, Daten ab), jetzt]."""
@@ -209,6 +216,7 @@ class AirWaterAuditCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return run_audits(series, start, end, recorder_keep_days=keep_days, long_term_days=long_term_days,
                           heater_kw=heater_kw, master=master, events=self._events(), controls=controls,
                           tz=str(dt_util.get_default_time_zone()), audits=self.audits(), statistics=statistics,
+                          configured_roles=configured_roles(self.config_entry.data),
                           price_refs=None if price_refs is None else [
                               r | {"series": series.get(PRICE_ROLE_PREFIX + r["id"], [])} for r in price_refs])
 

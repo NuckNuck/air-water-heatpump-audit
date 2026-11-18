@@ -53,12 +53,13 @@ const TEXT = {
       note: (p, f) => `${p.label}: ${f(p.current)} → ${f(p.value)}${p.unit ? " " + p.unit : ""} (über die Audit-Karte)`,
       ok: "Übernommen und als Ereignis eingetragen; die Audits rechnen neu.", failed: "Fehlgeschlagen" },
     origin: { sourced: "belegt", derived: "abgeleitet", physical: "physikalisch", descriptive: "beschreibend" },
-    heat: (h) => `Wärme ${h.raw_kwh} kWh roh, ${h.corrected_kwh} kWh mit Offset ${h.offset_k >= 0 ? "+" : ""}${h.offset_k} K`
-      + (h.offset_robust ? "" : " (vorläufig)") + (h.electricity_kwh != null ? ` · Zählerstrom ${h.electricity_kwh} kWh` : ""),
+    heat: (h, f) => `Wärme ${f(h.raw_kwh)} kWh roh, ${f(h.corrected_kwh)} kWh mit Offset ${h.offset_k >= 0 ? "+" : ""}${f(h.offset_k)} K`
+      + (h.offset_robust ? "" : " (vorläufig)") + (h.electricity_kwh != null ? ` · Zählerstrom ${f(h.electricity_kwh)} kWh` : ""),
     kinds: { heating_curve: "Heizkurve geändert", valves: "Heizkörperventile verstellt",
       hydraulic_balancing: "Hydraulischer Abgleich", pump_setting: "Pumpe verstellt",
       dhw_setting: "Warmwasser-Einstellung", hardware: "Umbau an der Anlage", other: "Sonstiges" },
-    section: (sec, fmt, kind) => `Bewertet ab ${fmt(sec.start)}: ${kind}${sec.note ? ` – ${sec.note}` : ""}`,
+    section: (sec, fmt, kind) => `Letztes Ereignis ${fmt(sec.start)}: ${kind}${sec.note ? ` – ${sec.note}` : ""}`
+      + " · Bewertet wird weiter über den ganzen Zeitraum; Veränderungen seitdem zeigt der Zeitstrahl.",
     prov: { label: "vorläufig", tip: "Urteil mit weniger als der vollen Datenmenge; es wird mit jedem Tag belastbarer.",
       before: "davor", period: (a, b) => `${a} bis ${b}`, beforeProv: "(damals vorläufig)",
       verdicts: { ok: "grün", hint: "gelb", warn: "rot", info: "Info" } },
@@ -117,12 +118,13 @@ const TEXT = {
       note: (p, f) => `${p.label}: ${f(p.current)} → ${f(p.value)}${p.unit ? " " + p.unit : ""} (from the audit card)`,
       ok: "Applied and recorded as an event; the audits are recalculated.", failed: "Failed" },
     origin: { sourced: "sourced", derived: "derived", physical: "physical", descriptive: "descriptive" },
-    heat: (h) => `Heat ${h.raw_kwh} kWh raw, ${h.corrected_kwh} kWh with offset ${h.offset_k >= 0 ? "+" : ""}${h.offset_k} K`
-      + (h.offset_robust ? "" : " (preliminary)") + (h.electricity_kwh != null ? ` · metered electricity ${h.electricity_kwh} kWh` : ""),
+    heat: (h, f) => `Heat ${f(h.raw_kwh)} kWh raw, ${f(h.corrected_kwh)} kWh with offset ${h.offset_k >= 0 ? "+" : ""}${f(h.offset_k)} K`
+      + (h.offset_robust ? "" : " (preliminary)") + (h.electricity_kwh != null ? ` · metered electricity ${f(h.electricity_kwh)} kWh` : ""),
     kinds: { heating_curve: "Heating curve changed", valves: "Radiator valves adjusted",
       hydraulic_balancing: "Hydraulic balancing", pump_setting: "Pump setting changed",
       dhw_setting: "Hot water setting", hardware: "Hardware change", other: "Other" },
-    section: (sec, fmt, kind) => `Assessed from ${fmt(sec.start)}: ${kind}${sec.note ? ` – ${sec.note}` : ""}`,
+    section: (sec, fmt, kind) => `Last event ${fmt(sec.start)}: ${kind}${sec.note ? ` – ${sec.note}` : ""}`
+      + " · Assessment still covers the whole period; the timeline shows changes since then.",
     prov: { label: "preliminary", tip: "Verdict with less than the full amount of data; it firms up day by day.",
       before: "before", period: (a, b) => `${a} to ${b}`, beforeProv: "(preliminary at the time)",
       verdicts: { ok: "green", hint: "yellow", warn: "red", info: "info" } },
@@ -471,7 +473,8 @@ class AirWaterAuditCard extends ProgressMixin(HTMLElement) {
       + `${COLORS.not_assessable} ${pct}%)">${label}</span>`;
   }
 
-  // Vorläufiges Urteil (Datenmenge) und das letzte Urteil vor dem Ereignis, unter dem Urteils-Marker (F239).
+  // Vorläufiges Urteil (Datenmenge) unter dem Urteils-Marker. `before` liefert der Runner seit #39 nicht mehr;
+  // der Block bleibt für ältere Berichte.
   _provisional(at, t) {
     const hass = this._hass;
     const loc = hass.locale?.language || hass.language;
@@ -604,7 +607,7 @@ class AirWaterAuditCard extends ProgressMixin(HTMLElement) {
       outdoor_mean: temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : null };
     return `<table class="days"><thead><tr>${["day", "outdoor", "electricity", "heat", "heat_raw", "cop", "cop_raw", "carnot", "dhw"]
       .map((k) => `<th>${c[k]}</th>`).join("")}</tr></thead><tbody>
-      ${[...rows].reverse().map((r) => line(day(r.day) + (r.gap_min ? ` <span class="gap" title="${esc(t.days.gap(r.gap_min,
+      ${[...rows].reverse().map((r) => line(day(r.day) + (r.gap_min ? ` <span class="gap" title="${esc(t.days.gap(f(r.gap_min, 0),
         f(r.gap_share_pct, 0), t.days.gapHow[r.gap_method] ?? r.gap_method))}">*</span>` : ""), r)).join("")}
       ${rows.length > 1 ? line(`<b>${t.days.total}</b>`, total).replace("<tr>", '<tr class="total">') : ""}
       </tbody></table><div class="msg">${t.days.note}${rows.some((r) => r.gap_min) ? ` ${t.days.gapNote}` : ""}</div>`;
@@ -676,7 +679,7 @@ class AirWaterAuditCard extends ProgressMixin(HTMLElement) {
         <div class="title">${esc(title)}</div>
         <div class="state">${esc(hass.formatEntityState(audit))}</div>
         ${a.entry_id ? settingsLink(a.entry_id, t.settings) : ""}
-      </div>${a.heat ? `<div class="heat">${esc(t.heat(a.heat))}</div>` : ""}</td></tr>`;
+      </div>${a.heat ? `<div class="heat">${esc(t.heat(a.heat, (v) => formatValue(v, "", hass.language)))}</div>` : ""}</td></tr>`;
     if (audit.state === "unavailable" || audit.state === "unknown") {
       const msg = runningProgress() ? PROGRESS_TEXT[this._lang()].first : t.waiting;
       return head + `<tr><td colspan="${span}" class="msg">${esc(msg)}</td></tr>`;
@@ -843,6 +846,7 @@ const REF_COLORS = { heating_oil: "#6d4c41", natural_gas: "#1e88e5", wood_pellet
 const REF_DASHES = ["6 3", "2 3", "10 3 2 3"];
 // Zeitraum-Umschalter (F285 a): Tage oder "all"; Auswahl je Browser in localStorage
 const TL_RANGES = ["3", "7", "30", "90", "365", "all"];
+const EVENT_ROWS = 10;  // sichtbare Einträge der Ereignisliste, der Rest scrollt (#48)
 const TL_RANGE_KEY = "air-water-heatpump-audit-timeline-range";
 
 const TL_TEXT = {
@@ -858,7 +862,7 @@ const TL_TEXT = {
     },
     notes: {
       efficiency: "Tageswert; das Urteil in der Tabelle gilt erst für eine Woche. Blau oben: unplausibel hoch, eher ein Messfehler.",
-      capacity: "Grenze aus Prüfung C1 (2.000 Starts pro Jahr, umgerechnet auf die Heizstunden des Standorts).",
+      capacity: "Grenze aus Prüfung C1 (5.500 Starts pro Jahr, umgerechnet auf die Heizstunden des Standorts).",
       dhw: "Aus den Warmwasserladungen des Tages; dieselbe Ampel wie beim Heizen.",
       cost: "Grenze: früherer Brennstoff plus 10 % Messtoleranz (Prüfung K1).",
     },
@@ -924,7 +928,7 @@ const TL_TEXT = {
     },
     notes: {
       efficiency: "Daily value; the verdict in the table needs a full week. Blue at the top: implausibly high, more likely a measurement error.",
-      capacity: "Limit from check C1 (2,000 starts per year, scaled to the site's heating hours).",
+      capacity: "Limit from check C1 (5,500 starts per year, scaled to the site's heating hours).",
       dhw: "From the day's hot water charges; same colours as for space heating.",
       cost: "Limit: previous fuel plus 10 % measurement tolerance (check K1).",
     },
@@ -1053,7 +1057,8 @@ class AirWaterAuditTimelineCard extends ProgressMixin(HTMLElement) {
         .day { margin-top: 12px; padding: 8px 10px; border-radius: 8px; background: var(--secondary-background-color); }
         .events { margin-top: 16px; }
         .events h3 { margin: 0 0 6px; font-size: 1em; font-weight: 500; }
-        .events ol { margin: 0; padding-left: 0; list-style: none; }
+        .events ol { margin: 0; padding-left: 0; list-style: none; position: relative; overflow-y: auto; }
+        .events ol.long { max-height: 17em; }
         .events li { margin: 3px 0; }
         .ev-tools { white-space: nowrap; }
         button.link { background: none; border: none; padding: 0 4px; color: var(--primary-color); cursor: pointer; font: inherit; }
@@ -1111,7 +1116,10 @@ class AirWaterAuditTimelineCard extends ProgressMixin(HTMLElement) {
     const signature = [st?.last_updated, width, this._selected, hass.language].join("|");
     if (!force && signature === this._signature) return;
     this._signature = signature;
+    const scroll = this._charts.querySelector(".events ol")?.scrollTop ?? 0;  // Scrollstand der Ereignisliste halten
     this._renderCharts(st, width);
+    const ol = this._charts.querySelector(".events ol");
+    if (ol && scroll) ol.scrollTop = scroll;
     this._renderAdmin(st);
   }
 
@@ -1147,6 +1155,7 @@ class AirWaterAuditTimelineCard extends ProgressMixin(HTMLElement) {
       `<button type="button" data-range="${r}" class="${r === this._range ? "on" : ""}">${esc(t.range[r])}</button>`).join("")}</div>` : "";
     if (!days.length) {
       this._charts.innerHTML = title + ranges + `<p class="muted">${t.none}</p>` + this._eventList(events, null, t);
+      this._limitEventList();
       return;
     }
     const x0 = days[0].start;
@@ -1161,6 +1170,7 @@ class AirWaterAuditTimelineCard extends ProgressMixin(HTMLElement) {
     const sel = this._selected !== null && days[this._selected] ? this._dayDetails(days[this._selected], a.scales, t, events)
       : `<div class="muted" style="margin-top:8px">${t.pick}</div>`;
     this._charts.innerHTML = title + ranges + charts + sel + this._eventList(events, x0, t);
+    this._limitEventList();
   }
 
   // Zugeschaltete Audits mit Zeitstrahl: Linien zuerst, Streifen (Datenbasis) zuletzt
@@ -1447,10 +1457,26 @@ class AirWaterAuditTimelineCard extends ProgressMixin(HTMLElement) {
       ? ` <span class="ev-tools"><button type="button" class="link" data-edit="${esc(e.id)}" title="${esc(t.edit)}">✎</button>`
         + `<button type="button" class="link" data-del="${esc(e.id)}" title="${esc(t.remove)}">✕</button></span>`
       : "";
-    const items = events.map((e) => `<li><span class="badge">${e.n}</span>${esc(this._fmtTime(e.time))} · `
+    // Neueste zuerst (#48); die Nummern bleiben chronologisch, sie gehören zu den Linien im Zeitstrahl
+    const items = [...events].reverse().map((e) => `<li><span class="badge">${e.n}</span>${esc(this._fmtTime(e.time))} · `
       + `${esc(kinds[e.kind] ?? e.kind)}${e.note ? ` – ${esc(e.note)}` : ""}`
       + (x0 !== null && e.t < x0 ? ` <span class="muted">(${t.beforeRange})</span>` : "") + tools(e) + `</li>`).join("");
-    return `<div class="events"><h3>${t.events}</h3>${items ? `<ol>${items}</ol>` : `<div class="muted">${t.noEvents}</div>`}</div>`;
+    return `<div class="events"><h3>${t.events}</h3>${items ? `<ol${events.length > EVENT_ROWS ? ' class="long"' : ""}>${items}</ol>`
+      : `<div class="muted">${t.noEvents}</div>`}</div>`;
+  }
+
+  // Höchstens EVENT_ROWS Einträge sichtbar, der Rest scrollt (#48). Die Höhe kommt aus der Lage des ersten
+  // nicht mehr sichtbaren Eintrags, so passt sie auch bei umbrochenen Notizen. Gemessen wird nach dem Layout; ohne
+  // brauchbares Layout (Karte verborgen) gilt die feste Höhe aus dem Stylesheet.
+  _limitEventList() {
+    const ol = this._charts?.querySelector(".events ol.long");
+    if (!ol) return;
+    requestAnimationFrame(() => {
+      const cut = ol.children[EVENT_ROWS];
+      if (cut && cut.offsetParent === ol && cut.offsetTop > ol.children[EVENT_ROWS - 1].offsetTop) {
+        ol.style.maxHeight = `${cut.offsetTop}px`;
+      }
+    });
   }
 
   _entryId() {

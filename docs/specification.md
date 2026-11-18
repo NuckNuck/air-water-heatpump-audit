@@ -128,14 +128,21 @@ Ein Modell-Profil in `profiles.py` kann Datenblattwerte vorschlagen; der Besitze
 
 Der Besitzer trägt Änderungen an der Anlage in der Zeitstrahl-Karte ein, ändert und löscht sie dort (gespeichert als
 Liste `events` in den Optionen, je Eintrag mit `id`): Zeitpunkt, Art (`heating_curve`, `valves`,
-`hydraulic_balancing`, `pump_setting`, `dhw_setting`, `hardware`, `other`) und Notiz. Ereignisse teilen die Zeit in
-Abschnitte; Audits mit Mehrtageswerten mitteln nie über einen Trenner hinweg.
+`hydraulic_balancing`, `pump_setting`, `dhw_setting`, `hardware`, `other`) und Notiz.
 
-- **Audit 0** prüft die Daten und nutzt das ganze Fenster.
-- **Audits 1–5** rechnen ab dem letzten Ereignis im Fenster (`section_start`). Jede Ereignisart setzt sie zurück.
-- **Ausnahmen:** D4 und T2 (Fühlerabgleich) nutzen das ganze Fenster, denn Ereignisse ändern die Anlage, nicht die
-  Fühler. Der Zeitstrahl speichert Tageswerte über das ganze Fenster; Tage vor dem ersten Messwert entfallen.
+**Ereignisse sind Markierungen, keine Trenner (seit 0.21.0, #39).** Alle Audits rechnen über ihren normalen Zeitraum
+weiter, als gäbe es das Ereignis nicht; `section_start` und `dhw_section_start` sind gleich dem Fensterbeginn. Grund:
+Ein Neubeginn ab dem Ereignis ließ die Prüfungen sofort auf „nicht bewertbar“ oder „vorläufig“ fallen, obwohl sich an
+den Daten nichts geändert hatte. Ob eine Änderung wirkt, zeigt der Zeitstrahl: Er trägt Tageswerte und die Ereignisse
+als Linien; Tage mit Ereignis sind als gemischt gekennzeichnet. Springt eine Prüfung später um, prüft der Besitzer, ob
+es mit dem Ereignis zusammenhängt.
+
+- Je Audit steht im Bericht das letzte betreffende Ereignis (`audits.<id>.event`): Audit 0 keines, Audit Warmwasser
+  nur Warmwasser-Ereignisse (`dhw_setting`), die übrigen jedes. Die Karte zeigt es als „Letztes Ereignis …“.
+- Der Vorher-Vergleich (`before`, bis 0.20.0) entfällt; das Feld bleibt im Bericht und ist immer leer.
+- Der Zeitstrahl speichert Tageswerte über das ganze Fenster; Tage vor dem ersten Messwert entfallen.
 - Kein aktives Nachfragen: Die Integration fordert keine Ereignisse an.
+- W2 braucht keinen Abschnitt: Es bewertet das aktuelle Warmwasser-Soll, eine Umstellung wirkt sofort (#44).
 
 ### 1.6 Geltungsbereich: Luft-Wasser-Wärmepumpen
 
@@ -188,7 +195,7 @@ trägt ein Ereignis ein. Ist der Vorschlag erreicht, zeigt sie „✓ eingestell
 
 Jede Prüfung meldet, wie viel ihr noch fehlt (`progress`: vorhanden, nötig, Einheit, Zählweise `full_days`,
 `elapsed` oder `rate`). Daraus schätzt `audit_core/readiness.py` je Audit den Tag, an dem alle Prüfungen bewertbar
-sind (Hochrechnung, Audit 0 ab Fensterbeginn, Audits 1–5 ab dem letzten Ereignis). Fällt ein Tag durch, rückt der
+sind (Hochrechnung ab Fensterbeginn; Ereignisse setzen sie nicht zurück, 1.5). Fällt ein Tag durch, rückt der
 Termin nach hinten.
 
 In der Tabelle füllt sich der Marker einer `not_assessable`-Prüfung mit `progress` von links in der Farbe von
@@ -201,12 +208,10 @@ aus 3 Zyklen → 1 h aus 1 Zyklus. Zeitspannen in Stunden brauchen mindestens 24
 T2 (Fühler-Offsets) behalten ihre eigene Untergrenze, denn mit ihnen rechnen andere Prüfungen; W3 urteilt erst nach
 einer vollen Woche, sonst fehlt die wöchentliche Aufheizung womöglich nur zufällig. Bis `progress` die volle Menge
 erreicht, trägt das Urteil `provisional`; die Karte zeigt den Marker blasser mit „vorläufig · x von y …“. Die
-Datenreife bezieht sich weiter auf die volle Mindestmenge. Gemittelt wird nur ab dem Ereignis (1.5).
+Datenreife bezieht sich weiter auf die volle Mindestmenge.
 
-**Stand vor dem Ereignis:** Ist eine Prüfung vorläufig oder `not_assessable` und hat ihr Audit ein Ereignis, rechnet
-der Runner dasselbe Audit für den Abschnitt davor (Fenster bis zum Ereignis) und hängt das Urteil als `before` an
-(Urteil, Wert, Text, Zeitraum, `provisional`). War dieser Abschnitt kürzer als 1 h oder dort nur vorläufig bewertet,
-sucht er bis zu drei Abschnitte zurück und nimmt das erste belastbare Urteil, sonst das vorläufige.
+**Stand vor dem Ereignis:** bis 0.20.0 hing der Runner an vorläufige Urteile das Urteil vor dem Ereignis (`before`).
+Seit 0.21.0 rechnen Ereignisse nicht mehr neu (1.5), der Vergleich entfällt.
 
 ---
 
@@ -318,7 +323,7 @@ Takten ist ein Symptom, keine Ursache.
 
 | ID | Key | Kennzahl | Gate | Urteil | Herkunft |
 |---|---|---|---|---|---|
-| C1 | `starts_per_year` | Starts pro Jahr; vor Ablauf eines Jahres Hochrechnung Starts pro Heizstunde × `heating_hours` | 14 Tage; Stammdatum `heating_hours` | `ok` ≤ 2.000 · `hint` darüber. Weil es bisher immer eine Hochrechnung ist („Obergrenze“), nie `warn`; > 5.500 wäre `warn`, sobald ein ganzes Jahr gemessen ist (noch nicht gebaut) | `sourced`: WPQS S. 99–102 (ein Drittel ≤ 2.000, 90 % < 5.500). Hochrechnung `derived` und eine Obergrenze, weil bei Kälte weniger getaktet wird |
+| C1 | `starts_per_year` | Starts pro Jahr; vor Ablauf eines Jahres Hochrechnung Starts pro Heizstunde × `heating_hours` | 14 Tage; Stammdatum `heating_hours` | `ok` ≤ 5.500 (seit 0.21.0, vorher ≤ 2.000; Grundsatz 1.2: keine Effizienzeinbuße zu befürchten), über 2.000 Anmerkung im Text · `hint` darüber. Weil es bisher immer eine Hochrechnung ist („Obergrenze“), nie `warn`; > 5.500 wäre `warn`, sobald ein ganzes Jahr gemessen ist (noch nicht gebaut). Der Text nennt die hochgerechnete Zahl vorne | `sourced`: WPQS S. 99–102 (ein Drittel ≤ 2.000, 90 % < 5.500). Hochrechnung `derived` und eine Obergrenze, weil bei Kälte weniger getaktet wird |
 | C2 | `max_starts_per_hour` | höchste Startzahl in einem gleitenden 60-min-Fenster | 1 Tag | `ok` ≤ 6 · `hint` 7–12 · `warn` > 12 | `sourced`: Verdichterhersteller 6–12/h laut WPQS S. 98; Danfoss max. 12/h (DF-VZH S. 32) |
 | C3 | `short_cycles` | Anteil und Anzahl der Heizzyklen < 10 min, zusätzlich < 3 min | 20 Heizzyklen | `ok` · `hint`: Heizzyklen < 3 min (ohne Abtauung/Neustart) an ≥ 2 verschiedenen Tagen; ein einzelner schlechter Tag (z. B. Wartung) reicht nicht | `sourced`: WPQS-Laufzeitklassen (< 10 min); 3 min = Mindestlaufzeit laut Danfoss (DF-VZH S. 47), übertragen |
 | C4 | `load_vs_min_capacity` | mittlere Heizleistung eines vollen Tages gegen die kleinste Leistung bei Tagesmittel außen und mittlerem Vorlauf | 1 voller Tag ohne Lücken; Stammdatum `capacity_min_table` | `info` mit Klartext: unter der kleinsten Stufe → Takten physikalisch unvermeidbar; darüber bei vielen Starts → Regelung/Hydraulik prüfen | `physical` + Datenblatt der Anlage. Erklärt C1–C3, kein eigenes Urteil |
@@ -459,7 +464,7 @@ bereitet, und wie viel der Speicher verliert. Warmwasser macht im Feld 19 % der 
 | ID | Key | Kennzahl | Gate | Urteil | Herkunft |
 |---|---|---|---|---|---|
 | W1 | `dhw_efficiency` | Gütegrad über alle Ladungen (ideale ÷ gemessene Strommenge), dazu Arbeitszahl mit Feldvergleich | 7 Ladungen mit Zählerwerten; D8 ≤ 0,1 kWh; `dq` ≠ `low` | wie E3: `ok` 0,30–0,50 · `hint` < 0,30 · `warn` < 0,24 nur mit belastbarem D4 · `info` > 0,50 | `derived`: Der Gütegrad rechnet den höheren Hub heraus, es gelten die Schwellen von E3. Feldvergleich Arbeitszahl nur Warmwasser L/W im Bestand: Mittel 2,8, 2,1–3,5 (WPQS S. 79, n = 18); heatpumpmonitor.org Median 3,09 (OEM) |
-| W2 | `dhw_temperature` | Median der Speichertemperatur nach dem Laden über alle Ladungen; unter 49 °C dazu der Abstand der Aufheizungen auf 60 °C im ganzen Fenster | 7 Ladungen; unter 49 °C ohne Aufheizung erst nach `dhw_disinfection_interval_days` + 1 Tag | unter 49 °C: `ok`, wenn alle Abstände (auch bis jetzt) ≤ Stammdatum + 1 Tag, sonst `hint` (Entscheid F226) · `hint` > 61 °C (Effizienz) · sonst `ok`, unter 50 °C mit Anmerkung „knapp“; Text nennt den Austausch aus W6 | `sourced`: untere Betriebstemperatur 50 °C für Ein- und Zweifamilienhäuser ohne Zirkulation, mit Zirkulation gelten 60 °C (DVGW-INFO S. 11); eine periodische Aufheizung ersetzt das nicht sicher (UBA-TWW S. 5); UBA empfiehlt durchgängig über 55 °C (S. 4). Ein Intervall für die Aufheizung nennt kein Regelwerk (DVGW-INFO S. 15, UBA-TWW S. 5); Vorgabe 7 Tage ist eigene Festlegung (`derived`), Mitsubishi Ecodan ab Werk 15 Tage (MEL-FTC6 S. 26). Über 60 °C verlangt keine Regel mehr, jedes Kelvin kostet ≈ 1,4 % (WPQS S. 171). Je 1 K Fühlertoleranz |
+| W2 | `dhw_temperature` | Aktuelles Warmwasser-Soll (`dhw_setpoint` am Fensterende, #44); ohne Soll-Sensor Median der Speichertemperatur nach dem Laden über die Ladungen der letzten 7 Tage; unter 49 °C dazu der Abstand der Aufheizungen auf 60 °C im ganzen Fenster | mit Soll keine; ohne Soll 7 Ladungen in 7 Tagen; unter 49 °C ohne Aufheizung erst nach `dhw_disinfection_interval_days` + 1 Tag | unter 49 °C: `ok`, wenn alle Abstände (auch bis jetzt) ≤ Stammdatum + 1 Tag, sonst `hint` (Entscheid F226) · `hint` > 61 °C (Effizienz) · sonst `ok`, unter 50 °C mit Anmerkung „knapp“; Text nennt den Austausch aus W6 | `sourced`: untere Betriebstemperatur 50 °C für Ein- und Zweifamilienhäuser ohne Zirkulation, mit Zirkulation gelten 60 °C (DVGW-INFO S. 11); eine periodische Aufheizung ersetzt das nicht sicher (UBA-TWW S. 5); UBA empfiehlt durchgängig über 55 °C (S. 4). Ein Intervall für die Aufheizung nennt kein Regelwerk (DVGW-INFO S. 15, UBA-TWW S. 5); Vorgabe 7 Tage ist eigene Festlegung (`derived`), Mitsubishi Ecodan ab Werk 15 Tage (MEL-FTC6 S. 26). Über 60 °C verlangt keine Regel mehr, jedes Kelvin kostet ≈ 1,4 % (WPQS S. 171). Je 1 K Fühlertoleranz |
 | W3 | `disinfection` | Aufheizungen auf 60 °C pro Woche, Heizstab-Strom dabei (Einschaltdauer bis 30 min nach der Ladung × `immersion_heater_kw`) | 14 Tage | `ok` · `hint` > 2 pro Woche · `ok` mit Text, wenn schon der Median (W2) ≥ 59 °C ist | `derived`; keine Pflicht und keine Häufigkeit in den Regeln (DVGW-INFO S. 15, UBA-TWW S. 5) – keine Aufheizung ist hier kein Befund, unter 50 °C bewertet sie W2 |
 | W4 | `standby_loss` | Warmhalteverlust aus dem Abkühlen in ruhigen Nächten: S = V · ρc · ΣΔT ÷ Σt, umgerechnet auf 45 K (Speicher 65 °C, Raum 20 °C angenommen), mit Effizienzklasse | 5 ruhige Nächte und 15 h; Stammdatum `dhw_tank_volume_l`; Speicher ≥ 10 K über 20 °C | `ok` bis Klassengrenze D · `hint` darüber; Text nennt Klasse und kWh/Tag | `physical`; Klassen nach EU-812 Anh. II Tab. 2 (S < a + b·V^0,4); Mindestanforderung für neue Speicher Klasse C (EU-814, [sekundär]); eine Klasse Toleranz, weil 0,5-K-Fühler und angenommene Raumtemperatur die Schätzung etwa eine Klasse unsicher machen (grün im Zweifel). Prüfbedingung 45 K [sekundär] |
 | W5 | `dhw_timing` | Einbuße nach Carnot, weil bei kälterer Luft geladen wird als im Mittel der wärmsten drei Stunden desselben Tages, gewichtet mit der Wärme je Ladung | 7 Ladungen mit Außentemperatur (Wetterdienst bevorzugt) | `ok` < 10 % · `hint` ≥ 10 % (gerundeter Wert) | `physical`: Carnot-COP T_Senke ÷ (T_Senke − T_außen), ≈ 2,0–2,5 %/K bei 45 K Hub; 10 % eigene Festlegung (`derived`): darunter ist ein Ladefenster den Komfortverlust kaum wert. Duscht der Haushalt überwiegend morgens (6.6), sagt der Text, dass ein Fenster am Nachmittag bis zum nächsten Morgen reichen muss |
@@ -541,7 +546,7 @@ Ziel: Den gemessenen Strom in Euro umrechnen: Was kostet eine Kilowattstunde Wä
 | K1 | `heat_price` | Wärmepreis der letzten 7 gültigen Tage in ct/kWh, mit festen Kosten je kWh (7.1) | 7 gültige Tage; Preis | `ok` ≤ Vergleichspreis × 1,10 · `hint` darüber · `info` ohne Vergleichspreis | `derived`: 10 % ≈ Messunsicherheit der Wärme; Nutzungsgrad Gas-Brennwert 0,86 auf Hs (DBU-BW). Wochenwert, im Winter höher als im Jahresmittel |
 | K2 | `annual_cost` | Strom, Kosten und Wärme im Jahr, Ersparnis gegen den Vergleich | 14 gültige Tage, vorläufig ab 5 (1.9); `heating_degree_days` | `info` (Hochrechnung) | `sourced`: Gradtagzahl G20/15 (DWD-GT); Referenz Potsdam 3.666,8 Kd. Mindestens 14 Tage `derived`. Mit `living_area_m2` dazu Wärme und Strom je m² und die Klasse des Energieausweises nach Endenergie (GEG Anlage 10: A+ < 30, A < 50, B < 75, C < 100, D < 130, E < 160, F < 200, G < 250, H darüber; Strom ÷ (1,2 × Wohnfläche) nach GEG § 82 Abs. 2); mit Personen (6.6) die Kosten je Person |
 | K3 | `tariff_benefit` | Ersparnis des eigenen Wärmepumpentarifs: (`household_price` − `tariff_price`) × Jahresstrom aus K2 − feste Kosten des eigenen Zählers; dazu die Grenzen, ab denen der eigene Zähler sich lohnt (7.2.1) | wie K2; beide Preise; kein `price_signal`; `info` am Haushaltszähler | `ok` ≥ 0 · `hint` < 0 | `physical` (Rechnung) |
-| K4 | `price_timing` | gezahlter Mittelpreis gegen das Zeitmittel von `price_signal` | 7 Tage; Rolle `price_signal` | `ok` ≤ +3 % · `hint` darüber | `derived`: 3 % eigene Festlegung (Zufall einer Woche) |
+| K4 | `price_timing` | gezahlter Mittelpreis gegen das Zeitmittel von `price_signal`; gibt es nur mit dieser Rolle (`CheckSpec.needs_role`, #40) | 7 Tage; Rolle `price_signal` | `ok` ≤ +3 % · `hint` darüber | `derived`: 3 % eigene Festlegung (Zufall einer Woche) |
 | K5 | `grid_lock` | Sperren pro Tag, Dauer, längste Sperre; Heizstab-Stunden während und bis 2 h nach einer Sperre | 7 Tage; Rolle `grid_lock` | `ok` · `hint`, wenn der Heizstab dabei läuft. Anzahl und Dauer nur im Text | `derived`; seit 2024 keine feste Höchstdauer, nur Mindestleistung 4,2 kW (BK6-22-300 Anl. 1 Ziff. 4.5.1; präventiv höchstens 2 h täglich bis Ende 2028, Ziff. 10.5). Die frühere Tarifregel „3 × 2 h“ ist ohne Primärquelle und wird nicht verwendet |
 
 #### 7.2.1 K3: Ab wann lohnt sich der eigene Zähler?

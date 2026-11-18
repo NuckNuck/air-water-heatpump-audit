@@ -144,8 +144,8 @@ def _dhw_temperature(r: CheckResult, _: dict) -> Action:
                   f"mindestens alle {num(interval, 'g')} Tage 60 °C", [
                       "Am Bedienteil die Legionellenschaltung suchen (oft „Legionellen“ oder „Antilegionella“), "
                       f"einschalten, Intervall {num(interval, 'g')} Tage, Uhrzeit am Nachmittag.",
-                      "Alternativ die Warmwasser-Solltemperatur so einstellen, dass der Speicher nach dem Laden "
-                      "mindestens 50 °C zeigt; das kostet etwa 1,4 % Strom je Kelvin beim Warmwasser.",
+                      "Alternativ die Warmwasser-Solltemperatur auf mindestens 50 °C stellen; das kostet etwa "
+                      "1,4 % Strom je Kelvin beim Warmwasser.",
                       "Gibt es eine Zirkulationsleitung, verlangen die Regeln 60 °C; dann mit dem Fachbetrieb klären.",
                       _EVENT_STEP])
 
@@ -184,7 +184,7 @@ _ACTIONS: dict[str, Callable[[CheckResult, dict], Action]] = {
                   lambda r: f"Abweichung zur Referenz höchstens {num(1.5, 'g')} K{_today(r, '+.1f')}",
                   ["Liegt der Fühler in der Sonne, an der Hauswand oder in der Abluft des Außengeräts? Dann "
                    "an eine schattige Nordseite versetzen lassen."]),
-    "C1": _fixed(INSTALLER, "Die Wärmepumpe startet sehr oft.", lambda r: f"unter 5.500 Starts im Jahr{_today(r, ',')}",
+    "C1": _fixed(INSTALLER, "Die Wärmepumpe startet sehr oft.", lambda r: f"höchstens 5.500 Starts im Jahr{_today(r, ',')}",
                  _CYCLING_STEPS),
     "C2": _fixed(INSTALLER, "Die Wärmepumpe startet in manchen Stunden sehr oft.",
                  lambda r: f"höchstens 6 Starts pro Stunde{_today(r)}", _CYCLING_STEPS),
