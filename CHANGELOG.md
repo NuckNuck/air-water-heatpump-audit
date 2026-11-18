@@ -6,7 +6,7 @@ Assistant 2026.11) bieten sie als Update an.
 Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/): Solange die Hauptversion 0 ist, kann jede
 Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
 
-## [0.21.0] – unveröffentlicht
+## [0.21.0] – 2026-11-18
 
 ### Geändert
 - **Ereignisse setzen die Bewertung nicht mehr zurück** (#39): Nach einem neuen Ereignis rechnen alle Audits über
@@ -15,7 +15,6 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
   steht „Letztes Ereignis …“ statt „Bewertet ab …“. Die Zeile „davor: …“ unter vorläufigen Urteilen entfällt.
 - **K4 nur mit dynamischem Strompreis** (#40): Ohne zugeordneten dynamischen Strompreis gibt es K4 weder in der Karte
   noch als Sensor; ein vorhandener K4-Sensor wird entfernt.
-
 - **W2 bewertet das eingestellte Warmwasser-Soll** (#44): Bisher galt der Median der Speichertemperatur über alle
   Ladungen im Zeitraum. Wer nach einem gelben W2 das Soll anhob, sah wochenlang weiter Gelb, weil die alten Ladungen
   im Median blieben. Jetzt zählt das aktuelle Soll, eine Umstellung wirkt sofort. Ohne zugeordneten Soll-Sensor nimmt
