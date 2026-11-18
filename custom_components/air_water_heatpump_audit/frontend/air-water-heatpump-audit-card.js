@@ -862,7 +862,7 @@ const TL_TEXT = {
     },
     notes: {
       efficiency: "Tageswert; das Urteil in der Tabelle gilt erst für eine Woche. Blau oben: unplausibel hoch, eher ein Messfehler.",
-      capacity: "Grenze aus Prüfung C1 (2.000 Starts pro Jahr, umgerechnet auf die Heizstunden des Standorts).",
+      capacity: "Grenze aus Prüfung C1 (5.500 Starts pro Jahr, umgerechnet auf die Heizstunden des Standorts).",
       dhw: "Aus den Warmwasserladungen des Tages; dieselbe Ampel wie beim Heizen.",
       cost: "Grenze: früherer Brennstoff plus 10 % Messtoleranz (Prüfung K1).",
     },
@@ -928,7 +928,7 @@ const TL_TEXT = {
     },
     notes: {
       efficiency: "Daily value; the verdict in the table needs a full week. Blue at the top: implausibly high, more likely a measurement error.",
-      capacity: "Limit from check C1 (2,000 starts per year, scaled to the site's heating hours).",
+      capacity: "Limit from check C1 (5,500 starts per year, scaled to the site's heating hours).",
       dhw: "From the day's hot water charges; same colours as for space heating.",
       cost: "Limit: previous fuel plus 10 % measurement tolerance (check K1).",
     },

@@ -107,6 +107,15 @@ class CycleTest(unittest.TestCase):
         self.assertGreater(r.value, 5500)
         self.assertEqual(r.verdict, HINT)
 
+    def test_projection_green_up_to_5500_with_note(self):
+        s = onoff(*[i * 3 * H + d for i in range(14 * 8) for d in (0, 2 * H)])
+        cyc = c3.detect_cycles(s, 0, 14 * 24 * H)
+        r = c3.check_starts_per_year(cyc, 0, 14 * 24 * H, 6279)
+        self.assertTrue(2000 < r.value <= 5500)
+        self.assertEqual(r.verdict, OK)
+        self.assertTrue(r.text.startswith(f"Hochgerechnet {r.value:,}".replace(",", ".")))
+        self.assertIn("höchstens 2.000", r.text)
+
     def test_projection_needs_heating_hours(self):
         r = c3.check_starts_per_year([], 0, 14 * 24 * H, None)
         self.assertEqual(r.verdict, NOT_ASSESSABLE)
@@ -1042,7 +1051,7 @@ class TimelineTest(unittest.TestCase):
         from audit_core.audits import BY_ID
         scale = lambda audit, hours: BY_ID[audit].timeline.scale({"heating_hours": hours})
         self.assertEqual(scale("flow_temperature", 6279)["bands"][0], [0, 1.5, OK])
-        self.assertAlmostEqual(scale("capacity", 6279)["bands"][0][1], 7.6)
+        self.assertAlmostEqual(scale("capacity", 6279)["bands"][0][1], 21.0)  # 5.500 × 24 ÷ 6.279
         self.assertEqual(scale("capacity", None)["bands"], [])
 
     def test_merge_keeps_old_days_and_replaces_recomputed(self):
