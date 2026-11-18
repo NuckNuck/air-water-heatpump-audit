@@ -21,6 +21,10 @@ Nebenversion (0.x.0) Namen, Entitäten oder Einstellungen ändern.
   im Median blieben. Jetzt zählt das aktuelle Soll, eine Umstellung wirkt sofort. Ohne zugeordneten Soll-Sensor nimmt
   W2 ersatzweise die Speichertemperatur nach dem Laden der letzten 7 Tage. Unter 50 °C bleibt W2 grün, wenn der
   Speicher regelmäßig auf 60 °C aufgeheizt wird.
+- **C1 grün bis 5.500 Starts pro Jahr** (#50): Bisher war C1 nur bis 2.000 hochgerechnete Starts grün, obwohl
+  das genannte Ziel „unter 5.500“ lautete. Jetzt ist C1 bis 5.500 grün (90 % der Anlagen im Feldtest liegen
+  darunter); über 2.000 steht eine Anmerkung im Text. Der Text nennt die hochgerechnete Zahl der Starts vorne. Die
+  Bänder „Starts pro Tag“ im Zeitstrahl folgen der neuen Grenze.
 - **Ereignisliste: neueste zuerst, höchstens 10 Einträge sichtbar** (#48): Die Liste unter dem Zeitstrahl beginnt mit
   dem zuletzt eingetragenen Ereignis; ab dem elften Eintrag scrollt sie, statt die Karte zu verlängern. Die Nummern
   bleiben chronologisch, damit sie zu den Linien im Zeitstrahl passen.

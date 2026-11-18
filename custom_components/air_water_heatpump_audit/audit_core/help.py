@@ -105,8 +105,10 @@ CHECK_HELP: dict[str, dict[str, str]] = {
     # Audit 3 – Leistung
     "C1": {"what": "Verdichterstarts, hochgerechnet auf ein Jahr. Viele Starts deuten auf eine zu große oder "
                    "ungünstig eingestellte Wärmepumpe hin.",
-           "rating": f"Grün bis {num(c3.STARTS_PER_YEAR_OK, ',')} pro Jahr, darüber Gelb (90 % der Anlagen im "
-                     f"Feldtest unter {num(c3.STARTS_PER_YEAR_HINT, ',')}). Höchstens Gelb, weil hochgerechnet. "
+           "rating": f"Grün bis {num(c3.STARTS_PER_YEAR_OK, ',')} pro Jahr (90 % der Anlagen im Feldtest liegen "
+                     f"darunter), darüber Gelb. Höchstens Gelb, weil hochgerechnet. Bei Grün über "
+                     f"{num(c3.STARTS_PER_YEAR_GOOD, ',')} steht eine Anmerkung im Text (ein Drittel der Anlagen "
+                     f"bleibt darunter). "
                      "Bewertet ab 14 Tagen, vorläufig ab 5.",
            "source": "Fraunhofer ISE, Feldtest WP-QS."},
     "C2": {"what": "Die meisten Verdichterstarts innerhalb einer Stunde.",

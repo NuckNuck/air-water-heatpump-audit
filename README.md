@@ -24,7 +24,7 @@ kann:
 | **Datenbasis** | Kann man den Messwerten trauen? | „Der Vorlauffühler zeigt 0,5 K mehr als der Rücklauffühler, obwohl beide gleich sein müssten.“ |
 | **Effizienz** | Wie gut arbeitet die Wärmepumpe? | „Gütegrad 0,38 – im Bereich guter Anlagen aus dem Fraunhofer-Feldtest.“ |
 | **Vorlauf** | Heizt sie wärmer als nötig? | „Hinter dem Pufferspeicher kommen 2,8 K weniger an, als die Wärmepumpe erzeugt.“ |
-| **Leistung** | Passt die Wärmepumpe zum Haus? | „Hochgerechnet 5.200 Verdichterstarts im Jahr – viele Anlagen kommen mit unter 2.000 aus.“ |
+| **Leistung** | Passt die Wärmepumpe zum Haus? | „Hochgerechnet 6.200 Verdichterstarts im Jahr – 90 % der Anlagen bleiben unter 5.500.“ |
 | **Warmwasser** | Effizient, hygienisch und zur richtigen Zeit? | „Speicher 45 °C, aber seit 3 Wochen nicht auf 60 °C aufgeheizt.“ |
 | **Kosten** | Was kostet die Wärme, lohnt der Tarif? | „Wärme kostet 8,1 ct/kWh – mit Gas wären es 14,3 ct.“ |
 
@@ -101,7 +101,7 @@ Lebensdauer.
 
 | Prüfung | Was wird geprüft? |
 |---|---|
-| C1 Starts pro Jahr | Verdichterstarts, hochgerechnet aufs Jahr. Grün bis 2.000. |
+| C1 Starts pro Jahr | Verdichterstarts, hochgerechnet aufs Jahr. Grün bis 5.500, über 2.000 mit Anmerkung. |
 | C2 Starts pro Stunde | Die meisten Starts innerhalb einer Stunde. Grün bis 6. |
 | C3 Kurze Zyklen | Wie viele Heizläufe kürzer als 10 Minuten sind; gelb, wenn an mindestens zwei Tagen Läufe unter 3 Minuten vorkommen. |
 | C4 Last gegen Mindestleistung | Ob der Wärmebedarf unter der kleinsten Leistung der Wärmepumpe liegt – dann ist Takten unvermeidbar (nur Info). |

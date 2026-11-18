@@ -184,7 +184,7 @@ _ACTIONS: dict[str, Callable[[CheckResult, dict], Action]] = {
                   lambda r: f"Abweichung zur Referenz höchstens {num(1.5, 'g')} K{_today(r, '+.1f')}",
                   ["Liegt der Fühler in der Sonne, an der Hauswand oder in der Abluft des Außengeräts? Dann "
                    "an eine schattige Nordseite versetzen lassen."]),
-    "C1": _fixed(INSTALLER, "Die Wärmepumpe startet sehr oft.", lambda r: f"unter 5.500 Starts im Jahr{_today(r, ',')}",
+    "C1": _fixed(INSTALLER, "Die Wärmepumpe startet sehr oft.", lambda r: f"höchstens 5.500 Starts im Jahr{_today(r, ',')}",
                  _CYCLING_STEPS),
     "C2": _fixed(INSTALLER, "Die Wärmepumpe startet in manchen Stunden sehr oft.",
                  lambda r: f"höchstens 6 Starts pro Stunde{_today(r)}", _CYCLING_STEPS),

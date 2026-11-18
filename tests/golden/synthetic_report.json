@@ -9,7 +9,7 @@
        "Danach mit dem Fachbetrieb die Regelung durchgehen: Schaltdifferenz (Hysterese) größer, Mindestlaufzeit und Sperrzeit nach dem Abschalten, Vorlauf nicht unnötig niedrig.",
        "Volumenstrom und Puffer prüfen lassen: Ein zu kleiner Wasserinhalt lässt die Wärmepumpe schnell abschalten."
       ],
-      "target": "unter 5.500 Starts im Jahr (heute 5.925 1/a)",
+      "target": "höchstens 5.500 Starts im Jahr (heute 5.925 1/a)",
       "text": "Die Wärmepumpe startet sehr oft.",
       "who": "installer"
      },
@@ -27,7 +27,7 @@
       "unit": "hours"
      },
      "provisional": true,
-     "text": "237 Starts in 240,0 h → Obergrenze 5.925 Starts/Jahr (WPQS: ⅓ ≤ 2.000, 90 % < 5.500).",
+     "text": "Hochgerechnet 5.925 Starts pro Jahr (237 Starts in 240,0 h; Obergrenze, weil bei Kälte weniger getaktet wird). Grün bis 5.500 (90 % der Anlagen im Feldtest WP-QS).",
      "unit": "1/a",
      "value": 5925,
      "verdict": "hint"
@@ -5580,11 +5580,11 @@
     "bands": [
      [
       0,
-      8.0,
+      22.0,
       "ok"
      ],
      [
-      8.0,
+      22.0,
       null,
       "hint"
      ]

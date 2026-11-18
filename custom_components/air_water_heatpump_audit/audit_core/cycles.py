@@ -8,7 +8,7 @@ from . import days
 from .data_basis import check_coverage
 from .heat import CapacityTable, energy_kwh, min_capacity_kw, time_mean
 from .result import (DERIVED, DESCRIPTIVE, ELAPSED, early, FULL_DAYS, HINT, INFO, NOT_ASSESSABLE, OK, PHYSICAL, RATE, SOURCED,
-                     WARN, CheckResult, count, grade, num, progress)
+                     CheckResult, count, grade, num, progress)
 from .series import Interval, Series, intersect, intervals_where, overlaps, subtract, total, weighted_values
 
 MIN_OFF_S = 30
@@ -22,7 +22,8 @@ DEFROST_WARM_C = 5.0  # C6: über +5 °C sollte kaum Reif entstehen (Abtaubereic
 DEFROST_WARM_MAX_PER_H = 2.0  # C6: mehr Abtauungen je Laufstunde über +5 °C → hint (derived)
 DEFROST_WARM_MIN_RUN_H = 5.0  # C6: erst ab 5 h Lauf über +5 °C bewerten, sonst entscheidet eine einzelne Stunde
 
-STARTS_PER_YEAR_OK, STARTS_PER_YEAR_HINT = 2000, 5500  # C1, WPQS: ⅓ der Anlagen ≤ 2.000, 90 % < 5.500
+STARTS_PER_YEAR_OK = 5500  # C1 grün bis hier: WPQS, 90 % der Anlagen < 5.500
+STARTS_PER_YEAR_GOOD = 2000  # C1-Anmerkung darüber: WPQS, ⅓ der Anlagen ≤ 2.000
 
 HEATING, DHW, MIXED = "heating", "dhw", "mixed"
 
@@ -138,8 +139,11 @@ def check_starts_per_year(cycles: list[Cycle], start: float, end: float, heating
     prog = progress(hours, min_days * 24, "hours", ELAPSED, start)
     n = len(starts(cycles))
     projection = round(n / hours * heating_hours) if hours else 0
-    text = (f"{n} Starts in {num(hours, '.1f')} h → Obergrenze {num(projection, ',')} Starts/Jahr "
-            f"(WPQS: ⅓ ≤ 2.000, 90 % < 5.500).")
+    text = (f"Hochgerechnet {num(projection, ',')} Starts pro Jahr ({n} Starts in {num(hours, '.1f')} h; "
+            f"Obergrenze, weil bei Kälte weniger getaktet wird). Grün bis {num(STARTS_PER_YEAR_OK, ',')} "
+            f"(90 % der Anlagen im Feldtest WP-QS).")
+    if STARTS_PER_YEAR_GOOD < projection <= STARTS_PER_YEAR_OK:
+        text += f" Anmerkung: Ein Drittel der Anlagen kommt mit höchstens {num(STARTS_PER_YEAR_GOOD, ',')} aus."
     if hours < early(min_days * 24, 24):
         return CheckResult("C1", "starts_per_year", NOT_ASSESSABLE, projection, "1/a",
                            text + f" Vorläufiges Urteil ab {num(early(min_days * 24, 24), '.0f')} h, belastbar ab "
@@ -150,8 +154,7 @@ def check_starts_per_year(cycles: list[Cycle], start: float, end: float, heating
 
 def starts_per_year_verdict(projection: float) -> str:
     """C1 (auch Tageswerte im Zeitstrahl): Hochrechnung ist eine Obergrenze, daher höchstens gelb."""
-    verdict = grade(projection, STARTS_PER_YEAR_OK, STARTS_PER_YEAR_HINT)
-    return HINT if verdict == WARN else verdict
+    return OK if projection <= STARTS_PER_YEAR_OK else HINT
 
 
 def check_backup_heater(heaters: dict[str, Series], power_kw: dict[str, float | None], electricity_kwh: float | None,
